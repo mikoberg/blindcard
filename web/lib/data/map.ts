@@ -1,0 +1,93 @@
+import { isValidStars } from "@/lib/card/stars";
+import type { CardEvent, CardFight, Rating } from "@/lib/card/types";
+import { DataError } from "./ensure";
+
+export interface EventRow {
+  id: string;
+  name: string;
+  slug: string;
+  event_date: string;
+  location: string | null;
+}
+
+export interface FightRow {
+  id: string;
+  event_id: string;
+  card_position: number;
+  weight_class: string | null;
+  is_title_fight: boolean;
+  scheduled_rounds: number | null;
+  fighter_a_id: string;
+  fighter_b_id: string;
+}
+
+export interface FighterRow {
+  id: string;
+  name: string;
+}
+
+/** `stars` and `percentile` are numeric columns; accept numbers or numeric strings. */
+export interface ScoreRow {
+  fight_id: string;
+  stars: number | string | null;
+  percentile: number | string | null;
+}
+
+export function mapEvent(row: EventRow): CardEvent {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    eventDate: row.event_date,
+    location: row.location,
+  };
+}
+
+function toNumber(value: number | string | null): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim() !== "") return Number(value);
+  return Number.NaN;
+}
+
+/** A rating is valid only if both numbers are valid. Never guess; invalid means unrated. */
+function toRating(score: ScoreRow | undefined): Rating | null {
+  if (!score) return null;
+  const stars = toNumber(score.stars);
+  const percentile = toNumber(score.percentile);
+  if (!isValidStars(stars) || !Number.isFinite(percentile) || percentile < 0 || percentile > 100) {
+    // Log the fight id only: never a score value and never anything from a result.
+    console.warn(`invalid score for fight ${score.fight_id}; showing it as not rated`);
+    return null;
+  }
+  return { stars, percentile };
+}
+
+export function buildCard(
+  fights: readonly FightRow[],
+  fighters: readonly FighterRow[],
+  scores: readonly ScoreRow[],
+): CardFight[] {
+  const fighterById = new Map(fighters.map((row) => [row.id, { id: row.id, name: row.name }]));
+  const scoreByFight = new Map<string, ScoreRow>();
+  for (const score of scores) {
+    if (!scoreByFight.has(score.fight_id)) scoreByFight.set(score.fight_id, score);
+  }
+
+  return fights
+    .map((fight): CardFight => {
+      const fighterA = fighterById.get(fight.fighter_a_id);
+      const fighterB = fighterById.get(fight.fighter_b_id);
+      if (!fighterA || !fighterB) throw new DataError("build card", "missing_fighter");
+      return {
+        id: fight.id,
+        cardPosition: fight.card_position,
+        weightClass: fight.weight_class,
+        isTitleFight: fight.is_title_fight,
+        scheduledRounds: fight.scheduled_rounds,
+        fighterA,
+        fighterB,
+        rating: toRating(scoreByFight.get(fight.id)),
+      };
+    })
+    .sort((a, b) => a.cardPosition - b.cardPosition);
+}
