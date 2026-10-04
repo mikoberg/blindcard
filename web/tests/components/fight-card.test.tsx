@@ -39,6 +39,17 @@ describe("FightCard", () => {
     expect(html).toContain("break-words");
   });
 
+  it("renders fighter A before fighter B, never reordered", () => {
+    const html = render(
+      makeFight(3, 3, {
+        fighterA: { id: "a", name: "Zed Zulu" },
+        fighterB: { id: "b", name: "Abe Alpha" },
+      }),
+    );
+    expect(html.indexOf("Zed Zulu")).toBeGreaterThan(-1);
+    expect(html.indexOf("Zed Zulu")).toBeLessThan(html.indexOf("Abe Alpha"));
+  });
+
   it("never renders a result word", () => {
     const html = render(makeFight(3, 5));
     expect(html).not.toMatch(/KO\/TKO|Submission|Decision|winner|wins/i);

@@ -43,6 +43,18 @@ describe("CardView", () => {
     expect(html).toContain("No standout fights on this card");
   });
 
+  it("keeps fighter A before fighter B inside the 'Watch these' list", () => {
+    const html = render([
+      makeFight(1, 4.5, {
+        fighterA: { id: "a", name: "Zed Zulu" },
+        fighterB: { id: "b", name: "Abe Alpha" },
+      }),
+    ]);
+    const watch = html.slice(html.indexOf("Watch these"), html.indexOf("Full card"));
+    expect(watch.indexOf("Zed Zulu")).toBeGreaterThan(-1);
+    expect(watch.indexOf("Zed Zulu")).toBeLessThan(watch.indexOf("Abe Alpha"));
+  });
+
   it("does not use the site's branding with a promotion name", () => {
     const html = render();
     // The event name is a plain fact from the database; nothing else may contain it.

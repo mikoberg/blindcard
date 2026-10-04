@@ -7,7 +7,6 @@ import { formatEventDate, groupEventsByYear } from "@/lib/format";
 export const revalidate = 300;
 export const metadata: Metadata = {
   title: "All events",
-  description: "Every event with spoiler-free fight ratings.",
 };
 
 export default async function EventsPage() {

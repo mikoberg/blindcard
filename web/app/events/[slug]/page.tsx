@@ -19,7 +19,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!event) return { title: "Event not found" };
   return {
     title: event.name,
-    description: `Which fights on ${event.name} are worth watching? Ratings without spoilers.`,
     alternates: { canonical: `/events/${event.slug}` },
   };
 }

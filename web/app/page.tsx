@@ -10,8 +10,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const event = await getLatestEventWithFights();
   if (!event) return {};
   return {
-    title: event.name,
-    description: `Which fights on ${event.name} are worth watching? Ratings without spoilers.`,
+    // A layout title.template does not apply to the page in the same (root) segment.
+    title: { absolute: `Blindcard – ${event.name}` },
     alternates: { canonical: `/events/${event.slug}` },
   };
 }
