@@ -13,7 +13,8 @@ from enum import StrEnum
 
 from blindcard_ingest.models import SECONDS_PER_ROUND, ParsedFight, ParsedRound
 
-FEATURE_NAMES: tuple[str, ...] = (
+#: The ten features of score v1. v1's config weights exactly these; they must keep their meaning.
+V1_FEATURES: tuple[str, ...] = (
     "pace",
     "knockdowns",
     "sub_attempts",
@@ -26,8 +27,33 @@ FEATURE_NAMES: tuple[str, ...] = (
     "control_share",
 )
 
+#: Candidate features for later score versions. Every one is always computed; a version's config
+#: decides which it weights (the stored features of a version hold only those).
+NEW_FEATURES: tuple[str, ...] = (
+    "ko_finish",  # ended by KO/TKO
+    "sub_finish",  # ended by submission
+    "early_finish",  # 1 - fraction of the scheduled time used, for finishes (early = high)
+    "time_fraction",  # fraction of the scheduled time used, finish or not
+    "control_share_nofinish",  # control share, only when no finish came out of it (stalling)
+    "knockdowns_both",  # both fighters scored a knockdown (back and forth)
+    "min_pace",  # significant strikes per minute of the LESS active fighter
+    "total_pace",  # total strikes landed per minute, both fighters
+    "takedown_rate",  # takedowns landed per minute, both fighters
+)
+
+FEATURE_NAMES: tuple[str, ...] = V1_FEATURES + NEW_FEATURES
+
 # Unbounded count/rate features: clipped at a reference quantile and scaled to 0..1.
-CAPPED_FEATURES: tuple[str, ...] = ("pace", "knockdowns", "sub_attempts", "reversals", "swings")
+CAPPED_FEATURES: tuple[str, ...] = (
+    "pace",
+    "knockdowns",
+    "sub_attempts",
+    "reversals",
+    "swings",
+    "min_pace",
+    "total_pace",
+    "takedown_rate",
+)
 
 
 class MethodKind(StrEnum):
@@ -130,17 +156,22 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
     kind = classify_method(inp.method)
 
     sig_landed: dict[str, int] = defaultdict(int)
+    knockdowns_by_fighter: dict[str, int] = defaultdict(int)
     knockdowns_by_round: dict[int, dict[str, int]] = defaultdict(dict)
     sig_by_round: dict[int, dict[str, int]] = defaultdict(dict)
     total_knockdowns = total_subs = total_reversals = total_control = 0
+    total_strikes = total_takedowns = 0
     for r in inp.rounds:
         sig_landed[r.fighter_source_id] += r.sig_strikes_landed
         sig_by_round[r.round_number][r.fighter_source_id] = r.sig_strikes_landed
         knockdowns_by_round[r.round_number][r.fighter_source_id] = r.knockdowns
+        knockdowns_by_fighter[r.fighter_source_id] += r.knockdowns
         total_knockdowns += r.knockdowns
         total_subs += r.sub_attempts
         total_reversals += r.reversals
         total_control += r.control_seconds
+        total_strikes += r.total_strikes_landed
+        total_takedowns += r.takedowns_landed
 
     total_sig = sum(sig_landed.values())
     first, second = sorted(sig_landed)
@@ -157,6 +188,8 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
 
     finished = kind in (MethodKind.KO_TKO, MethodKind.SUBMISSION)
     scheduled_seconds = inp.scheduled_rounds * SECONDS_PER_ROUND
+    time_fraction = min(inp.fight_seconds / scheduled_seconds, 1.0)
+    control_share = min(total_control / inp.fight_seconds, 1.0)
 
     return {
         "pace": total_sig / minutes,
@@ -172,7 +205,18 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "competitiveness": (
             1.0 - abs(sig_landed[first] - sig_landed[second]) / total_sig if total_sig else 0.0
         ),
-        "control_share": min(total_control / inp.fight_seconds, 1.0),
+        "control_share": control_share,
+        "ko_finish": 1.0 if kind is MethodKind.KO_TKO else 0.0,
+        "sub_finish": 1.0 if kind is MethodKind.SUBMISSION else 0.0,
+        "early_finish": 1.0 - time_fraction if finished else 0.0,
+        "time_fraction": time_fraction,
+        "control_share_nofinish": 0.0 if finished else control_share,
+        "knockdowns_both": 1.0
+        if all(knockdowns_by_fighter[f] > 0 for f in (first, second))
+        else 0.0,
+        "min_pace": min(sig_landed[first], sig_landed[second]) / minutes,
+        "total_pace": total_strikes / minutes,
+        "takedown_rate": total_takedowns / minutes,
     }
 
 

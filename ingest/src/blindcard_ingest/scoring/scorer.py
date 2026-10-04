@@ -67,10 +67,17 @@ def quantile(sorted_values: Sequence[float], q: float) -> float:
     return sorted_values[lower] + (sorted_values[upper] - sorted_values[lower]) * fraction
 
 
-def normalise(caps: Mapping[str, float], raw: Mapping[str, float]) -> dict[str, float]:
-    """Scale each feature to 0..1: capped features by their frozen cap, the rest as-is."""
+def features_of(config: ScoringConfig) -> tuple[str, ...]:
+    """The features a version weights, in the canonical order (so sums are reproducible)."""
+    return tuple(name for name in FEATURE_NAMES if name in config.weights)
+
+
+def normalise(
+    config: ScoringConfig, caps: Mapping[str, float], raw: Mapping[str, float]
+) -> dict[str, float]:
+    """Scale the version's features to 0..1: capped ones by their frozen cap, the rest as-is."""
     result: dict[str, float] = {}
-    for name in FEATURE_NAMES:
+    for name in features_of(config):
         value = raw[name]
         if name in CAPPED_FEATURES:
             cap = caps[name]
@@ -81,7 +88,7 @@ def normalise(caps: Mapping[str, float], raw: Mapping[str, float]) -> dict[str, 
 
 
 def composite_of(config: ScoringConfig, normalised: Mapping[str, float]) -> float:
-    return sum(config.weights[name] * normalised[name] for name in FEATURE_NAMES)
+    return sum(config.weights[name] * normalised[name] for name in features_of(config))
 
 
 def percentile_of(knots: Sequence[float], composite: float) -> float:
@@ -128,20 +135,22 @@ def build_reference(config: ScoringConfig, pool: Sequence[Mapping[str, float]]) 
     caps = {
         name: quantile(sorted(raw[name] for raw in pool), config.cap_quantile)
         for name in CAPPED_FEATURES
+        if name in config.weights
     }
-    composites = sorted(composite_of(config, normalise(caps, raw)) for raw in pool)
+    composites = sorted(composite_of(config, normalise(config, caps, raw)) for raw in pool)
     knots = [quantile(composites, i / QUANTILE_STEPS) for i in range(QUANTILE_STEPS + 1)]
     return Reference(caps=caps, knots=knots, pool_size=len(pool))
 
 
 def score(config: ScoringConfig, reference: Reference, raw: Mapping[str, float]) -> ScoredFight:
-    normalised = normalise(reference.caps, raw)
+    normalised = normalise(config, reference.caps, raw)
     composite = composite_of(config, normalised)
     percentile = round(percentile_of(reference.knots, composite), 2)
     return ScoredFight(
         composite=composite,
         percentile=percentile,
         stars=stars_for_percentile(config, percentile),
-        raw=dict(raw),
+        # Only what this version weights: extra candidate features never leak into its record.
+        raw={name: raw[name] for name in features_of(config)},
         normalised=normalised,
     )

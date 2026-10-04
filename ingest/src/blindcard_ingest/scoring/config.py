@@ -76,12 +76,11 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
     if not isinstance(min_pool_size, int) or min_pool_size < 1:
         raise ScoringConfigError("normalisation.min_pool_size must be an integer >= 1")
 
-    if set(raw_weights) != set(FEATURE_NAMES):
-        missing = sorted(set(FEATURE_NAMES) - set(raw_weights))
-        extra = sorted(set(raw_weights) - set(FEATURE_NAMES))
-        raise ScoringConfigError(
-            f"weights must match the features (missing={missing}, extra={extra})"
-        )
+    if not raw_weights:
+        raise ScoringConfigError("weights must name at least one feature")
+    unknown = sorted(set(raw_weights) - set(FEATURE_NAMES))
+    if unknown:
+        raise ScoringConfigError(f"weights name an unknown feature: {unknown}")
     weights: dict[str, float] = {}
     for name, value in raw_weights.items():
         is_number = isinstance(value, int | float) and not isinstance(value, bool)

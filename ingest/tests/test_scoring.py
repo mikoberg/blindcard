@@ -10,7 +10,7 @@ from blindcard_ingest.scoring.config import (
     load_scoring_config,
     parse_scoring_config,
 )
-from blindcard_ingest.scoring.features import FEATURE_NAMES
+from blindcard_ingest.scoring.features import V1_FEATURES
 from blindcard_ingest.scoring.scorer import (
     QUANTILE_STEPS,
     Reference,
@@ -57,7 +57,7 @@ def pool() -> list[dict[str, float]]:
 
 def test_shipped_v1_config_is_valid(config: ScoringConfig) -> None:
     assert config.version == 1
-    assert set(config.weights) == set(FEATURE_NAMES)
+    assert set(config.weights) == set(V1_FEATURES)
     assert config.weights["control_share"] < 0
     assert config.star_thresholds[0] == StarThreshold(0, 1.0)
     assert config.star_thresholds[-1].stars == 5.0
@@ -91,15 +91,22 @@ def test_config_round_trips_through_parse(config: ScoringConfig) -> None:
     assert parse_scoring_config(_config_dict(config)).weights == config.weights
 
 
-def test_unknown_or_missing_weight_is_rejected(config: ScoringConfig) -> None:
+def test_unknown_weight_or_no_weights_at_all_is_rejected(config: ScoringConfig) -> None:
     data = _config_dict(config)
     data["weights"]["charisma"] = 1.0
-    with pytest.raises(ScoringConfigError, match="extra=\\['charisma'\\]"):
+    with pytest.raises(ScoringConfigError, match="unknown feature"):
         parse_scoring_config(data)
     data = _config_dict(config)
-    del data["weights"]["pace"]
-    with pytest.raises(ScoringConfigError, match="missing=\\['pace'\\]"):
+    data["weights"] = {}
+    with pytest.raises(ScoringConfigError, match="at least one"):
         parse_scoring_config(data)
+
+
+def test_a_config_may_weight_only_some_features(config: ScoringConfig) -> None:
+    data = _config_dict(config)
+    data["weights"] = {"pace": 1.0, "ko_finish": 2.0}
+    parsed = parse_scoring_config(data)
+    assert set(parsed.weights) == {"pace", "ko_finish"}
 
 
 @pytest.mark.parametrize(
@@ -152,15 +159,15 @@ def test_normalised_capped_features_stay_within_zero_and_one(
 ) -> None:
     reference = build_reference(config, pool)
     extreme = {**raw_fight(0), "pace": 1000.0, "knockdowns": 50.0}
-    normalised = normalise(reference.caps, extreme)
+    normalised = normalise(config, reference.caps, extreme)
     assert normalised["pace"] == 1.0
     assert normalised["knockdowns"] == 1.0
     assert all(0 <= v <= 1 for v in normalised.values())
 
 
-def test_zero_cap_gives_zero_not_a_division_error() -> None:
+def test_zero_cap_gives_zero_not_a_division_error(config: ScoringConfig) -> None:
     caps = {"pace": 0.0, "knockdowns": 0.0, "sub_attempts": 0.0, "reversals": 0.0, "swings": 0.0}
-    normalised = normalise(caps, {**raw_fight(3), "pace": 5.0})
+    normalised = normalise(config, caps, {**raw_fight(3), "pace": 5.0})
     assert normalised["pace"] == 0.0
 
 
@@ -248,10 +255,10 @@ def test_weights_come_from_config_not_code(
     config: ScoringConfig, pool: list[dict[str, float]]
 ) -> None:
     reference = build_reference(config, pool)
-    normalised = normalise(reference.caps, pool[42])
+    normalised = normalise(config, reference.caps, pool[42])
     heavier = dataclasses.replace(config, weights={**config.weights, "pace": 5.0})
     assert composite_of(heavier, normalised) != composite_of(config, normalised)
-    expected = sum(config.weights[n] * normalised[n] for n in FEATURE_NAMES)
+    expected = sum(config.weights[n] * normalised[n] for n in config.weights)
     assert composite_of(config, normalised) == pytest.approx(expected)
 
 
@@ -262,3 +269,55 @@ def test_percentile_is_rounded_for_the_database_column(
     scored = score(config, reference, pool[33])
     assert scored.percentile == round(scored.percentile, 2)
     assert set(scored.features_json()) == {"raw", "normalised"}
+
+
+# --- v1 must not change when the feature set grows ----------------------------------------
+
+V1_GOLDEN = [  # (pool index, composite, percentile, stars) captured before the v2 work
+    (0, 0.7321616515367956, 0.0, 1.0),
+    (17, 3.3004990553430718, 69.85, 3.5),
+    (50, 2.4425657803787844, 25.61, 2.0),
+    (100, 1.8529699092207732, 5.03, 1.0),
+    (199, 4.43, 98.97, 5.0),
+]
+
+
+def test_v1_scores_are_unchanged_golden(
+    config: ScoringConfig, pool: list[dict[str, float]]
+) -> None:
+    reference = build_reference(config, pool)
+    assert reference.caps == {
+        "pace": 21.701,
+        "knockdowns": 2.0,
+        "sub_attempts": 3.0,
+        "reversals": 1.0,
+        "swings": 4.0,
+    }
+    for index, composite, percentile, stars in V1_GOLDEN:
+        scored = score(config, reference, pool[index])
+        assert scored.composite == pytest.approx(composite, abs=1e-12)
+        assert (scored.percentile, scored.stars) == (percentile, stars)
+
+
+def test_stored_features_hold_exactly_the_features_the_config_weights(
+    config: ScoringConfig, pool: list[dict[str, float]]
+) -> None:
+    """Extra raw features in the input (new candidates) must not leak into a v1 record."""
+    reference = build_reference(config, pool)
+    scored = score(config, reference, {**pool[0], "ko_finish": 1.0, "min_pace": 4.0})
+    assert set(scored.raw) == set(config.weights)
+    assert set(scored.normalised) == set(config.weights)
+
+
+def test_a_config_with_few_features_only_needs_and_caps_those(
+    config: ScoringConfig, pool: list[dict[str, float]]
+) -> None:
+    small = dataclasses.replace(config, weights={"pace": 1.0, "finish": 2.0})
+    reference = build_reference(small, pool)
+    assert set(reference.caps) == {"pace"}  # `finish` is binary, not capped
+    scored = score(small, reference, pool[10])
+    assert set(scored.raw) == {"pace", "finish"}
+    assert scored.composite == pytest.approx(
+        1.0 * min(pool[10]["pace"], reference.caps["pace"]) / reference.caps["pace"]
+        + 2.0 * pool[10]["finish"]
+    )

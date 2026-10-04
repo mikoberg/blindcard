@@ -24,6 +24,8 @@ def rnd(
     subs: int = 0,
     rev: int = 0,
     control: int = 0,
+    total: int | None = None,
+    td: int = 0,
 ) -> ParsedRound:
     return ParsedRound(
         round_number=number,
@@ -31,6 +33,10 @@ def rnd(
         knockdowns=kd,
         sig_strikes_landed=sig,
         sig_strikes_attempted=sig + 5,
+        total_strikes_landed=sig if total is None else total,
+        total_strikes_attempted=(sig if total is None else total) + 10,
+        takedowns_landed=td,
+        takedowns_attempted=td + 1,
         sub_attempts=subs,
         reversals=rev,
         control_seconds=control,

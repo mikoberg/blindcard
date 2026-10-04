@@ -151,3 +151,67 @@ def test_missing_round_data_makes_the_fight_unscorable() -> None:
     assert "round data does not cover every round" in problems
     assert not any(ch.isdigit() for p in problems for ch in p)  # no round numbers in messages
     assert scoring_problems(scoring_input([])) != []
+
+
+# --- additional candidate features (used by score versions that weight them) --------------
+
+
+def test_v1_features_are_a_prefix_subset_of_all_features() -> None:
+    from blindcard_ingest.scoring.features import V1_FEATURES
+
+    assert set(V1_FEATURES) < set(FEATURE_NAMES)
+    assert len(V1_FEATURES) == 10
+
+
+def test_new_features_on_a_full_distance_decision() -> None:
+    raw = compute_raw_features(scoring_input(three_round_decision_rounds()))
+    assert raw["ko_finish"] == 0 and raw["sub_finish"] == 0
+    assert raw["early_finish"] == 0
+    assert raw["time_fraction"] == pytest.approx(1.0)
+    assert raw["control_share_nofinish"] == pytest.approx(90 / 900)  # no finish: stalling counts
+    assert raw["min_pace"] == pytest.approx(50 / 15)  # the less active fighter: B, 50 in 15 min
+    assert raw["total_pace"] == pytest.approx(110 / 15)
+    assert raw["knockdowns_both"] == 0
+    assert raw["takedown_rate"] == 0
+
+
+def test_a_knockout_is_early_and_control_before_it_is_not_stalling() -> None:
+    rounds = [
+        rnd(1, A, sig=10, kd=1, control=120),
+        rnd(1, B, sig=5),
+        rnd(2, A, sig=4),
+        rnd(2, B, sig=2, kd=1),
+    ]
+    raw = compute_raw_features(
+        scoring_input(rounds, method="KO/TKO", end_round=2, end_time=100, scheduled=3)
+    )
+    assert raw["ko_finish"] == 1 and raw["sub_finish"] == 0
+    assert raw["early_finish"] == pytest.approx(1 - 400 / 900)
+    assert raw["time_fraction"] == pytest.approx(400 / 900)
+    assert raw["control_share"] == pytest.approx(120 / 400)  # v1's view: penalised
+    assert raw["control_share_nofinish"] == 0  # v2's view: a finish came out of it
+    assert raw["knockdowns_both"] == 1  # both fighters scored a knockdown
+    assert raw["min_pace"] == pytest.approx(7 / (400 / 60))
+
+
+def test_a_submission_is_a_submission_finish() -> None:
+    rounds = [rnd(1, A, sig=3, subs=2), rnd(1, B, sig=1)]
+    raw = compute_raw_features(
+        scoring_input(rounds, method="SUB", end_round=1, end_time=60, scheduled=3)
+    )
+    assert raw["sub_finish"] == 1 and raw["ko_finish"] == 0
+    assert raw["early_finish"] == pytest.approx(1 - 60 / 900)
+
+
+def test_non_finishes_never_count_as_early_finishes() -> None:
+    for method in ("DQ", "Overturned", "Could Not Continue", "U-DEC"):
+        raw = compute_raw_features(scoring_input(three_round_decision_rounds(), method=method))
+        assert raw["early_finish"] == 0 and raw["ko_finish"] == 0 and raw["sub_finish"] == 0
+
+
+def test_takedown_rate_is_takedowns_landed_per_minute_for_both_fighters() -> None:
+    rounds = [rnd(1, A, sig=1, td=2), rnd(1, B, sig=1), rnd(2, A, sig=1), rnd(2, B, sig=1, td=1)]
+    raw = compute_raw_features(
+        scoring_input(rounds, method="U-DEC", end_round=2, end_time=300, scheduled=2)
+    )
+    assert raw["takedown_rate"] == pytest.approx(3 / 10)  # 3 takedowns in 10 minutes
