@@ -3,12 +3,12 @@
 Spoiler-free fight rating site: fans see which fights on a card are worth watching without
 learning any result. See `CLAUDE.md` for the spoiler rule and the legal guardrails.
 
-Status: **Phase 1 (data side)**. No web UI yet (`web/`), no user-rating blend, no ML (`ml/`).
+Status: **Phase 2 (web)** is in place (`web/`, see `web/README.md`) on top of the Phase 1 data side. No user-rating blend, no ML (`ml/`).
 
 ```
 ingest/     Python 3.12: data source, scoring, CLI          (pytest)
 supabase/   Postgres schema (migrations) + RLS tests
-web/        Phase 2 placeholder
+web/        Next.js site (Phase 2)
 ml/         Phase 4 placeholder
 ```
 
