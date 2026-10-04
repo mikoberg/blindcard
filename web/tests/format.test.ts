@@ -23,9 +23,13 @@ describe("formatEventDate", () => {
   });
 
   it("rejects malformed or impossible dates", () => {
-    for (const bad of ["", "garbage", "2026-13-40", "26-09-2026", "2026-9-26"]) {
+    for (const bad of ["", "garbage", "2026-13-40", "26-09-2026", "2026-9-26", "2026-02-30", "2026-04-31", "2026-02-29", "2026-00-10", "2026-01-00"]) {
       expect(() => formatEventDate(bad)).toThrow(RangeError);
     }
+  });
+
+  it("accepts a real leap day", () => {
+    expect(formatEventDate("2028-02-29")).toBe("Tue 29 Feb 2028");
   });
 });
 

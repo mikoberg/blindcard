@@ -15,6 +15,9 @@ export function formatEventDate(isoDate: string): string {
   if (Number.isNaN(date.getTime())) {
     throw new RangeError(`not a valid date: ${isoDate}`);
   }
+  if (date.toISOString().slice(0, 10) !== isoDate) {
+    throw new RangeError(`not a valid date: ${isoDate}`);
+  }
   return `${WEEKDAYS[date.getUTCDay()]} ${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
