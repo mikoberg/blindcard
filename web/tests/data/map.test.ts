@@ -3,8 +3,8 @@ import { DataError } from "@/lib/data/ensure";
 import { buildCard, mapEvent, mapOverview, type FightRow, type FighterRow, type ScoreRow } from "@/lib/data/map";
 
 const fights: FightRow[] = [
-  { id: "f2", event_id: "e1", card_position: 2, weight_class: "Welterweight", is_title_fight: false, scheduled_rounds: 3, fighter_a_id: "p3", fighter_b_id: "p4" },
-  { id: "f1", event_id: "e1", card_position: 1, weight_class: "Lightweight", is_title_fight: true, scheduled_rounds: 5, fighter_a_id: "p1", fighter_b_id: "p2" },
+  { id: "f2", event_id: "e1", card_position: 2, card_segment: "prelim", weight_class: "Welterweight", is_title_fight: false, scheduled_rounds: 3, fighter_a_id: "p3", fighter_b_id: "p4" },
+  { id: "f1", event_id: "e1", card_position: 1, card_segment: "main", weight_class: "Lightweight", is_title_fight: true, scheduled_rounds: 5, fighter_a_id: "p1", fighter_b_id: "p2" },
 ];
 const fighters: FighterRow[] = [
   { id: "p1", name: "One" },
@@ -70,6 +70,22 @@ describe("buildCard", () => {
 
   it("throws when a fighter row is missing (data integrity)", () => {
     expect(() => buildCard(fights, fighters.slice(1), [])).toThrow(DataError);
+  });
+});
+
+describe("card segments in buildCard", () => {
+  it("carries the segment of each fight and treats an unknown value as no segment", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const card = buildCard(
+      [...fights, { ...fights[0]!, id: "f3", card_position: 3, card_segment: "headliner" }],
+      fighters,
+      [],
+    );
+    expect(card.map((f) => [f.id, f.cardSegment])).toEqual([
+      ["f1", "main"],
+      ["f2", "prelim"],
+      ["f3", null],
+    ]);
   });
 });
 

@@ -16,7 +16,7 @@ import psycopg
 import pytest
 from fakes import make_bundle
 
-from blindcard_ingest.db.repository import PostgresRepository
+from blindcard_ingest.db.repository import PostgresRepository, RepositoryError
 from blindcard_ingest.pipeline import run_rescore
 from blindcard_ingest.settings import DEFAULT_SCORING_CONFIG_DIR
 
@@ -245,3 +245,24 @@ def test_labeled_fights_come_only_from_events_with_a_stored_bonus(
     assert sorted(f.card_position for f in fights) == sorted(
         f.card_position for f in labeled.fights
     )
+
+
+def test_card_segments_are_stored_survive_a_re_ingest_and_ignore_unknown_fights(
+    conn: psycopg.Connection, repo: PostgresRepository
+) -> None:
+    bundle = make_bundle("seg1", DATE, seed=7)
+    repo.upsert_event_bundle(SOURCE, "UFC", bundle)
+    first, second = bundle.fights[0].source_id, bundle.fights[1].source_id
+    awards = {first: "main", second: "early_prelim", "no-such-fight": "prelim"}
+
+    assert repo.set_card_segments(SOURCE, awards) == 2
+    repo.upsert_event_bundle(SOURCE, "UFC", bundle)  # re-ingesting the event keeps its segments
+
+    rows = conn.execute(
+        "select source_id, card_segment from public.fights"
+        " where source = %s and source_id in (%s, %s)",
+        (SOURCE, first, second),
+    ).fetchall()
+    assert dict(rows) == {first: "main", second: "early_prelim"}
+    with pytest.raises(RepositoryError):
+        repo.set_card_segments(SOURCE, {first: "headliner"})

@@ -1,5 +1,5 @@
 import { isValidStars } from "@/lib/card/stars";
-import type { CardEvent, CardFight, Rating } from "@/lib/card/types";
+import type { CardEvent, CardFight, CardSegment, Rating } from "@/lib/card/types";
 import type { EventSummary, RatedSlot } from "@/lib/overview/types";
 import { DataError } from "./ensure";
 
@@ -15,6 +15,7 @@ export interface FightRow {
   id: string;
   event_id: string;
   card_position: number;
+  card_segment: string | null;
   weight_class: string | null;
   is_title_fight: boolean;
   scheduled_rounds: number | null;
@@ -63,6 +64,16 @@ function toRating(score: ScoreRow | undefined): Rating | null {
   return { stars, percentile };
 }
 
+const SEGMENTS: readonly CardSegment[] = ["main", "prelim", "early_prelim"];
+
+/** An unknown value is treated as "no segment", never guessed. */
+function toSegment(fight: FightRow): CardSegment | null {
+  if (fight.card_segment === null || fight.card_segment === undefined) return null;
+  if ((SEGMENTS as readonly string[]).includes(fight.card_segment)) return fight.card_segment as CardSegment;
+  console.warn(`unknown card segment for fight ${fight.id}; shown without a segment`);
+  return null;
+}
+
 export function buildCard(
   fights: readonly FightRow[],
   fighters: readonly FighterRow[],
@@ -82,6 +93,7 @@ export function buildCard(
       return {
         id: fight.id,
         cardPosition: fight.card_position,
+        cardSegment: toSegment(fight),
         weightClass: fight.weight_class,
         isTitleFight: fight.is_title_fight,
         scheduledRounds: fight.scheduled_rounds,

@@ -99,6 +99,7 @@ class FakeRepository:
     active_version: int | None = None
     scores: dict[tuple[str, int], ScoredFight] = field(default_factory=dict)
     bonuses: dict[str, list[str]] = field(default_factory=dict)
+    segments: dict[str, str] = field(default_factory=dict)
     upserts: int = 0
 
     def complete_event_source_ids(self, source: str) -> set[str]:
@@ -185,6 +186,20 @@ class FakeRepository:
         for fight_source_id, bonuses in bonuses_by_fight.items():
             if fight_source_id in known:
                 self.bonuses[fight_source_id] = list(bonuses)
+                updated += 1
+        return updated
+
+    def set_card_segments(self, source: str, segments_by_fight: Mapping[str, str]) -> int:
+        known = {
+            fight.source_id
+            for (src, _), bundle in self.events.items()
+            if src == source
+            for fight in bundle.fights
+        }
+        updated = 0
+        for fight_source_id, segment in segments_by_fight.items():
+            if fight_source_id in known:
+                self.segments[fight_source_id] = segment
                 updated += 1
         return updated
 

@@ -1,5 +1,6 @@
 import { fightBlurb } from "@/lib/card/blurb";
 import { isHiddenGem } from "@/lib/card/hiddenGem";
+import { SEGMENT_LABELS } from "@/lib/card/segments";
 import { formatStars } from "@/lib/card/stars";
 import type { CardFight } from "@/lib/card/types";
 import { Monogram } from "./Monogram";
@@ -26,7 +27,14 @@ function RatingPlate({ stars }: { stars: number | null }) {
   );
 }
 
-export function FightCard({ fight }: { fight: CardFight }) {
+export function FightCard({
+  fight,
+  showSegment = false,
+}: {
+  fight: CardFight;
+  /** Label the card with its part of the card (used when the list is not grouped). */
+  showSegment?: boolean;
+}) {
   return (
     <li
       id={`fight-${fight.id}`}
@@ -37,6 +45,11 @@ export function FightCard({ fight }: { fight: CardFight }) {
         <RatingPlate stars={fight.rating?.stars ?? null} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            {showSegment && fight.cardSegment && (
+              <span className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-xs font-semibold text-[var(--muted)]">
+                {SEGMENT_LABELS[fight.cardSegment]}
+              </span>
+            )}
             {fight.isTitleFight && (
               <span className="rounded-full border border-[var(--accent)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">
                 Title fight

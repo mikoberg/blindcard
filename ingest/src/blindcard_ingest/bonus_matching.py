@@ -110,7 +110,7 @@ def _letters(slug: str) -> str:
     return "".join(sorted(slug.replace("-", "")))
 
 
-class _EventIndex:
+class EventIndex:
     """Fighters of one event, resolved to their fight by an ordered list of increasingly loose
     steps. EVERY step must find exactly one fighter: two candidates mean "refuse", never
     "pick one" and never "fall through to a weaker step"."""
@@ -191,7 +191,7 @@ class _EventIndex:
 
 
 def resolve_awards(awards: BonusAwards, fights: Sequence[FightNames]) -> AwardResolution:
-    index = _EventIndex(fights)
+    index = EventIndex(fights)
     labels: dict[str, set[str]] = {}
     missed: list[str] = []
     total = unresolved = 0

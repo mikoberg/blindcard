@@ -79,3 +79,16 @@ jobs:
           args=(--since-days "$SINCE_DAYS")
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-latest "${args[@]}"
+
+      # Which part of the card each fight was on (main card / prelims / early prelims), read
+      # from the event's Wikipedia article. An event is only segmented when every fight matches,
+      # so a card whose article is not updated yet simply shows no split until a later run.
+      - name: Card segments
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          args=(--from "$(date -u +%Y)")
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          blindcard-ingest ingest-segments "${args[@]}"

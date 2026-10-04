@@ -8,6 +8,7 @@ export function makeFight(position: number, stars: number | null, extra: Extra =
   return {
     id: `fight-${position}`,
     cardPosition: position,
+    cardSegment: null,
     weightClass: "Lightweight",
     isTitleFight: false,
     scheduledRounds: 3,

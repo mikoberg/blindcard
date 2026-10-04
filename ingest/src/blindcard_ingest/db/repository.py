@@ -118,6 +118,13 @@ class Repository(Protocol):
         """
         ...
 
+    def set_card_segments(self, source: str, segments_by_fight: Mapping[str, str]) -> int:
+        """Set `fights.card_segment` (main / prelim / early_prelim) by fight source id.
+
+        Returns how many existing fights were updated; unknown fights are ignored.
+        """
+        ...
+
     def events_for_bonus_matching(self, source: str, from_year: int) -> list[EventToLabel]:
         """Stored events from `from_year` on, with the fighter names of each fight."""
         ...
@@ -424,6 +431,20 @@ class PostgresRepository:
                     where f.id = r.fight_id and f.source = %s and f.source_id = %s
                     """,
                     (list(bonuses), source, fight_source_id),
+                )
+                updated += cur.rowcount
+        return updated
+
+    def set_card_segments(self, source: str, segments_by_fight: Mapping[str, str]) -> int:
+        if not segments_by_fight:
+            return 0
+        updated = 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            for fight_source_id, segment in segments_by_fight.items():
+                cur.execute(
+                    "update public.fights set card_segment = %s"
+                    " where source = %s and source_id = %s",
+                    (segment, source, fight_source_id),
                 )
                 updated += cur.rowcount
         return updated

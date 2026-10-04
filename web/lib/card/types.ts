@@ -10,10 +10,15 @@ export interface Rating {
   percentile: number;
 }
 
+/** Which part of the card a fight was on. A pre-fight fact (the running order is announced). */
+export type CardSegment = "main" | "prelim" | "early_prelim";
+
 export interface CardFight {
   id: string;
   /** 1 = main event. */
   cardPosition: number;
+  /** null = unknown: the event's segments could not be established completely. */
+  cardSegment: CardSegment | null;
   weightClass: string | null;
   isTitleFight: boolean;
   scheduledRounds: number | null;

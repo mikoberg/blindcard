@@ -1,4 +1,4 @@
-"""Command line: backfill, ingest-latest, ingest-bonuses, fit-scoring, rescore.
+"""Command line: backfill, ingest-latest, ingest-bonuses, ingest-segments, fit-scoring, rescore.
 
 Exit codes: 0 = ok, 1 = the run finished but reported errors (unscored fights, failed or
 overdue events), 2 = bad configuration or unusable input (nothing meaningful was done).
@@ -29,6 +29,7 @@ from blindcard_ingest.pipeline import (
 )
 from blindcard_ingest.scoring.config import ScoringConfigError
 from blindcard_ingest.scoring.scorer import ScoringError
+from blindcard_ingest.segment_pipeline import run_ingest_segments
 from blindcard_ingest.settings import Settings, SettingsError, load_settings
 from blindcard_ingest.sources.base import FightDataSource
 from blindcard_ingest.sources.ufcstats.dataset import SOURCE_NAME, DatasetError
@@ -78,6 +79,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="label fights with Fight/Performance of the Night (from Wikipedia)",
     )
     bonuses.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
+
+    segments = commands.add_parser(
+        "ingest-segments",
+        parents=[common],
+        help="store which part of the card (main / prelims / early prelims) each fight was on",
+    )
+    segments.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
 
     fit = commands.add_parser(
         "fit-scoring",
@@ -200,6 +208,23 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
             logger.warning(
                 "only %.0f%% of events are labelled; see the local bonus_report.json",
                 100 * bonus_report.labeled_share,
+            )
+        return EXIT_OK
+
+    if args.command == "ingest-segments":
+        with _open_repository(settings) as repo, _open_wikipedia(settings) as wiki:
+            segment_report = run_ingest_segments(
+                wiki,
+                repo,
+                source_name=SOURCE_NAME,
+                from_year=args.from_year,
+                report_path=settings.cache_dir.parent / "segment_report.json",
+                dry_run=args.dry_run,
+            )
+        if segment_report.segmented_share < 0.9:
+            logger.warning(
+                "only %.0f%% of events got card segments; see the local segment_report.json",
+                100 * segment_report.segmented_share,
             )
         return EXIT_OK
 

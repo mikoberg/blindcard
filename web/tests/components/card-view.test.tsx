@@ -61,3 +61,38 @@ describe("CardView", () => {
     expect(html.replace("UFC Fight Night: Alpha vs. Beta", "")).not.toMatch(/UFC|Octagon/);
   });
 });
+
+describe("CardView with card segments", () => {
+  const segmented = [
+    makeFight(1, 4.5, { cardSegment: "main" }),
+    makeFight(2, 3, { cardSegment: "main" }),
+    makeFight(3, 4, { cardSegment: "prelim" }),
+    makeFight(4, 2, { cardSegment: "early_prelim" }),
+  ];
+
+  it("shows the fights under Main card, Prelims and Early prelims, in that order", () => {
+    const html = render(segmented);
+    const main = html.indexOf("Main card");
+    const prelims = html.indexOf("Prelims");
+    const early = html.indexOf("Early prelims");
+    expect(main).toBeGreaterThan(-1);
+    expect(prelims).toBeGreaterThan(main);
+    expect(early).toBeGreaterThan(prelims);
+    // each fight sits after its own heading
+    expect(html.indexOf('data-fight-id="fight-2"')).toBeLessThan(prelims);
+    expect(html.indexOf('data-fight-id="fight-3"')).toBeGreaterThan(prelims);
+    expect(html.indexOf('data-fight-id="fight-4"')).toBeGreaterThan(early);
+  });
+
+  it("shows a flat card when the event has no segments", () => {
+    const html = render([makeFight(1, 4.5), makeFight(2, 3)]);
+    expect(html).not.toContain("Main card");
+    expect(html).not.toContain("Prelims");
+  });
+
+  it("shows a flat card when only some fights have a segment (never half a split)", () => {
+    const html = render([makeFight(1, 4.5, { cardSegment: "main" }), makeFight(2, 3)]);
+    expect(html).not.toContain("Early prelims");
+    expect(html).not.toContain("Prelims");
+  });
+});

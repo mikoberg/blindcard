@@ -56,6 +56,17 @@ insert into auth.users (id) values
 insert into public.ratings (fight_id, user_id, stars)
 values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c2', 2);
 
+-- Card segment: only the three known values (as owner).
+do $$
+begin
+  begin
+    update public.fights set card_segment = 'headliner' where source = 'test';
+    raise exception 'FAIL: fights accepted an unknown card segment';
+  exception when check_violation then
+    raise notice 'PASS unknown card segments are rejected';
+  end;
+end $$;
+
 ------------------------------------------------------------------------------
 -- Fighter-order guard (as owner): a/b must follow the source_id rule, never the listing
 ------------------------------------------------------------------------------
@@ -155,6 +166,21 @@ begin
     and column_name not in ('id', 'slug', 'name', 'event_date', 'location', 'ratings');
   if n <> 0 then raise exception 'FAIL: event_overview has unexpected columns'; end if;
   raise notice 'PASS event_overview is public, active version only';
+end $$;
+
+-- Card segments are a public, pre-fight fact: readable, but only the three known values.
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from public.fights where source = 'test' and card_segment is null;
+  if n <> 1 then raise exception 'FAIL: seeded fight should have no segment yet, got %', n; end if;
+  begin
+    update public.fights set card_segment = 'main' where source = 'test';
+    raise exception 'FAIL: anon could write a card segment';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot write card segments';
+  end;
 end $$;
 
 -- Score breakdown reveal: one fight per call, active version only, same config as the features.
