@@ -177,3 +177,62 @@ def test_no_awards_at_all_is_never_complete() -> None:
     result = resolve_awards(awards(), FIGHTS)
     assert not result.complete
     assert result.awards_total == 0 and result.bonuses_by_fight == {}
+
+
+# --- name variants seen in real Wikipedia data --------------------------------------------
+
+
+def _one_fight(*names: str) -> list[FightNames]:
+    return [FightNames("f", (names[0], names[1]))]
+
+
+def test_family_and_given_name_in_another_order_or_split_differently() -> None:
+    fights = _one_fight("Song Yadong", "Opponent A") + [
+        FightNames("g", ("HyunSung Park", "Opponent B")),
+        FightNames("h", ("Batgerel Danaa", "Chan Sung Jung")),
+    ]
+    result = resolve_awards(
+        awards(potn=("Yadong Song", "Park Hyun-sung", "Danaa Batgerel", "Jung Chan-sung")), fights
+    )
+    assert result.complete
+    assert set(result.bonuses_by_fight) == {"f", "g", "h"}
+
+
+def test_an_extra_given_name_is_accepted_when_the_rest_matches() -> None:
+    fights = _one_fight("Diego Ferreira", "Opponent A")
+    assert resolve_awards(awards(potn=("Carlos Diego Ferreira",)), fights).complete
+    fights = _one_fight("Bruno Silva", "Opponent A")
+    assert resolve_awards(awards(potn=("Bruno Gustavo da Silva",)), fights).complete
+
+
+def test_a_single_shared_token_is_not_a_subset_match() -> None:
+    # "Maria" alone is not enough to claim "Maria Souza"; the last-name step has to decide.
+    fights = _one_fight("Maria Souza", "Opponent A")
+    assert resolve_awards(awards(potn=("Maria",)), fights).complete is False
+
+
+def test_a_nickname_instead_of_the_given_name_resolves_by_a_unique_last_name() -> None:
+    fights = _one_fight("Jacare Souza", "Opponent A") + [FightNames("g", ("Bobby Green", "X Y"))]
+    result = resolve_awards(awards(potn=("Ronaldo Souza",)), fights)
+    assert result.complete and set(result.bonuses_by_fight) == {"f"}
+
+
+def test_a_shared_last_name_on_the_card_is_never_guessed() -> None:
+    fights = [
+        FightNames("a", ("Jacare Souza", "X One")),
+        FightNames("b", ("Edimilson Souza", "X Two")),
+    ]
+    assert not resolve_awards(awards(potn=("Ronaldo Souza",)), fights).complete
+
+
+def test_unrelated_names_still_do_not_match() -> None:
+    fights = _one_fight("Chris Gruetzemacher", "Mike Pierce")
+    for name in ("Chris Weidman", "Conor McGregor", "Luke Rockhold"):
+        assert not resolve_awards(awards(potn=(name,)), fights).complete
+
+
+def test_a_fight_of_the_night_pair_resolves_through_the_new_steps() -> None:
+    fights = [FightNames("f", ("Song Yadong", "Marlon Vera"))]
+    result = resolve_awards(awards(fotn=(("Yadong Song", "Marlon Vera"),)), fights)
+    assert result.complete
+    assert result.bonuses_by_fight == {"f": (FIGHT_OF_THE_NIGHT,)}

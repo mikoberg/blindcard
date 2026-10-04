@@ -3,8 +3,10 @@
 Rules (never guess):
   * an event is matched to a page by date (a one-day difference is allowed for events
     outside the US) and, when several candidates remain, by name tokens;
-  * names are compared as slugs (diacritics folded), then without generational suffixes
-    (Jr, Sr, II, ...), then by a close spelling that must be unique;
+  * names are compared as slugs (diacritics folded) through ordered steps: exact, without
+    generational suffixes (Jr, Sr, II, ...), same letters in another order, one name containing
+    the other, a close spelling, and finally the same last name. Every step must find exactly
+    ONE fighter of the event, otherwise the name stays unresolved;
   * every award must resolve to exactly one fight of THAT event; one unresolved award makes the
     whole event "incomplete" and the caller must not store any of its labels.
 """
@@ -99,41 +101,93 @@ def _strip_suffix(slug: str) -> str:
     return "-".join(parts)
 
 
+def _slug_tokens(slug: str) -> list[str]:
+    return [t for t in slug.split("-") if t and t not in _SUFFIXES]
+
+
+def _letters(slug: str) -> str:
+    """The slug's letters sorted: equal for the same name in another order or split."""
+    return "".join(sorted(slug.replace("-", "")))
+
+
 class _EventIndex:
-    """Fighter name -> fight id for one event; a name that maps to two fights is ambiguous."""
+    """Fighters of one event, resolved to their fight by an ordered list of increasingly loose
+    steps. EVERY step must find exactly one fighter: two candidates mean "refuse", never
+    "pick one" and never "fall through to a weaker step"."""
 
     def __init__(self, fights: Sequence[FightNames]) -> None:
-        self._exact: dict[str, str | None] = {}
-        self._stripped: dict[str, str | None] = {}
+        # fighter slug -> fight id (None when the same slug appears in two fights)
+        self._fighters: dict[str, str | None] = {}
         for fight in fights:
             for name in fight.names:
                 slug = slugify(name)
-                self._put(self._exact, slug, fight.source_id)
-                self._put(self._stripped, _strip_suffix(slug), fight.source_id)
+                if slug in self._fighters and self._fighters[slug] != fight.source_id:
+                    self._fighters[slug] = None
+                else:
+                    self._fighters[slug] = fight.source_id
 
-    @staticmethod
-    def _put(table: dict[str, str | None], key: str, fight_id: str) -> None:
-        if key in table and table[key] != fight_id:
-            table[key] = None
-        else:
-            table[key] = fight_id
+    def _exact(self, slug: str) -> set[str]:
+        return {slug} if slug in self._fighters else set()
 
-    def resolve(self, name: str) -> str | None:
-        slug = slugify(name)
-        if slug in self._exact:
-            return self._exact[slug]
+    def _without_suffix(self, slug: str) -> set[str]:
+        target = _strip_suffix(slug)
+        return {k for k in self._fighters if _strip_suffix(k) == target}
+
+    def _same_letters(self, slug: str) -> set[str]:
+        """Family and given name swapped, or hyphenated differently ("Song Yadong")."""
+        target = _letters(slug)
+        return {k for k in self._fighters if _letters(k) == target}
+
+    def _name_contains(self, slug: str) -> set[str]:
+        """One name is the other plus extra parts ("Carlos Diego Ferreira" / "Diego Ferreira")."""
+        wanted = set(_slug_tokens(slug))
+        found = set()
+        for key in self._fighters:
+            have = set(_slug_tokens(key))
+            small, large = sorted((wanted, have), key=len)
+            if len(small) >= 2 and small <= large:
+                found.add(key)
+        return found
+
+    def _close_spelling(self, slug: str) -> set[str]:
         stripped = _strip_suffix(slug)
-        if stripped in self._stripped:
-            return self._stripped[stripped]
         ranked = sorted(
-            ((difflib.SequenceMatcher(None, stripped, key).ratio(), key) for key in self._stripped),
+            (
+                (difflib.SequenceMatcher(None, stripped, _strip_suffix(key)).ratio(), key)
+                for key in self._fighters
+            ),
             reverse=True,
         )
         if not ranked or ranked[0][0] < _FUZZY_CUTOFF:
-            return None
-        if len(ranked) > 1 and ranked[1][0] > ranked[0][0] - _FUZZY_MARGIN:
-            return None  # two equally plausible candidates: refuse
-        return self._stripped[ranked[0][1]]
+            return set()
+        best = ranked[0][0]
+        return {key for ratio, key in ranked if ratio >= best - _FUZZY_MARGIN}
+
+    def _same_last_name(self, slug: str) -> set[str]:
+        """A ring name or nickname instead of the given name ("Jacare Souza" / "Ronaldo Souza")."""
+        tokens = _slug_tokens(slug)
+        if not tokens:
+            return set()
+        return {
+            key for key in self._fighters if (have := _slug_tokens(key)) and have[-1] == tokens[-1]
+        }
+
+    def resolve(self, name: str) -> str | None:
+        slug = slugify(name)
+        for step in (
+            self._exact,
+            self._without_suffix,
+            self._same_letters,
+            self._name_contains,
+            self._close_spelling,
+            self._same_last_name,
+        ):
+            candidates = step(slug)
+            if len(candidates) == 1:
+                return self._fighters[next(iter(candidates))]
+            if len(candidates) > 1:
+                return None
+        return None
 
 
 def resolve_awards(awards: BonusAwards, fights: Sequence[FightNames]) -> AwardResolution:
