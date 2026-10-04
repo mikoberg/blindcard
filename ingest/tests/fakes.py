@@ -11,6 +11,7 @@ from helpers import make_fight, rnd
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.db.repository import FightScoringInput, LabeledFight, StoredScoringVersion
 from blindcard_ingest.models import EventBundle, ParsedEvent, ParsedFight
+from blindcard_ingest.scoring.career import CareerContext, HistoryBout, career_contexts
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import ScoringInput
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
@@ -121,6 +122,24 @@ class FakeRepository:
         config, reference = self.versions[self.active_version]
         return StoredScoringVersion(config=config, reference=reference)
 
+    def _contexts(self) -> dict[str, CareerContext]:
+        bouts = [
+            HistoryBout(
+                fight_id=fight.source_id,
+                event_date=bundle.event.event_date,
+                card_position=fight.card_position,
+                is_title_fight=fight.is_title_fight,
+                fighter_a=fight.fighter_a.source_id,
+                fighter_b=fight.fighter_b.source_id,
+                winner=fight.result.winner_source_id if fight.result else None,
+                has_result=fight.result is not None,
+                outcome=fight.result.outcome if fight.result else "win",
+            )
+            for bundle in self.events.values()
+            for fight in bundle.fights
+        ]
+        return career_contexts(bouts)
+
     def scoring_inputs(
         self,
         *,
@@ -128,6 +147,7 @@ class FakeRepository:
         event_source_ids: Collection[str] | None = None,
         missing_score_for_version: int | None = None,
     ) -> list[FightScoringInput]:
+        contexts = self._contexts()
         items: list[FightScoringInput] = []
         for (src, event_id), bundle in sorted(self.events.items(), key=lambda kv: kv[0][1]):
             if source is not None and src != source:
@@ -154,6 +174,7 @@ class FakeRepository:
                             rounds=fight.rounds,
                             card_position=fight.card_position,
                             is_title_fight=fight.is_title_fight,
+                            context=contexts.get(fight.source_id),
                         ),
                     )
                 )

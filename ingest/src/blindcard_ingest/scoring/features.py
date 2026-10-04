@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from blindcard_ingest.models import SECONDS_PER_ROUND, ParsedFight, ParsedRound
+from blindcard_ingest.scoring.career import CareerContext
 
 #: The ten features of score v1. v1's config weights exactly these; they must keep their meaning.
 V1_FEATURES: tuple[str, ...] = (
@@ -45,6 +46,12 @@ NEW_FEATURES: tuple[str, ...] = (
     "title_fight",  # a championship bout
     "volume",  # significant strikes landed over the whole fight, both fighters
     "five_rounds",  # scheduled for five rounds
+    # Career context: what was known about the two fighters before the bout.
+    "rematch",  # they have fought each other before
+    "streak",  # the two fighters' current win streaks, added
+    "star_power",  # their earlier main events and title fights, added
+    "unbeaten_fighter",  # at least one of them has no UFC loss (after a few fights)
+    "experience",  # UFC fights of the less experienced of the two
 )
 
 FEATURE_NAMES: tuple[str, ...] = V1_FEATURES + NEW_FEATURES
@@ -60,6 +67,9 @@ CAPPED_FEATURES: tuple[str, ...] = (
     "total_pace",
     "takedown_rate",
     "volume",
+    "streak",
+    "star_power",
+    "experience",
 )
 
 
@@ -112,6 +122,8 @@ class ScoringInput:
     #: Pre-fight facts about the bout's place on the card (None = not known to the caller).
     card_position: int | None = None
     is_title_fight: bool = False
+    #: What was known about the two fighters before the bout (None = not available).
+    context: CareerContext | None = None
 
     @classmethod
     def from_fight(cls, fight: ParsedFight) -> ScoringInput:
@@ -234,6 +246,25 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "title_fight": 1.0 if inp.is_title_fight else 0.0,
         "volume": float(total_sig),
         "five_rounds": 1.0 if inp.scheduled_rounds == 5 else 0.0,
+        **_career_features(inp.context),
+    }
+
+
+def _career_features(context: CareerContext | None) -> dict[str, float]:
+    if context is None:
+        return {
+            "rematch": 0.0,
+            "streak": 0.0,
+            "star_power": 0.0,
+            "unbeaten_fighter": 0.0,
+            "experience": 0.0,
+        }
+    return {
+        "rematch": 1.0 if context.prior_meetings > 0 else 0.0,
+        "streak": float(sum(context.win_streaks)),
+        "star_power": float(sum(context.prior_headliners)),
+        "unbeaten_fighter": 1.0 if any(context.unbeaten) else 0.0,
+        "experience": float(min(context.prior_fights)),
     }
 
 

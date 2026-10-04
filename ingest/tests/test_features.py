@@ -241,3 +241,26 @@ def test_volume_is_all_significant_strikes_landed_and_five_rounds_follows_the_sc
     assert raw["volume"] == 110 and raw["five_rounds"] == 0
     five = compute_raw_features(scoring_input(rounds, end_round=3, end_time=300, scheduled=5))
     assert five["five_rounds"] == 1 and five["volume"] == 110
+
+
+def test_career_features_come_from_the_context_and_are_zero_without_one() -> None:
+    from blindcard_ingest.scoring.career import CareerContext
+
+    rounds = three_round_decision_rounds()
+    assert compute_raw_features(scoring_input(rounds))["rematch"] == 0
+    context = CareerContext(
+        prior_meetings=1,
+        win_streaks=(3, 5),
+        prior_fights=(12, 20),
+        prior_headliners=(2, 4),
+        unbeaten=(False, True),
+    )
+    raw = compute_raw_features(scoring_input(rounds, context=context))
+    assert raw["rematch"] == 1
+    assert raw["streak"] == 8
+    assert raw["star_power"] == 6
+    assert raw["unbeaten_fighter"] == 1
+    assert raw["experience"] == 12  # the less experienced of the two
+
+    none = compute_raw_features(scoring_input(rounds, context=None))
+    assert none["streak"] == 0 and none["experience"] == 0 and none["unbeaten_fighter"] == 0

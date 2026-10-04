@@ -20,6 +20,7 @@ from psycopg.types.json import Jsonb
 
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
+from blindcard_ingest.scoring.career import HistoryBout, career_contexts
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import ScoringInput
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
@@ -399,6 +400,7 @@ class PostgresRepository:
                     fight_key = row.pop("fight_id")
                     rounds_by_fight.setdefault(fight_key, []).append(ParsedRound(**row))
 
+        contexts = career_contexts(self._history_bouts())
         return [
             FightScoringInput(
                 fight_id=str(row["id"]),
@@ -411,9 +413,41 @@ class PostgresRepository:
                     rounds=rounds_by_fight.get(row["id"], []),
                     card_position=row["card_position"],
                     is_title_fight=row["is_title_fight"],
+                    context=contexts.get(str(row["id"])),
                 ),
             )
             for row in fights
+        ]
+
+    def _history_bouts(self) -> list[HistoryBout]:
+        """Every stored bout with who won, for the fighters' history (all sources)."""
+        query = """
+            select f.id, e.event_date, f.card_position, f.is_title_fight,
+                   a.source_id as a_id, b.source_id as b_id, w.source_id as winner,
+                   r.outcome, (r.fight_id is not null) as has_result
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fighters a on a.id = f.fighter_a_id
+            join public.fighters b on b.id = f.fighter_b_id
+            left join public.fight_results r on r.fight_id = f.id
+            left join public.fighters w on w.id = r.winner_fighter_id
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+        return [
+            HistoryBout(
+                fight_id=str(row["id"]),
+                event_date=row["event_date"],
+                card_position=row["card_position"],
+                is_title_fight=row["is_title_fight"],
+                fighter_a=row["a_id"],
+                fighter_b=row["b_id"],
+                winner=row["winner"],
+                has_result=row["has_result"],
+                outcome=row["outcome"] or "win",
+            )
+            for row in rows
         ]
 
     def save_scores(self, version: int, scored: Sequence[tuple[str, ScoredFight]]) -> None:

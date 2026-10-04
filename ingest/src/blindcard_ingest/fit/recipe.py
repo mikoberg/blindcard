@@ -1,12 +1,13 @@
-"""The recipe behind score v6: one score, fitted to the night bonuses, written as TOML.
+"""The recipe behind score v7: one score, fitted to the night bonuses, written as TOML.
 
 The score blends two fits of the same features:
   * Fight of the Night: how worth watching a fight is (two-way action, pace, swings);
   * Performance of the Night: dominant finishes.
 What a fan finds worth watching includes a finish (KO/TKO and submission are ONE feature,
 "finish"), how early it came, how much happened over the whole fight (volume, a five-round
-war), and how big the fight was (main event, co-main, title fight). None of those may
-subtract from a score. The share of the Performance fit is the largest one
+war), how big the fight was (main event, co-main, title fight) and what was known about the
+fighters beforehand (rematch, win streaks, an unbeaten fighter, earlier headliners). None of
+those may subtract from a score. The share of the Performance fit is the largest one
 that keeps AUC(stars -> finished) within a margin of neutral on the training years: a wider
 margin gives finishes more credit. The stakes are known before the fight and cost nothing.
 
@@ -50,6 +51,11 @@ SCORE_FEATURES: tuple[str, ...] = (
     "title_fight",
     "volume",
     "five_rounds",
+    "rematch",
+    "streak",
+    "star_power",
+    "unbeaten_fighter",
+    "experience",
 )
 
 #: Share of the Performance fit blended into the score, tried in this order.
@@ -59,10 +65,29 @@ BLEND_GRID: tuple[float, ...] = tuple(i / 40 for i in range(25))
 #: event, so these weights are capped at this share of the largest weight (after scaling).
 STAKES_FEATURES: tuple[str, ...] = ("main_event", "co_main", "title_fight")
 DEFAULT_STAKES_CAP = 0.20
+#: What was known about the fighters beforehand: a story the numbers of the bout cannot show.
+#: The labels (bonuses) hardly say anything about it, so these are capped too, a bit higher.
+CAREER_FEATURES: tuple[str, ...] = (
+    "rematch",
+    "streak",
+    "star_power",
+    "unbeaten_fighter",
+    "experience",
+)
+DEFAULT_CAREER_CAP = 0.35
 
 #: Good for a fight by definition: they may add to a score but never subtract from it.
 NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(
-    {"finish", "early_finish", "main_event", "co_main", "title_fight", "volume", "five_rounds"}
+    {
+        "finish",
+        "early_finish",
+        "main_event",
+        "co_main",
+        "title_fight",
+        "volume",
+        "five_rounds",
+        *CAREER_FEATURES,
+    }
 )
 
 NEUTRAL_LEAK = 0.5  # AUC(stars -> finished) of a score that says nothing about finishes
@@ -91,6 +116,11 @@ FEATURE_NOTES: dict[str, str] = {
     "title_fight": "a championship bout",
     "volume": "significant strikes landed over the whole fight, both fighters",
     "five_rounds": "scheduled for five rounds",
+    "rematch": "the two fighters have met before",
+    "streak": "the two fighters' current win streaks, added",
+    "star_power": "their earlier main events and title fights, added",
+    "unbeaten_fighter": "at least one of them has no UFC loss",
+    "experience": "UFC fights of the less experienced of the two",
 }
 
 
@@ -169,7 +199,9 @@ def _predict(weights: Mapping[str, float], row: Mapping[str, float]) -> float:
     return sum(weight * row[name] for name, weight in weights.items())
 
 
-def _scaled(weights: Mapping[str, float], stakes_cap: float) -> dict[str, float]:
+def _scaled(
+    weights: Mapping[str, float], stakes_cap: float, career_cap: float = DEFAULT_CAREER_CAP
+) -> dict[str, float]:
     """Largest weight magnitude 1.0, stakes capped, rounded to 3 decimals, zeros dropped.
 
     The score is a percentile of the composite, so the scale does not matter; this only makes
@@ -180,6 +212,9 @@ def _scaled(weights: Mapping[str, float], stakes_cap: float) -> dict[str, float]
     for name in STAKES_FEATURES:
         if name in rounded:
             rounded[name] = min(rounded[name], stakes_cap)
+    for name in CAREER_FEATURES:
+        if name in rounded:
+            rounded[name] = min(rounded[name], career_cap)
     return {name: w for name, w in rounded.items() if w != 0.0}
 
 

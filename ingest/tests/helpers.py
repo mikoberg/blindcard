@@ -9,6 +9,7 @@ from blindcard_ingest.models import (
     ParsedRound,
     order_fighters,
 )
+from blindcard_ingest.scoring.career import CareerContext
 from blindcard_ingest.scoring.features import ScoringInput
 
 A = "aaa111"
@@ -52,6 +53,7 @@ def scoring_input(
     scheduled: int | None = 3,
     card_position: int | None = None,
     is_title_fight: bool = False,
+    context: CareerContext | None = None,
 ) -> ScoringInput:
     return ScoringInput(
         scheduled_rounds=scheduled,
@@ -61,6 +63,7 @@ def scoring_input(
         rounds=rounds,
         card_position=card_position,
         is_title_fight=is_title_fight,
+        context=context,
     )
 
 

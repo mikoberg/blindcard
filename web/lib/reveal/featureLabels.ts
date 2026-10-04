@@ -29,6 +29,16 @@ const LABELS: Record<string, FeatureLabel> = {
   early_finish: { label: "How early the finish came", format: percent },
   time_fraction: { label: "Share of the scheduled time used", format: percent },
   control_share: { label: "Time spent under control", format: percent },
+  volume: { label: "Strikes landed over the whole fight", format: count },
+  five_rounds: { label: "Scheduled for five rounds", format: yesNo },
+  main_event: { label: "Main event", format: yesNo },
+  co_main: { label: "Co-main event", format: yesNo },
+  title_fight: { label: "Title fight", format: yesNo },
+  rematch: { label: "Rematch", format: yesNo },
+  streak: { label: "Win streaks of the two fighters", format: count },
+  star_power: { label: "Earlier main events and title fights", format: count },
+  unbeaten_fighter: { label: "An unbeaten fighter", format: yesNo },
+  experience: { label: "UFC fights of the less experienced fighter", format: count },
   control_share_nofinish: { label: "Time under control without a finish", format: percent },
 };
 
