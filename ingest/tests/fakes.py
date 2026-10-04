@@ -152,6 +152,8 @@ class FakeRepository:
                             end_round=fight.result.end_round,
                             end_time_seconds=fight.result.end_time_seconds,
                             rounds=fight.rounds,
+                            card_position=fight.card_position,
+                            is_title_fight=fight.is_title_fight,
                         ),
                     )
                 )

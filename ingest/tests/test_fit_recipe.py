@@ -69,10 +69,9 @@ def result() -> FitResult:
     return fit_scoring(rows, [r.raw for r in rows], cap_quantile=0.99)
 
 
-def test_the_score_has_no_duration_features_and_follows_the_action(result: FitResult) -> None:
+def test_the_score_follows_the_action_and_leaves_out_redundant_duration(result: FitResult) -> None:
     assert set(result.weights) <= set(SCORE_FEATURES)
-    assert "time_fraction" not in result.weights
-    assert "early_finish" not in result.weights
+    assert "time_fraction" not in result.weights  # early_finish says the same
     assert result.weights["min_pace"] > 0
     assert max(abs(w) for w in result.weights.values()) == 1.0
 
@@ -82,6 +81,19 @@ def test_ko_and_submission_are_one_factor_and_a_finish_never_counts_against_a_fi
 ) -> None:
     assert "ko_finish" not in result.weights and "sub_finish" not in result.weights
     assert result.weights.get("finish", 0.0) >= 0
+
+
+def test_nothing_that_makes_a_fight_good_ever_subtracts(result: FitResult) -> None:
+    for name in (
+        "finish",
+        "early_finish",
+        "main_event",
+        "co_main",
+        "title_fight",
+        "volume",
+        "five_rounds",
+    ):
+        assert result.weights.get(name, 0.0) >= 0.0
 
 
 def test_a_finish_adds_to_the_score_when_the_margin_allows_it(result: FitResult) -> None:

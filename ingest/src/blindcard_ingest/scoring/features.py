@@ -39,6 +39,12 @@ NEW_FEATURES: tuple[str, ...] = (
     "min_pace",  # significant strikes per minute of the LESS active fighter
     "total_pace",  # total strikes landed per minute, both fighters
     "takedown_rate",  # takedowns landed per minute, both fighters
+    # Stakes: announced before the fight, so they say nothing about how it went.
+    "main_event",  # card position 1
+    "co_main",  # card position 2
+    "title_fight",  # a championship bout
+    "volume",  # significant strikes landed over the whole fight, both fighters
+    "five_rounds",  # scheduled for five rounds
 )
 
 FEATURE_NAMES: tuple[str, ...] = V1_FEATURES + NEW_FEATURES
@@ -53,6 +59,7 @@ CAPPED_FEATURES: tuple[str, ...] = (
     "min_pace",
     "total_pace",
     "takedown_rate",
+    "volume",
 )
 
 
@@ -102,6 +109,9 @@ class ScoringInput:
     end_round: int
     end_time_seconds: int
     rounds: Sequence[ParsedRound]
+    #: Pre-fight facts about the bout's place on the card (None = not known to the caller).
+    card_position: int | None = None
+    is_title_fight: bool = False
 
     @classmethod
     def from_fight(cls, fight: ParsedFight) -> ScoringInput:
@@ -113,6 +123,8 @@ class ScoringInput:
             end_round=fight.result.end_round,
             end_time_seconds=fight.result.end_time_seconds,
             rounds=fight.rounds,
+            card_position=fight.card_position,
+            is_title_fight=fight.is_title_fight,
         )
 
     @property
@@ -217,6 +229,11 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "min_pace": min(sig_landed[first], sig_landed[second]) / minutes,
         "total_pace": total_strikes / minutes,
         "takedown_rate": total_takedowns / minutes,
+        "main_event": 1.0 if inp.card_position == 1 else 0.0,
+        "co_main": 1.0 if inp.card_position == 2 else 0.0,
+        "title_fight": 1.0 if inp.is_title_fight else 0.0,
+        "volume": float(total_sig),
+        "five_rounds": 1.0 if inp.scheduled_rounds == 5 else 0.0,
     }
 
 

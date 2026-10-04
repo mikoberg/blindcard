@@ -105,10 +105,10 @@ def build_parser() -> argparse.ArgumentParser:
     fit.add_argument(
         "--finish-leak",
         type=float,
-        default=0.25,
+        default=0.40,
         metavar="AUC",
         help=(
-            "how far above 0.5 the public stars may predict 'finished' (default 0.25); "
+            "how far above 0.5 the public stars may predict 'finished' (default 0.40); "
             "higher gives finishes more credit and tells more about the result"
         ),
     )

@@ -50,6 +50,8 @@ def scoring_input(
     end_round: int = 3,
     end_time: int = 300,
     scheduled: int | None = 3,
+    card_position: int | None = None,
+    is_title_fight: bool = False,
 ) -> ScoringInput:
     return ScoringInput(
         scheduled_rounds=scheduled,
@@ -57,6 +59,8 @@ def scoring_input(
         end_round=end_round,
         end_time_seconds=end_time,
         rounds=rounds,
+        card_position=card_position,
+        is_title_fight=is_title_fight,
     )
 
 

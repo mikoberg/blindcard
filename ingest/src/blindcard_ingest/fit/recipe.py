@@ -1,14 +1,14 @@
-"""The recipe behind score v3: one score, fitted to the night bonuses, written as TOML.
+"""The recipe behind score v5: one score, fitted to the night bonuses, written as TOML.
 
 The score blends two fits of the same features:
   * Fight of the Night: how worth watching a fight is (two-way action, pace, swings);
   * Performance of the Night: dominant finishes.
-A finish is good for a fight, so KO/TKO and submission are ONE feature ("finish") that may add
-to a score but never subtract from it. Because credit for finishes makes the stars say
-something about how a fight ended, the share of the Performance fit is chosen as the largest
-one that keeps AUC(stars -> finished) within a stated margin of neutral on the training years
-(default: no more revealing than score v1 was). Duration features are excluded: the length of a
-fight is a spoiler.
+What a fan finds worth watching includes a finish (KO/TKO and submission are ONE feature,
+"finish"), how early it came, how much happened over the whole fight (volume, a five-round
+war), and how big the fight was (main event, co-main, title fight). None of those may
+subtract from a score. The share of the Performance fit is the largest one
+that keeps AUC(stars -> finished) within a margin of neutral on the training years: a wider
+margin gives finishes more credit. The stakes are known before the fight and cost nothing.
 
 Everything is deterministic: same labels in, same weights out.
 """
@@ -30,7 +30,7 @@ from blindcard_ingest.scoring.config import StarThreshold
 from blindcard_ingest.scoring.features import CAPPED_FEATURES
 from blindcard_ingest.scoring.scorer import quantile
 
-#: Candidates: no duration features (time_fraction, early_finish, lateness).
+#: Candidates. time_fraction and finish lateness are left out: early_finish says the same.
 SCORE_FEATURES: tuple[str, ...] = (
     "pace",
     "knockdowns",
@@ -44,18 +44,26 @@ SCORE_FEATURES: tuple[str, ...] = (
     "knockdowns_both",
     "min_pace",
     "takedown_rate",
+    "early_finish",
+    "main_event",
+    "co_main",
+    "title_fight",
+    "volume",
+    "five_rounds",
 )
 
 #: Share of the Performance fit blended into the score, tried in this order.
 BLEND_GRID: tuple[float, ...] = tuple(i / 40 for i in range(25))
 
-#: A finish is good for a fight, so it may add to a score but never subtract from it.
-NON_NEGATIVE_FEATURES: frozenset[str] = frozenset({"finish"})
+#: Good for a fight by definition: they may add to a score but never subtract from it.
+NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(
+    {"finish", "early_finish", "main_event", "co_main", "title_fight", "volume", "five_rounds"}
+)
 
 NEUTRAL_LEAK = 0.5  # AUC(stars -> finished) of a score that says nothing about finishes
-#: How far above neutral AUC(stars -> finished) may rise on the training years. 0.25 keeps the
-#: score below what score v1 gave away (0.77); 0 would mean no credit for finishes at all.
-DEFAULT_FINISH_LEAK = 0.25
+#: How far above neutral AUC(stars -> finished) may rise on the training years. Wider = finishes
+#: count for more. 0.4 gives a first-round KO in a co-main and a five-round war their due.
+DEFAULT_FINISH_LEAK = 0.40
 #: Slack between the training years and the refit on all years before the report warns.
 LEAK_SLACK = 0.05
 
@@ -72,6 +80,12 @@ FEATURE_NOTES: dict[str, str] = {
     "knockdowns_both": "both fighters scored a knockdown",
     "min_pace": "significant strikes per minute of the less active fighter",
     "takedown_rate": "takedowns landed per minute, both fighters",
+    "early_finish": "how early a finish came (1 - share of the scheduled time used)",
+    "main_event": "the main event of the card",
+    "co_main": "the co-main event",
+    "title_fight": "a championship bout",
+    "volume": "significant strikes landed over the whole fight, both fighters",
+    "five_rounds": "scheduled for five rounds",
 }
 
 

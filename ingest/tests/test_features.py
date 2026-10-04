@@ -215,3 +215,29 @@ def test_takedown_rate_is_takedowns_landed_per_minute_for_both_fighters() -> Non
         scoring_input(rounds, method="U-DEC", end_round=2, end_time=300, scheduled=2)
     )
     assert raw["takedown_rate"] == pytest.approx(3 / 10)  # 3 takedowns in 10 minutes
+
+
+# --- stakes: where the bout sat on the card (known before the fight) -------------------------
+
+
+def test_stakes_come_from_the_card_position_and_the_title_flag() -> None:
+    rounds = three_round_decision_rounds()
+    plain = compute_raw_features(scoring_input(rounds))
+    assert plain["main_event"] == 0 and plain["co_main"] == 0 and plain["title_fight"] == 0
+
+    main = compute_raw_features(scoring_input(rounds, card_position=1, is_title_fight=True))
+    assert (main["main_event"], main["co_main"], main["title_fight"]) == (1, 0, 1)
+
+    co_main = compute_raw_features(scoring_input(rounds, card_position=2))
+    assert (co_main["main_event"], co_main["co_main"], co_main["title_fight"]) == (0, 1, 0)
+
+    undercard = compute_raw_features(scoring_input(rounds, card_position=9))
+    assert undercard["main_event"] == 0 and undercard["co_main"] == 0
+
+
+def test_volume_is_all_significant_strikes_landed_and_five_rounds_follows_the_schedule() -> None:
+    rounds = three_round_decision_rounds()  # 110 significant strikes landed in total
+    raw = compute_raw_features(scoring_input(rounds))
+    assert raw["volume"] == 110 and raw["five_rounds"] == 0
+    five = compute_raw_features(scoring_input(rounds, end_round=3, end_time=300, scheduled=5))
+    assert five["five_rounds"] == 1 and five["volume"] == 110

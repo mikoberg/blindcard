@@ -358,6 +358,7 @@ class PostgresRepository:
     ) -> list[FightScoringInput]:
         query = """
             select f.id, e.source_id as event_source_id, f.scheduled_rounds,
+                   f.card_position, f.is_title_fight,
                    r.method, r.end_round, r.end_time_seconds
             from public.fights f
             join public.events e on e.id = f.event_id
@@ -408,6 +409,8 @@ class PostgresRepository:
                     end_round=row["end_round"],
                     end_time_seconds=row["end_time_seconds"],
                     rounds=rounds_by_fight.get(row["id"], []),
+                    card_position=row["card_position"],
+                    is_title_fight=row["is_title_fight"],
                 ),
             )
             for row in fights
