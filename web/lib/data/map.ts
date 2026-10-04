@@ -1,5 +1,6 @@
 import { isValidStars } from "@/lib/card/stars";
 import type { CardEvent, CardFight, Rating } from "@/lib/card/types";
+import type { EventSummary, RatedSlot } from "@/lib/overview/types";
 import { DataError } from "./ensure";
 
 export interface EventRow {
@@ -90,4 +91,43 @@ export function buildCard(
       };
     })
     .sort((a, b) => a.cardPosition - b.cardPosition);
+}
+
+export interface OverviewRow {
+  id: string;
+  slug: string;
+  name: string;
+  event_date: string;
+  location: string | null;
+  fight_count: number;
+  /** jsonb array of { p: card position, s: stars } in card order. */
+  ratings: unknown;
+}
+
+/** Keeps only well-formed slots: a bad slot is dropped (shown as not rated), never guessed. */
+function toSlots(value: unknown, eventId: string): RatedSlot[] {
+  if (!Array.isArray(value)) return [];
+  const slots: RatedSlot[] = [];
+  for (const item of value) {
+    const slot = (item ?? {}) as { p?: unknown; s?: unknown };
+    const stars = toNumber(slot.s as number | string | null);
+    if (typeof slot.p === "number" && Number.isInteger(slot.p) && slot.p >= 1 && isValidStars(stars)) {
+      slots.push({ position: slot.p, stars });
+    } else {
+      console.warn(`invalid rating slot in event ${eventId}; showing it as not rated`);
+    }
+  }
+  return slots.sort((a, b) => a.position - b.position);
+}
+
+export function mapOverview(row: OverviewRow): EventSummary {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    eventDate: row.event_date,
+    location: row.location,
+    fightCount: row.fight_count,
+    ratings: toSlots(row.ratings, row.id),
+  };
 }

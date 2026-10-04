@@ -15,7 +15,7 @@ async function get(path: string, headers: Record<string, string> = {}) {
 }
 
 live("the running app serves no result data", () => {
-  it("home, events list and card pages: HTML, Next data payload and client bundles", async () => {
+  it("home overview and card pages: HTML, Next data payload and client bundles", async () => {
     const sitemap = await get("/sitemap.xml");
     const eventPaths = [...sitemap.text.matchAll(/<loc>[^<]*?(\/events\/[a-z0-9-]+)<\/loc>/g)]
       .map((match) => match[1] as string)
@@ -23,7 +23,7 @@ live("the running app serves no result data", () => {
     expect(eventPaths.length).toBeGreaterThan(0);
 
     const chunkUrls = new Set<string>();
-    for (const path of ["/", "/events", ...eventPaths]) {
+    for (const path of ["/", ...eventPaths]) {
       const html = await get(path);
       expect(html.status, path).toBe(200);
       expect(findLeaks(html.text, HTML_LEAK_PATTERNS), `HTML ${path}`).toEqual([]);
@@ -53,9 +53,12 @@ live("the running app serves no result data", () => {
   });
 
   it("the reveal route: POST only, no-store, one fight, strict about ids", async () => {
-    const home = await get("/");
-    const id = /data-fight-id="([0-9a-f-]{36})"/.exec(home.text)?.[1];
-    expect(id, "the home page should list at least one fight").toBeTruthy();
+    const sitemap = await get("/sitemap.xml");
+    const eventPath = /<loc>[^<]*?(\/events\/[a-z0-9-]+)<\/loc>/.exec(sitemap.text)?.[1];
+    expect(eventPath, "the sitemap should list an event").toBeTruthy();
+    const card = await get(eventPath as string);
+    const id = /data-fight-id="([0-9a-f-]{36})"/.exec(card.text)?.[1];
+    expect(id, "an event page should list at least one fight").toBeTruthy();
 
     const post = await fetch(`${BASE}/api/reveal/${id}`, { method: "POST" });
     expect(post.status).toBe(200);

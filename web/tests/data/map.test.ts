@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { DataError } from "@/lib/data/ensure";
-import { buildCard, mapEvent, type FightRow, type FighterRow, type ScoreRow } from "@/lib/data/map";
+import { buildCard, mapEvent, mapOverview, type FightRow, type FighterRow, type ScoreRow } from "@/lib/data/map";
 
 const fights: FightRow[] = [
   { id: "f2", event_id: "e1", card_position: 2, weight_class: "Welterweight", is_title_fight: false, scheduled_rounds: 3, fighter_a_id: "p3", fighter_b_id: "p4" },
@@ -70,5 +70,42 @@ describe("buildCard", () => {
 
   it("throws when a fighter row is missing (data integrity)", () => {
     expect(() => buildCard(fights, fighters.slice(1), [])).toThrow(DataError);
+  });
+});
+
+describe("mapOverview", () => {
+  const row = {
+    id: "e1",
+    slug: "e1",
+    name: "Event",
+    event_date: "2026-09-12",
+    location: "Las Vegas",
+    fight_count: 3,
+    ratings: [
+      { p: 3, s: 2.5 },
+      { p: 1, s: "4.0" },
+    ],
+  };
+
+  it("maps the row and sorts the rated slots by card position", () => {
+    expect(mapOverview(row)).toEqual({
+      id: "e1",
+      slug: "e1",
+      name: "Event",
+      eventDate: "2026-09-12",
+      location: "Las Vegas",
+      fightCount: 3,
+      ratings: [
+        { position: 1, stars: 4 },
+        { position: 3, stars: 2.5 },
+      ],
+    });
+  });
+
+  it("drops malformed slots (never guesses a rating) and survives a non-array", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const bad = [{ p: 1, s: 4.3 }, { p: 0, s: 3 }, { p: 2 }, null, { p: 4, s: 3 }];
+    expect(mapOverview({ ...row, ratings: bad }).ratings).toEqual([{ position: 4, stars: 3 }]);
+    expect(mapOverview({ ...row, ratings: "x" }).ratings).toEqual([]);
   });
 });

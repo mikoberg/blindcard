@@ -21,7 +21,7 @@ export function WatchThese({ fights }: { fights: readonly CardFight[] }) {
                 <span className="break-words font-semibold">
                   {fight.fighterA.name} <span className="text-[var(--muted)]">vs</span> {fight.fighterB.name}
                   {isHiddenGem(fight) && (
-                    <span className="ml-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-ink)]">
+                    <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-ink)]">
                       Hidden gem
                     </span>
                   )}

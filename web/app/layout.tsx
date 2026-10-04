@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed, Inter } from "next/font/google";
+import { Barlow, Barlow_Condensed } from "next/font/google";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
-const body = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
+const body = Barlow({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-body",
+  display: "swap",
+});
 const display = Barlow_Condensed({
   subsets: ["latin"],
   weight: ["600", "700"],
@@ -23,19 +28,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${body.variable} ${display.variable}`}>
       <body className="min-h-screen">
-        <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4">
-          <header className="flex items-center justify-between py-5">
+        <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4">
+          <header className="flex items-center py-5">
             <Link
               href="/"
               className="inline-flex min-h-11 items-center font-[family-name:var(--font-display)] text-2xl font-bold tracking-wide"
             >
               Blind<span className="text-[var(--accent)]">card</span>
             </Link>
-            <nav aria-label="Main">
-              <Link href="/events" className="inline-flex min-h-11 items-center text-sm text-[var(--muted)] hover:text-[var(--text)]">
-                All events
-              </Link>
-            </nav>
           </header>
           <main className="flex-1 pb-12">{children}</main>
           <Footer />

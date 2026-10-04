@@ -10,7 +10,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const events = await listEvents();
   return [
     { url: `${base}/` },
-    { url: `${base}/events` },
     ...events.map((event) => ({ url: `${base}/events/${event.slug}`, lastModified: event.eventDate })),
   ];
 }

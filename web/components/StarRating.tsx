@@ -21,7 +21,14 @@ function Star({ fill }: { fill: StarFill }) {
   );
 }
 
-export function StarRating({ stars }: { stars: number | null }) {
+export function StarRating({
+  stars,
+  showNumber = true,
+}: {
+  stars: number | null;
+  /** Hide the number when it is shown elsewhere (the rating plate); the label stays. */
+  showNumber?: boolean;
+}) {
   if (stars === null) {
     return (
       <span className="inline-flex items-center rounded-full border border-[var(--border)] px-2.5 py-0.5 text-xs text-[var(--muted)]">
@@ -36,12 +43,14 @@ export function StarRating({ stars }: { stars: number | null }) {
           <Star key={index} fill={fill} />
         ))}
       </span>
-      <span
-        className="font-[family-name:var(--font-display)] text-xl font-bold tabular-nums"
-        aria-hidden="true"
-      >
-        {formatStars(stars)}
-      </span>
+      {showNumber && (
+        <span
+          className="font-[family-name:var(--font-display)] text-xl font-bold tabular-nums"
+          aria-hidden="true"
+        >
+          {formatStars(stars)}
+        </span>
+      )}
     </span>
   );
 }

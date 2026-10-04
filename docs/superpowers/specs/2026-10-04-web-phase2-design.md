@@ -11,7 +11,7 @@ behind an explicit per-fight Reveal. Phase 2 is the public read side only.
 Understanding (agreed):
 
 - Public site in English. Dark, sporty, clean visual style, mobile first.
-- Homepage is the latest event's card, directly.
+- Homepage is an overview of all events (revised after first review; it was the latest event's card): the six newest as poster cards, then every year with a year bar. Backed by the `event_overview` view (migration 0003). `/events` redirects to `/`.
 - Fight blurbs are templates built from pre-fight facts only. No generated text.
 - Next.js (App Router, TypeScript, Tailwind), server-rendered, hosted on Vercel.
 - The spoiler rule in `CLAUDE.md` is binding. The legal guardrails apply (no "UFC"/"Octagon"
@@ -33,7 +33,7 @@ RPC straight from the browser (no `no-store`, logging or rate-limit point).
 web/
   app/
     layout.tsx, globals.css, not-found.tsx, error.tsx, sitemap.ts, robots.ts
-    page.tsx                         latest event card
+    page.tsx                         overview of all events (poster cards, year bar)
     events/page.tsx                  all events
     events/[slug]/page.tsx           card page
     api/reveal/[fightId]/route.ts    POST only

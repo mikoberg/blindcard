@@ -136,6 +136,27 @@ begin
   raise notice 'PASS reveal_fight returns one fight at a time';
 end $$;
 
+-- Homepage overview: public, active version only, no result columns.
+do $$
+declare
+  n integer;
+  r jsonb;
+begin
+  select count(*) into n from public.event_overview where id = '00000000-0000-0000-0000-0000000000e1';
+  if n <> 1 then raise exception 'FAIL: anon should see the seeded event in event_overview, saw %', n; end if;
+  select ratings into r from public.event_overview where id = '00000000-0000-0000-0000-0000000000e1';
+  -- one fight, rated by the active version 9001 (4.5), not by the inactive 9002 (1.5)
+  if r <> '[{"p": 1, "s": 4.5}]'::jsonb then
+    raise exception 'FAIL: event_overview ratings should hold the active version only, got %', r;
+  end if;
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'event_overview'
+    and column_name not in ('id', 'slug', 'name', 'event_date', 'location', 'fight_count', 'ratings');
+  if n <> 0 then raise exception 'FAIL: event_overview has unexpected columns'; end if;
+  raise notice 'PASS event_overview is public, active version only';
+end $$;
+
 -- Score breakdown reveal: one fight per call, active version only, same config as the features.
 do $$
 declare

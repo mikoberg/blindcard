@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CardEvent } from "@/lib/card/types";
 
 const mocks = vi.hoisted(() => ({
-  getLatestEventWithFights: vi.fn(),
   getEventBySlug: vi.fn(),
   listEvents: vi.fn(),
   getCard: vi.fn(),
@@ -10,7 +9,6 @@ const mocks = vi.hoisted(() => ({
 
 // The data layer would reach the network; metadata tests never need it.
 vi.mock("@/lib/data/events", () => ({
-  getLatestEventWithFights: mocks.getLatestEventWithFights,
   getEventBySlug: mocks.getEventBySlug,
   listEvents: mocks.listEvents,
   isValidSlug: (slug: string) => /^[a-z0-9-]{1,200}$/.test(slug),
@@ -18,14 +16,13 @@ vi.mock("@/lib/data/events", () => ({
 vi.mock("@/lib/data/card", () => ({ getCard: mocks.getCard }));
 // The layout loads fonts through a Next build plugin that does not exist under Vitest.
 vi.mock("next/font/google", () => ({
-  Inter: () => ({ variable: "inter-var" }),
+  Barlow: () => ({ variable: "barlow-body-var" }),
   Barlow_Condensed: () => ({ variable: "barlow-var" }),
 }));
 
 import { generateMetadata as eventMetadata } from "@/app/events/[slug]/page";
-import { metadata as eventsMetadata } from "@/app/events/page";
 import { metadata as layoutMetadata } from "@/app/layout";
-import { generateMetadata as homeMetadata } from "@/app/page";
+import { metadata as homeMetadata } from "@/app/page";
 
 const event: CardEvent = {
   id: "e1",
@@ -47,19 +44,10 @@ describe("layout metadata", () => {
 });
 
 describe("home metadata", () => {
-  it("uses an absolute 'Blindcard – event' title (the layout template skips the same segment)", async () => {
-    mocks.getLatestEventWithFights.mockResolvedValue(event);
-    const meta = await homeMetadata();
-    expect(meta.title).toEqual({ absolute: "Blindcard – UFC Fight Night: Alpha vs. Beta" });
-    expect(meta.alternates?.canonical).toBe(`/events/${event.slug}`);
-    expect(meta).not.toHaveProperty("description");
-  });
-
-  it("falls back to the layout default when there is no event", async () => {
-    mocks.getLatestEventWithFights.mockResolvedValue(null);
-    const meta = await homeMetadata();
-    expect(meta).not.toHaveProperty("title");
-    expect(meta).not.toHaveProperty("description");
+  it("is static: an absolute 'Blindcard – All events' title (the layout template skips the same segment)", () => {
+    expect(homeMetadata.title).toEqual({ absolute: "Blindcard – All events" });
+    expect(homeMetadata.alternates?.canonical).toBe("/");
+    expect(homeMetadata).not.toHaveProperty("description");
   });
 });
 
@@ -82,12 +70,5 @@ describe("event page metadata", () => {
     const meta = await eventMetadata({ params: Promise.resolve({ slug: "Bad Slug!" }) });
     expect(meta.title).toBe("Event not found");
     expect(mocks.getEventBySlug).not.toHaveBeenCalled();
-  });
-});
-
-describe("events list metadata", () => {
-  it("has a title and inherits the layout description", () => {
-    expect(eventsMetadata.title).toBe("All events");
-    expect(eventsMetadata).not.toHaveProperty("description");
   });
 });
