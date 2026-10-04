@@ -1,6 +1,6 @@
 import { RevealParseError } from "./errors";
 import { isValidStars } from "@/lib/card/stars";
-import type { PerformanceAxis, RevealResponse, RevealRow, RevealScore, ScoreAxis } from "./types";
+import type { AxisView, FactorView, PerformanceView, RevealResponse, RevealRow, RevealScore } from "./types";
 
 const OUTCOMES = ["win", "draw", "no_contest"] as const;
 
@@ -28,25 +28,27 @@ export function rowToResponse(row: RevealRow, score: RevealScore | null = null):
   };
 }
 
-function parseAxis(value: unknown, label: string): ScoreAxis {
+function parseFactors(value: unknown, label: string): FactorView[] {
+  if (!Array.isArray(value)) throw new RevealParseError(label);
+  return value.map((item) => {
+    const f = (item ?? {}) as Record<string, unknown>;
+    if (
+      typeof f.label !== "string" ||
+      typeof f.value !== "string" ||
+      typeof f.amount !== "string" ||
+      typeof f.share !== "number" ||
+      !(f.share >= 0 && f.share <= 1)
+    ) {
+      throw new RevealParseError(`${label} factor`);
+    }
+    return { label: f.label, value: f.value, amount: f.amount, share: f.share };
+  });
+}
+
+function parseAxis(value: unknown, label: string): AxisView {
   if (typeof value !== "object" || value === null) throw new RevealParseError(label);
-  const factors = (value as Record<string, unknown>).factors;
-  if (!Array.isArray(factors)) throw new RevealParseError(`${label} factors`);
-  return {
-    factors: factors.map((item) => {
-      const f = (item ?? {}) as Record<string, unknown>;
-      if (
-        typeof f.feature !== "string" ||
-        typeof f.raw !== "number" ||
-        !Number.isFinite(f.raw) ||
-        typeof f.contribution !== "number" ||
-        !Number.isFinite(f.contribution)
-      ) {
-        throw new RevealParseError(`${label} factor`);
-      }
-      return { feature: f.feature, raw: f.raw, contribution: f.contribution };
-    }),
-  };
+  const o = value as Record<string, unknown>;
+  return { up: parseFactors(o.up, `${label} up`), down: parseFactors(o.down, `${label} down`) };
 }
 
 function parseScore(value: unknown): RevealScore | null {
@@ -56,7 +58,7 @@ function parseScore(value: unknown): RevealScore | null {
   if (typeof o.version !== "number" || !Number.isInteger(o.version)) {
     throw new RevealParseError("score version");
   }
-  let performance: PerformanceAxis | null = null;
+  let performance: PerformanceView | null = null;
   if (o.performance !== null && o.performance !== undefined) {
     const axis = parseAxis(o.performance, "performance");
     const stars = (o.performance as Record<string, unknown>).stars;

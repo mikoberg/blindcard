@@ -67,10 +67,11 @@ describe("parseRevealResponse", () => {
 });
 
 describe("the score breakdown in a reveal response", () => {
+  const line = { label: "Striking pace", value: "9.0 strikes per min", amount: "+0.50", share: 1 };
   const score = {
     version: 2,
-    fight: { factors: [{ feature: "pace", raw: 9, contribution: 0.5 }] },
-    performance: { stars: 4.5, factors: [{ feature: "ko_finish", raw: 1, contribution: 1 }] },
+    fight: { up: [line], down: [] },
+    performance: { stars: 4.5, up: [line], down: [] },
   };
 
   it("is carried through the database mapping and the browser parse", () => {
@@ -87,9 +88,10 @@ describe("the score breakdown in a reveal response", () => {
   it.each([
     ["a non-object score", "x"],
     ["a fractional version", { ...score, version: 1.5 }],
-    ["missing fight factors", { ...score, fight: {} }],
-    ["a factor without a feature", { ...score, fight: { factors: [{ raw: 1, contribution: 1 }] } }],
-    ["a non-finite contribution", { ...score, fight: { factors: [{ feature: "p", raw: 1, contribution: null }] } }],
+    ["a missing axis", { ...score, fight: {} }],
+    ["a factor without a label", { ...score, fight: { up: [{ ...line, label: undefined }], down: [] } }],
+    ["a bar share above 1", { ...score, fight: { up: [{ ...line, share: 2 }], down: [] } }],
+    ["a numeric amount", { ...score, fight: { up: [{ ...line, amount: 0.5 }], down: [] } }],
     ["invalid performance stars", { ...score, performance: { ...score.performance, stars: 4.3 } }],
   ])("rejects %s", (_label, bad) => {
     expect(() => parseRevealResponse({ ...rowToResponse(row), score: bad })).toThrow(RevealParseError);

@@ -11,28 +11,31 @@ export interface RevealResponse {
   score: RevealScore | null;
 }
 
-/** One feature's share of a score: weight times the normalised value, plus the raw value. */
-export interface ScoreFactor {
-  feature: string;
-  raw: number;
-  contribution: number;
+/** One line of "why this rating", already worded and formatted by the server. */
+export interface FactorView {
+  label: string;
+  value: string;
+  /** Signed contribution to the score, e.g. "+0.55". */
+  amount: string;
+  /** Bar length, 0..1, relative to the strongest factor of the same axis. */
+  share: number;
 }
 
-export interface ScoreAxis {
-  /** Non-zero contributions, largest magnitude first. */
-  factors: ScoreFactor[];
+export interface AxisView {
+  up: FactorView[];
+  down: FactorView[];
 }
 
-export interface PerformanceAxis extends ScoreAxis {
+export interface PerformanceView extends AxisView {
   stars: number;
 }
 
 export interface RevealScore {
   version: number;
   /** The public rating's axis: what made the fight worth watching. */
-  fight: ScoreAxis;
+  fight: AxisView;
   /** A second axis shown only after a reveal; null when the version has none. */
-  performance: PerformanceAxis | null;
+  performance: PerformanceView | null;
 }
 
 /** One row of the database function reveal_score(). */

@@ -49,7 +49,9 @@ describe("revealFight", () => {
     answer({ data: [row], error: null }, { data: [scoreRow], error: null });
     const result = await revealFight("f1");
     expect(rpc).toHaveBeenCalledWith("reveal_score", { p_fight_id: "f1" });
-    expect(result?.score?.fight.factors).toEqual([{ feature: "pace", raw: 9, contribution: 0.5 }]);
+    expect(result?.score?.fight.up).toEqual([
+      { label: "Striking pace", value: "9.0 strikes per min", amount: "+0.50", share: 1 },
+    ]);
     expect(result?.score?.performance?.stars).toBe(4.5);
   });
 

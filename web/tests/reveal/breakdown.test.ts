@@ -33,26 +33,46 @@ const row: ScoreRow = {
 };
 
 describe("buildScoreBreakdown", () => {
-  it("turns weight times normalised value into signed factors, largest first", () => {
+  it("words the factors for display: signed amounts, readable values, largest first", () => {
     const score = buildScoreBreakdown(row);
     expect(score?.version).toBe(2);
-    expect(score?.fight.factors.map((f) => [f.feature, +f.contribution.toFixed(3)])).toEqual([
-      ["pace", 0.5],
-      ["knockdowns", 0.4],
-      ["control_share_nofinish", -0.3],
+    expect(score?.fight.up).toEqual([
+      { label: "Striking pace", value: "9.0 strikes per min", amount: "+0.50", share: 1 },
+      { label: "Knockdowns", value: "1", amount: "+0.40", share: 0.8 },
     ]);
-    expect(score?.fight.factors[0]).toMatchObject({ raw: 9 });
+    expect(score?.fight.down).toEqual([
+      { label: "Time under control without a finish", value: "60%", amount: "−0.30", share: 0.6 },
+    ]);
   });
 
   it("drops features that contributed nothing", () => {
-    const features = buildScoreBreakdown(row)?.fight.factors.map((f) => f.feature);
-    expect(features).not.toContain("swings");
+    const labels = [...(buildScoreBreakdown(row)?.fight.up ?? []), ...(buildScoreBreakdown(row)?.fight.down ?? [])];
+    expect(labels.map((f) => f.label)).not.toContain("Round-to-round lead changes");
   });
 
   it("adds the private performance axis with its stars", () => {
     const score = buildScoreBreakdown(row);
     expect(score?.performance?.stars).toBe(4.5);
-    expect(score?.performance?.factors.map((f) => f.feature)).toEqual(["ko_finish", "time_fraction"]);
+    expect(score?.performance?.up[0]).toMatchObject({ label: "Ended by KO/TKO", value: "yes" });
+    expect(score?.performance?.down[0]).toMatchObject({ label: "Share of the scheduled time used" });
+  });
+
+  it("caps the lists and survives a feature it has no label for", () => {
+    const weights: Record<string, number> = { brand_new: 2 };
+    const raw: Record<string, number> = { brand_new: 3 };
+    const normalised: Record<string, number> = { brand_new: 1 };
+    for (let i = 0; i < 8; i++) {
+      weights[`knockdowns_${i}`] = 1;
+    }
+    const config = { weights: { pace: 1, knockdowns: 1, swings: 1, reversals: 1, sub_attempts: 1, ...weights } };
+    for (const key of Object.keys(config.weights)) {
+      raw[key] = raw[key] ?? 1;
+      normalised[key] = normalised[key] ?? 0.5;
+    }
+    const score = buildScoreBreakdown({ ...row, config, features: { raw, normalised } });
+    expect(score?.fight.up).toHaveLength(4);
+    expect(score?.fight.up[0].label).toBe("brand new");
+    expect(score?.performance).toBeNull();
   });
 
   it("has no performance axis for a version without one", () => {
