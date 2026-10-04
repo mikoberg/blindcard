@@ -1,5 +1,6 @@
 import contextlib
 import datetime as dt
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -128,3 +129,42 @@ def test_unknown_scoring_version_is_a_config_error(
     monkeypatch.setenv("DATABASE_URL", "postgresql://example/db")
     patch_backends(monkeypatch, FakeRepository(), FakeSource([]))
     assert cli.main(["rescore", "--version", "99"]) == cli.EXIT_BAD_CONFIG
+
+
+class _EmptyWikipedia:
+    """A Wikipedia that knows no events: every event ends up 'not labelled'."""
+
+    def events_list_wikitext(self) -> str:
+        return "==Past events==\n{|\n|}\n"
+
+    def page_wikitexts(self, titles: Sequence[str]) -> dict[str, str]:
+        return {}
+
+
+def test_ingest_bonuses_refuses_to_run_without_a_contact(
+    isolated_env: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://example/db")
+    assert cli.main(["ingest-bonuses"]) == cli.EXIT_BAD_CONFIG
+
+
+def test_ingest_bonuses_runs_and_never_fails_on_low_coverage(
+    isolated_env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://example/db")
+    monkeypatch.setenv("SCRAPER_CONTACT", "https://example.org/contact")
+    repo = FakeRepository()
+    repo.upsert_event_bundle("ufcstats", "UFC", make_bundle("e1", dt.date(2024, 5, 4), seed=1))
+    patch_backends(monkeypatch, repo, FakeSource([]))
+
+    @contextlib.contextmanager
+    def open_wikipedia(_settings: Settings):  # type: ignore[no-untyped-def]
+        yield _EmptyWikipedia()
+
+    monkeypatch.setattr(cli, "_open_wikipedia", open_wikipedia)
+
+    assert (
+        cli.main(["ingest-bonuses", "--from", "2020", "--cache-dir", str(tmp_path / "html")]) == 0
+    )
+    assert repo.bonuses == {}
+    assert (tmp_path / "bonus_report.json").is_file()  # the local report sits beside the cache

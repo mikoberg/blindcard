@@ -17,6 +17,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import ScoringInput
@@ -93,6 +94,10 @@ class Repository(Protocol):
 
         Returns how many existing fights were updated; unknown fights are ignored.
         """
+        ...
+
+    def events_for_bonus_matching(self, source: str, from_year: int) -> list[EventToLabel]:
+        """Stored events from `from_year` on, with the fighter names of each fight."""
         ...
 
     def replace_version(
@@ -400,6 +405,35 @@ class PostgresRepository:
                 )
                 updated += cur.rowcount
         return updated
+
+    def events_for_bonus_matching(self, source: str, from_year: int) -> list[EventToLabel]:
+        query = """
+            select e.source_id as event_source_id, e.name as event_name, e.event_date,
+                   f.source_id as fight_source_id, a.name as a_name, b.name as b_name
+            from public.events e
+            join public.fights f on f.event_id = e.id
+            join public.fighters a on a.id = f.fighter_a_id
+            join public.fighters b on b.id = f.fighter_b_id
+            where e.source = %s and e.event_date >= make_date(%s, 1, 1)
+            order by e.event_date, e.source_id, f.card_position
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (source, from_year))
+            rows = cur.fetchall()
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            grouped.setdefault(row["event_source_id"], []).append(row)
+        return [
+            EventToLabel(
+                source_id=event_id,
+                name=group[0]["event_name"],
+                event_date=group[0]["event_date"],
+                fights=tuple(
+                    FightNames(r["fight_source_id"], (r["a_name"], r["b_name"])) for r in group
+                ),
+            )
+            for event_id, group in grouped.items()
+        ]
 
     def replace_version(
         self,

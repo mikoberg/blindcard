@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 from helpers import make_fight, rnd
 
+from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.db.repository import FightScoringInput, StoredScoringVersion
 from blindcard_ingest.models import EventBundle, ParsedEvent, ParsedFight
 from blindcard_ingest.scoring.config import ScoringConfig
@@ -186,6 +187,23 @@ class FakeRepository:
                 self.bonuses[fight_source_id] = list(bonuses)
                 updated += 1
         return updated
+
+    def events_for_bonus_matching(self, source: str, from_year: int) -> list[EventToLabel]:
+        return [
+            EventToLabel(
+                source_id=bundle.event.source_id,
+                name=bundle.event.name,
+                event_date=bundle.event.event_date,
+                fights=tuple(
+                    FightNames(f.source_id, (f.fighter_a.name, f.fighter_b.name))
+                    for f in bundle.fights
+                ),
+            )
+            for (src, _), bundle in sorted(
+                self.events.items(), key=lambda kv: kv[1].event.event_date
+            )
+            if src == source and bundle.event.event_date.year >= from_year
+        ]
 
     def close(self) -> None:
         return None

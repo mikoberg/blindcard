@@ -1,4 +1,4 @@
-"""Command line: backfill, ingest-latest, rescore.
+"""Command line: backfill, ingest-latest, ingest-bonuses, rescore.
 
 Exit codes: 0 = ok, 1 = the run finished but reported errors (unscored fights, failed or
 overdue events), 2 = bad configuration or unusable input (nothing meaningful was done).
@@ -14,6 +14,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
+from blindcard_ingest.bonus_pipeline import BonusSource, run_ingest_bonuses
 from blindcard_ingest.db.repository import PostgresRepository, Repository, RepositoryError
 from blindcard_ingest.http.cache import HtmlCache
 from blindcard_ingest.http.client import FetchError, PoliteClient
@@ -29,8 +30,9 @@ from blindcard_ingest.scoring.config import ScoringConfigError
 from blindcard_ingest.scoring.scorer import ScoringError
 from blindcard_ingest.settings import Settings, SettingsError, load_settings
 from blindcard_ingest.sources.base import FightDataSource
-from blindcard_ingest.sources.ufcstats.dataset import DatasetError
+from blindcard_ingest.sources.ufcstats.dataset import SOURCE_NAME, DatasetError
 from blindcard_ingest.sources.ufcstats.source import UfcStatsCsvSource
+from blindcard_ingest.sources.wikipedia.client import WikipediaClient, WikipediaError
 
 logger = logging.getLogger("blindcard_ingest.cli")
 
@@ -69,6 +71,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"only events newer than this many days (default {DEFAULT_SINCE_DAYS})",
     )
 
+    bonuses = commands.add_parser(
+        "ingest-bonuses",
+        parents=[common],
+        help="label fights with Fight/Performance of the Night (from Wikipedia)",
+    )
+    bonuses.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
+
     rescore = commands.add_parser(
         "rescore", parents=[common], help="rebuild the reference and rescore all fights"
     )
@@ -98,6 +107,16 @@ def _open_source(settings: Settings) -> Iterator[FightDataSource]:
         min_interval_seconds=settings.request_interval_seconds,
     ) as client:
         yield UfcStatsCsvSource(client)
+
+
+@contextmanager
+def _open_wikipedia(settings: Settings) -> Iterator[BonusSource]:
+    with PoliteClient(
+        settings.require_user_agent(),
+        HtmlCache(settings.cache_dir),
+        min_interval_seconds=settings.request_interval_seconds,
+    ) as client:
+        yield WikipediaClient(client)
 
 
 def _today() -> dt.date:
@@ -132,6 +151,24 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
     # Fail on missing configuration before anything is fetched.
     settings.require_database_url()
     settings.require_user_agent()
+
+    if args.command == "ingest-bonuses":
+        with _open_repository(settings) as repo, _open_wikipedia(settings) as wiki:
+            bonus_report = run_ingest_bonuses(
+                wiki,
+                repo,
+                source_name=SOURCE_NAME,
+                from_year=args.from_year,
+                report_path=settings.cache_dir.parent / "bonus_report.json",
+                dry_run=args.dry_run,
+            )
+        if bonus_report.labeled_share < 0.9:
+            logger.warning(
+                "only %.0f%% of events are labelled; see the local bonus_report.json",
+                100 * bonus_report.labeled_share,
+            )
+        return EXIT_OK
+
     with _open_repository(settings) as repo, _open_source(settings) as source:
         if args.command == "backfill":
             report = run_backfill(
@@ -155,6 +192,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run(args, settings)
     except RepositoryError as exc:
         logger.error("%s", exc)  # already stripped of row data
+        return EXIT_RUN_ERRORS
+    except WikipediaError as exc:
+        logger.error("%s", exc)
         return EXIT_RUN_ERRORS
     except (
         SettingsError,

@@ -1,0 +1,82 @@
+==Past events==
+{{sticky header}}
+{| id="Past events"  class="sticky-header sortable wikitable succession-box" style="font-size:90%;"
+! scope="col" | #
+! scope="col" | Event
+! scope="col" | Date
+! scope="col" | Venue
+! scope="col" | Location
+! scope="col" | Attendance
+! scope="col" class=unsortable| Ref.
+|-
+|790
+|[[UFC 331|UFC 331: Van vs. Pantoja 2]]
+|{{dts|2026|Sep|19}}
+|[[Crypto.com Arena]]
+|[[Los Angeles]], [[California]], U.S.
+|19,357
+|<ref>{{Cite web|url=https://www.houstonchronicle.com/sports/article/ufc-331-joshua-van-winner-pantoja-results-22438581.php|title=Houston's Joshua Van batters Alexandre Pantoja to retain flyweight title at UFC 331|publisher=houstonchronicle.com|author=Matt Young|date=2026-09-20|access-date=2026-09-20}}</ref>
+|-
+|789
+|[[UFC Fight Night: Silva vs. Delgado]]
+|{{dts|2026|Sep|12}}
+|[[Desert Diamond Arena]]
+|[[Glendale, Arizona|Glendale]], [[Arizona]], U.S.
+|16,928
+|<ref>{{Cite web|url=https://ktar.com/arizona-news/noche-ufc-desert-diamond-arenas-all-time-gross-record|title=Noche UFC breaks Desert Diamond Arena's all-time gross record|publisher=ktar.com|author=Kylie Werner|date=2026-09-13|access-date=2026-09-14}}</ref>
+|-
+|687
+|[[UFC 300|UFC 300: Pereira vs. Hill]]
+|{{dts|2024|Apr|13}}
+|[[T-Mobile Arena]] 
+|{{nts|20,067}}
+|<ref>{{Cite web|url=https://mmajunkie.usatoday.com/lists/ufc-300-post-event-facts-max-holloway-boosts-records-resume-with-bmf-title-knockout|title=UFC 300 post-event facts: Max Holloway boosts records, resume with BMF title knockout|publisher=mmajunkie.usatoday.com|author=Mike Bohn|date=2024-04-14|access-date=2024-04-14}}</ref>
+|-
+|align=center bgcolor="#D3D3D3"| —
+|bgcolor="#D3D3D3"|[[UFC 233|UFC 233: Cejudo vs. Dillashaw]]
+|bgcolor="#D3D3D3"|{{dts|2019|Jan|26}}
+|bgcolor="#D3D3D3"|[[Honda Center]]
+|bgcolor="#D3D3D3"|[[Anaheim, California]], U.S.
+|bgcolor="#D3D3D3"|Canceled
+|bgcolor="#D3D3D3"|<ref>{{Cite web|url=https://www.mmafighting.com/2018/12/12/18138173/ufc-cancels-ufc-233-card-in-anaheim|title=UFC cancels UFC 233 card in Anaheim|date=2018-12-12|website=MMA Fighting|access-date=2019-02-03}}</ref>
+|-
+|441
+|[[UFC 225|UFC 225: Whittaker vs. Romero 2]]
+|{{dts|2018|Jun|9}}
+|[[United Center]]
+|[[Chicago, Illinois]], U.S.
+|{{nts|18,117}}
+|<ref>{{Cite news|url=https://mmajunkie.com/2018/06/ufc-225-draws-announced-18117-fans-for-2-55-million-gate-in-chicago|title=UFC 225 draws announced 18,117 fans for $2.55 million gate in Chicago|date=2018-06-10|work=MMAjunkie|access-date=2018-06-10|language=en-US}}</ref>
+|-
+|421
+|[[UFC 218|UFC 218: Holloway vs. Aldo 2]]
+|{{dts|2017|Dec|2}}
+|[[Little Caesars Arena]]
+|[[Detroit, Michigan]], U.S.
+|{{nts|17,587}}
+|<ref name="Staff">{{Cite news|url=http://mmajunkie.com/2017/12/ufc-218-draws-reported-17587-attendance-for-2-million-gate|title=UFC 218 draws reported 17,587 attendance for $2 million gate|publisher=mmajunkie.com|author=Staff|date=December 3, 2017}}</ref>
+|-
+|320
+|[[UFC Fight Night: Condit vs. Alves]]
+|{{dts|2015|May|30}}
+|[[Goiânia Arena]]
+|[[Goiânia]], Brazil
+|{{nts|3,500}}
+|<ref>{{cite news|url=http://mmajunkie.com/2015/05/ufc-fight-night-67-draws-announced-3500-attendance-in-brazil|title=UFC Fight Night 67 draws announced 3,500 attendance in Brazil|publisher=mmajunkie.com|date=May 31, 2015}}</ref>
+|-
+|307
+|[[UFC 183|UFC 183: Silva vs. Diaz]]
+|{{dts|2015|Jan|31}}
+|[[MGM Grand Garden Arena]]
+|[[Las Vegas, Nevada]], U.S.
+|{{nts|13,114}}
+|<ref>{{cite news|url=http://mmajunkie.com/2015/02/ufc-183-silva-vs-diaz-draws-reported-13114-fans-for-4-5-million-live-gate|title='UFC 183: Silva vs. Diaz' draws reported 13,114 fans for $4.5 million live gate|publisher=MMAjunkie.com|date=February 1, 2015}}</ref>
+|-
+|304
+|[[UFC 182|UFC 182: Jones vs. Cormier]]
+|{{dts|2015|Jan|3}}
+|[[MGM Grand Garden Arena]]
+|[[Las Vegas, Nevada]], U.S.
+|{{nts|11,575}}
+|<ref>{{cite news|url=http://www.mmaweekly.com/ufc-182-gate-and-attendance-low-but-ppv-expectations-running-high|title=UFC 182 Gate and Attendance Low, but PPV Expectations Running High|publisher=MMAweekly.com|date=January 4, 2015}}</ref>
+|}
