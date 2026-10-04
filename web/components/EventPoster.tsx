@@ -6,9 +6,9 @@ import type { EventSummary } from "@/lib/overview/types";
 type Size = "sm" | "md" | "lg";
 
 const HEIGHT: Record<Size, string> = {
-  sm: "h-36",
-  md: "h-48",
-  lg: "min-h-72",
+  sm: "h-48",
+  md: "h-60",
+  lg: "min-h-80",
 };
 
 /** The strip sits on the bottom edge at a fixed height, so the type above it never collides. */
@@ -68,16 +68,16 @@ export function EventPoster({
         style={{ backgroundColor: art.slab, clipPath: art.cut }}
       />
       <div aria-hidden="true" className="poster-stripes absolute inset-0 -z-10" />
-      {main && (
-        <p
-          className="poster-label absolute left-4 top-3 max-w-[70%]"
-          style={{ fontSize: `${labelFontSize(label, LABEL_CQW[size])}cqw` }}
-          aria-hidden="true"
-        >
-          {label}
-        </p>
-      )}
       <div className={`relative flex h-full flex-col justify-end gap-2 p-4 ${STRIP_SPACE[size]}`}>
+        {main && (
+          <p
+            className="poster-label mb-auto max-w-[70%]"
+            style={{ fontSize: `${labelFontSize(label, LABEL_CQW[size])}cqw` }}
+            aria-hidden="true"
+          >
+            {label}
+          </p>
+        )}
         {header}
         {main ? (
           <div className="poster-type" style={{ fontSize: `${fontSize}cqw` }} aria-hidden="true">
