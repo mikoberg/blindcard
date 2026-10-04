@@ -1,7 +1,23 @@
+/**
+ * Known limitations of this scanner:
+ * - /winner/i and /\b\d{2} - \d{2}\b/ can false-positive on harmless text such as
+ *   "Winners Circle" or "Sep 26 - 27". If that ever happens, narrow the pattern with evidence;
+ *   never delete it.
+ * - The Open Graph image is a PNG, so its text cannot be scanned here. It is one static,
+ *   generic image (see app/opengraph-image.tsx).
+ */
+
 /** Result data that must never appear in anything served before an explicit Reveal. */
 export const HTML_LEAK_PATTERNS: readonly RegExp[] = [
   /KO\/TKO/,
-  /Doctor'?s Stoppage/i,
+  /Doctor(&#x27;|&#39;|')?s Stoppage/i, // React escapes the apostrophe in text nodes
+  /\bSubmission\b/,
+  /\bwins\b/, // the reveal headline "<name> wins"
+  /\bNo contest\b/i,
+  /\bDQ\b/,
+  /\bDraw\b/, // the reveal headline for a draw (case-sensitive: the formatter's exact word)
+  /endRound|endTimeSeconds|end_time_seconds/,
+  /"outcome"/,
   /Could Not Continue/i,
   /Overturned/i,
   /Decision - (Unanimous|Split|Majority)/i,
@@ -14,7 +30,11 @@ export const HTML_LEAK_PATTERNS: readonly RegExp[] = [
   /ufcstats\.com/i,
 ];
 
-/** The browser bundles may mention generic words, but never a method string or a table name. */
+/**
+ * The browser bundles may mention generic words, but never a method string or a table name.
+ * The words wins / Submission / No contest / DQ / outcome / endRound are NOT listed here:
+ * lib/reveal/format.ts and the reveal types legitimately contain them in the client code.
+ */
 export const CHUNK_LEAK_PATTERNS: readonly RegExp[] = [
   /KO\/TKO/,
   /Doctor'?s Stoppage/i,

@@ -17,6 +17,31 @@ describe("findLeaks (negative control: the scanner can fail)", () => {
     expect(findLeaks("a TKO - Doctor's Stoppage", CHUNK_LEAK_PATTERNS)).not.toEqual([]);
   });
 
+  it("flags the result vocabulary the app itself produces", () => {
+    for (const leaky of [
+      "Raul Rosas Jr. wins",
+      "X wins by Submission",
+      "Submission",
+      "Draw",
+      "No contest",
+      "DQ",
+      '{"endRound":2,"endTimeSeconds":98,"method":"Submission"}',
+      '{"end_time_seconds":98}',
+      '{"outcome":"draw"}',
+      "Doctor's Stoppage",
+      "Doctor&#x27;s Stoppage",
+      "Doctor&#39;s Stoppage",
+    ]) {
+      expect(findLeaks(leaky, HTML_LEAK_PATTERNS), leaky).not.toEqual([]);
+    }
+  });
+
+  it("keeps the vocabulary patterns out of the client bundle list (format.ts legitimately holds those words)", () => {
+    for (const word of ["wins", "Submission", "No contest", "DQ", '"outcome":"win"', "endRound"]) {
+      expect(findLeaks(word, CHUNK_LEAK_PATTERNS), word).toEqual([]);
+    }
+  });
+
   it("passes ordinary page text", () => {
     const clean =
       "Main event. Lightweight title fight, scheduled for five rounds. Rated 4.5 out of 5. Sat 26 Sep 2026. Reveal result";

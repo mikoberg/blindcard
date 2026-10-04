@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { CHUNK_LEAK_PATTERNS, HTML_LEAK_PATTERNS, findLeaks } from "./leaks";
 
-const BASE = process.env.SPOILER_TEST_BASE_URL?.replace(/\/$/, "");
+// The live suite is SKIPPED unless SPOILER_TEST_BASE_URL is set. To run it:
+//   npm run build
+//   npm run start -- -p 3100          (in a second terminal)
+//   $env:SPOILER_TEST_BASE_URL = "http://localhost:3100"
+//   npx vitest run tests/spoiler
+const BASE =process.env.SPOILER_TEST_BASE_URL?.replace(/\/$/, "");
 const live = describe.skipIf(!BASE);
 
 async function get(path: string, headers: Record<string, string> = {}) {
@@ -24,6 +29,9 @@ live("the running app serves no result data", () => {
       expect(findLeaks(html.text, HTML_LEAK_PATTERNS), `HTML ${path}`).toEqual([]);
 
       const payload = await get(path, { RSC: "1" });
+      // Prove a real Flight payload was scanned (not an error page or an ignored header).
+      expect(payload.status, `payload status ${path}`).toBe(200);
+      expect(payload.headers.get("content-type"), `payload content-type ${path}`).toContain("text/x-component");
       expect(findLeaks(payload.text, HTML_LEAK_PATTERNS), `payload ${path}`).toEqual([]);
 
       for (const match of html.text.matchAll(/src="(\/_next\/static\/[^"]+\.js)"/g)) {
