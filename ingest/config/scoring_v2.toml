@@ -3,6 +3,7 @@
 # Fitted on events before 2024, checked on the rest; shipped weights
 # are refitted on all labelled fights. Held-out numbers for this fit:
 #   public axis: FOTN AUC 0.806, FOTN in the top 3 of its card 66%, AUC for 'finished' 0.487
+#   shipped weights, all labelled fights: AUC for 'finished' 0.479
 #   performance axis (private): POTN AUC 0.842
 # The public axis blends 15% of the Performance fit into the Fight fit,
 # chosen so the stars say (almost) nothing about whether a fight was finished.
