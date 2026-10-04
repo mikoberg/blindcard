@@ -1,0 +1,81 @@
+name: ingest-latest
+
+# Ingests recent events that are not complete yet and scores their fights.
+#
+# Timing: the data mirror commits a refresh about once a day, around 18:04 UTC (observed,
+# not guaranteed). We run shortly after, plus a later retry. GitHub cron is UTC only, so the
+# Amsterdam time shifts by an hour with daylight saving. The command is condition-driven
+# (it only does work for events that are not complete yet), so extra runs are harmless.
+#
+# Prerequisites, once: apply supabase/migrations, run `backfill`, then
+# `rescore --version 1`. Without an active score version this job fails on purpose.
+#
+# Needs the repository secret DATABASE_URL. Optional repository variable SCRAPER_CONTACT
+# (public contact URL for the User-Agent; defaults to this repository).
+#
+# Note: GitHub disables scheduled workflows in a public repository after 60 days without
+# repository activity; re-enable them under the Actions tab if that happens.
+
+on:
+  schedule:
+    - cron: "0 19 * * *"
+    - cron: "30 21 * * *"
+  workflow_dispatch:
+    inputs:
+      since_days:
+        description: "Only events newer than this many days"
+        required: false
+        default: "21"
+      dry_run:
+        description: "Fetch and parse, but write nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ingest-latest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    # Scheduled runs of forks would have no secrets and only add noise.
+    if: github.repository == 'mikoberg/blindcard'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ingest/pyproject.toml
+
+      # Editable install on purpose: the scoring config is located relative to the source tree.
+      - name: Install
+        run: python -m pip install -e ingest
+
+      # Raw downloads are pinned to a commit and never change, so caching them is safe.
+      # Old snapshots are pruned so the cache does not grow without bound.
+      - name: Restore download cache
+        uses: actions/cache@v4
+        with:
+          path: ingest/.cache
+          key: downloads-${{ github.run_id }}
+          restore-keys: downloads-
+
+      - name: Prune old downloads
+        run: find ingest/.cache -type f -mtime +3 -delete 2>/dev/null || true
+
+      - name: Ingest latest events
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
+          SINCE_DAYS: ${{ inputs.since_days || '21' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          args=(--since-days "$SINCE_DAYS")
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          blindcard-ingest ingest-latest "${args[@]}"

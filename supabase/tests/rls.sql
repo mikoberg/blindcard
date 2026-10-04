@@ -1,0 +1,171 @@
+-- RLS / spoiler-isolation tests for 0001_init.sql.
+--
+-- Needs a Supabase database (roles anon/authenticated, auth.users, auth.uid()).
+-- Run against a THROWAWAY dev database, never production:
+--   psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls.sql
+-- Everything runs inside one transaction that is rolled back at the end.
+-- Any failed assertion raises an exception and aborts the script.
+
+begin;
+
+------------------------------------------------------------------------------
+-- Seed (as the connecting owner role, which bypasses RLS)
+------------------------------------------------------------------------------
+
+insert into public.events (id, source, source_id, name, slug, event_date)
+values ('00000000-0000-0000-0000-0000000000e1', 'test', 'ev1', 'Test Event', 'test-event', '2026-01-01');
+
+insert into public.fighters (id, source, source_id, name, slug) values
+  ('00000000-0000-0000-0000-0000000000a1', 'test', 'aaa111', 'Fighter A', 'fighter-a'),
+  ('00000000-0000-0000-0000-0000000000b1', 'test', 'bbb222', 'Fighter B', 'fighter-b');
+
+insert into public.fights (id, event_id, source, source_id, card_position, fighter_a_id, fighter_b_id)
+values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000e1',
+        'test', 'fight1', 1,
+        '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000b1');
+
+insert into public.fight_results (fight_id, outcome, winner_fighter_id, method, end_round, end_time_seconds)
+values ('00000000-0000-0000-0000-0000000000f1', 'win',
+        '00000000-0000-0000-0000-0000000000b1', 'KO/TKO', 2, 123);
+
+insert into public.fight_rounds (fight_id, round_number, fighter_id, knockdowns)
+values ('00000000-0000-0000-0000-0000000000f1', 1, '00000000-0000-0000-0000-0000000000a1', 0),
+       ('00000000-0000-0000-0000-0000000000f1', 1, '00000000-0000-0000-0000-0000000000b1', 1);
+
+insert into public.scoring_versions (version, config, reference, is_active)
+values (1, '{}'::jsonb, '{}'::jsonb, true);
+insert into public.excitement_scores (fight_id, version, percentile, stars)
+values ('00000000-0000-0000-0000-0000000000f1', 1, 91.50, 4.5);
+insert into public.excitement_features (fight_id, version, features, composite)
+values ('00000000-0000-0000-0000-0000000000f1', 1, '{"finish": 1}'::jsonb, 1.23);
+
+insert into auth.users (id) values
+  ('00000000-0000-0000-0000-0000000000c1'),
+  ('00000000-0000-0000-0000-0000000000c2');
+insert into public.ratings (fight_id, user_id, stars)
+values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c2', 2);
+
+------------------------------------------------------------------------------
+-- Fighter-order guard (as owner): a/b must follow the source_id rule, never the listing
+------------------------------------------------------------------------------
+
+do $$
+begin
+  begin
+    insert into public.fights (event_id, source, source_id, card_position, fighter_a_id, fighter_b_id)
+    values ('00000000-0000-0000-0000-0000000000e1', 'test', 'fight2', 2,
+            '00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000a1');
+    raise exception 'FAIL: fights accepted fighter_a with the larger source_id';
+  exception when raise_exception then
+    if sqlerrm like 'FAIL:%' then raise; end if;
+  end;
+  raise notice 'PASS fighter order guard rejects reversed order';
+end $$;
+
+------------------------------------------------------------------------------
+-- anon
+------------------------------------------------------------------------------
+
+set local role anon;
+
+do $$
+declare
+  tbl text;
+  n   integer;
+begin
+  -- Private tables: not readable at all.
+  foreach tbl in array array['fight_results', 'fight_rounds', 'excitement_features', 'ratings'] loop
+    begin
+      execute format('select count(*) from public.%I', tbl) into n;
+      raise exception 'FAIL: anon could read public.% (% rows visible)', tbl, n;
+    exception when insufficient_privilege then
+      raise notice 'PASS anon cannot read %', tbl;
+    end;
+  end loop;
+
+  -- Public tables: readable.
+  select count(*) into n from public.fights;
+  if n <> 1 then raise exception 'FAIL: anon should see 1 fight, saw %', n; end if;
+  select count(*) into n from public.events;
+  if n <> 1 then raise exception 'FAIL: anon should see 1 event, saw %', n; end if;
+  select count(*) into n from public.excitement_scores;
+  if n <> 1 then raise exception 'FAIL: anon should see 1 score, saw %', n; end if;
+  raise notice 'PASS anon can read public card data';
+
+  -- Public tables: not writable.
+  begin
+    insert into public.events (source, source_id, name, slug, event_date)
+    values ('x', 'x', 'x', 'x', '2026-01-02');
+    raise exception 'FAIL: anon could insert into events';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot write events';
+  end;
+
+  -- The fights table must carry no result columns at all.
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'fights'
+    and column_name in ('winner_fighter_id', 'winner', 'method', 'end_round', 'end_time_seconds', 'bonuses');
+  if n <> 0 then raise exception 'FAIL: fights has result columns'; end if;
+  raise notice 'PASS fights has no result columns';
+end $$;
+
+-- Reveal path: exactly one fight per call.
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from public.reveal_fight('00000000-0000-0000-0000-0000000000f1');
+  if n <> 1 then raise exception 'FAIL: reveal_fight should return exactly 1 row, got %', n; end if;
+  select count(*) into n from public.reveal_fight('00000000-0000-0000-0000-00000000dead');
+  if n <> 0 then raise exception 'FAIL: reveal_fight leaked a row for an unknown fight'; end if;
+  raise notice 'PASS reveal_fight returns one fight at a time';
+end $$;
+
+reset role;
+
+------------------------------------------------------------------------------
+-- authenticated (user c1)
+------------------------------------------------------------------------------
+
+select set_config('request.jwt.claims',
+  '{"sub": "00000000-0000-0000-0000-0000000000c1", "role": "authenticated"}', true);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
+set local role authenticated;
+
+do $$
+declare
+  tbl text;
+  n   integer;
+begin
+  foreach tbl in array array['fight_results', 'fight_rounds', 'excitement_features'] loop
+    begin
+      execute format('select count(*) from public.%I', tbl) into n;
+      raise exception 'FAIL: authenticated could read public.%', tbl;
+    exception when insufficient_privilege then
+      raise notice 'PASS authenticated cannot read %', tbl;
+    end;
+  end loop;
+
+  -- Own rating: allowed. Someone else's rating row is invisible.
+  insert into public.ratings (fight_id, user_id, stars)
+  values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c1', 5);
+  select count(*) into n from public.ratings;
+  if n <> 1 then raise exception 'FAIL: user should see only their own rating, saw %', n; end if;
+  raise notice 'PASS ratings are own-rows only (read)';
+
+  -- Rating on behalf of another user: rejected by RLS.
+  begin
+    insert into public.ratings (fight_id, user_id, stars)
+    values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c2', 1);
+    raise exception 'FAIL: user could insert a rating for another user';
+  exception when insufficient_privilege then
+    raise notice 'PASS ratings are own-rows only (write)';
+  end;
+end $$;
+
+reset role;
+
+rollback;
+
+\echo 'rls.sql: all assertions passed'

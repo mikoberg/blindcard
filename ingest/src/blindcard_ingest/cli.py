@@ -1,0 +1,167 @@
+"""Command line: backfill, ingest-latest, rescore.
+
+Exit codes: 0 = ok, 1 = the run finished but reported errors (unscored fights, failed or
+overdue events), 2 = bad configuration or unusable input (nothing meaningful was done).
+"""
+
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import datetime as dt
+import logging
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
+from pathlib import Path
+
+from blindcard_ingest.db.repository import PostgresRepository, Repository, RepositoryError
+from blindcard_ingest.http.cache import HtmlCache
+from blindcard_ingest.http.client import FetchError, PoliteClient
+from blindcard_ingest.logging_setup import configure_logging
+from blindcard_ingest.pipeline import (
+    DEFAULT_SINCE_DAYS,
+    IngestReport,
+    run_backfill,
+    run_ingest_latest,
+    run_rescore,
+)
+from blindcard_ingest.scoring.config import ScoringConfigError
+from blindcard_ingest.scoring.scorer import ScoringError
+from blindcard_ingest.settings import Settings, SettingsError, load_settings
+from blindcard_ingest.sources.base import FightDataSource
+from blindcard_ingest.sources.ufcstats.dataset import DatasetError
+from blindcard_ingest.sources.ufcstats.source import UfcStatsCsvSource
+
+logger = logging.getLogger("blindcard_ingest.cli")
+
+EXIT_OK = 0
+EXIT_RUN_ERRORS = 1
+EXIT_BAD_CONFIG = 2
+
+
+def build_parser() -> argparse.ArgumentParser:
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--dry-run", action="store_true", help="read and parse everything, write nothing"
+    )
+    common.add_argument(
+        "--log-level", help="DEBUG, INFO, WARNING, ... (default: LOG_LEVEL or INFO)"
+    )
+    common.add_argument("--cache-dir", type=Path, help="raw download cache (default: CACHE_DIR)")
+
+    parser = argparse.ArgumentParser(
+        prog="blindcard-ingest", description="Ingest fight data and compute excitement scores."
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    backfill = commands.add_parser(
+        "backfill", parents=[common], help="ingest all completed events from a year on"
+    )
+    backfill.add_argument("--from", dest="from_year", type=int, required=True, metavar="YEAR")
+
+    latest = commands.add_parser(
+        "ingest-latest", parents=[common], help="ingest recent events that are not complete yet"
+    )
+    latest.add_argument(
+        "--since-days",
+        type=int,
+        default=DEFAULT_SINCE_DAYS,
+        help=f"only events newer than this many days (default {DEFAULT_SINCE_DAYS})",
+    )
+
+    rescore = commands.add_parser(
+        "rescore", parents=[common], help="rebuild the reference and rescore all fights"
+    )
+    rescore.add_argument("--version", type=int, required=True, metavar="N")
+    rescore.add_argument(
+        "--activate",
+        action="store_true",
+        help="make this the active version (the first version always activates itself)",
+    )
+    return parser
+
+
+@contextmanager
+def _open_repository(settings: Settings) -> Iterator[Repository]:
+    repo = PostgresRepository(settings.require_database_url())
+    try:
+        yield repo
+    finally:
+        repo.close()
+
+
+@contextmanager
+def _open_source(settings: Settings) -> Iterator[FightDataSource]:
+    with PoliteClient(
+        settings.require_user_agent(),
+        HtmlCache(settings.cache_dir),
+        min_interval_seconds=settings.request_interval_seconds,
+    ) as client:
+        yield UfcStatsCsvSource(client)
+
+
+def _today() -> dt.date:
+    return dt.datetime.now(dt.UTC).date()
+
+
+def _finish(report: IngestReport) -> int:
+    for error in report.errors:
+        logger.error("%s", error)
+    return EXIT_RUN_ERRORS if report.has_errors else EXIT_OK
+
+
+def _run(args: argparse.Namespace, settings: Settings) -> int:
+    if args.command == "rescore":
+        with _open_repository(settings) as repo:
+            rescore = run_rescore(
+                repo,
+                settings.scoring_config_dir,
+                args.version,
+                activate=args.activate,
+                dry_run=args.dry_run,
+            )
+        logger.info(
+            "rescore v%d done: %d fights scored, %d unscorable%s",
+            rescore.version,
+            rescore.pool_size,
+            rescore.unscorable,
+            " (dry run)" if args.dry_run else "",
+        )
+        return EXIT_OK
+
+    # Fail on missing configuration before anything is fetched.
+    settings.require_database_url()
+    settings.require_user_agent()
+    with _open_repository(settings) as repo, _open_source(settings) as source:
+        if args.command == "backfill":
+            report = run_backfill(
+                source, repo, from_year=args.from_year, today=_today(), dry_run=args.dry_run
+            )
+            logger.info("next: `blindcard-ingest rescore --version 1` to (re)build the scores")
+        else:
+            report = run_ingest_latest(
+                source, repo, today=_today(), since_days=args.since_days, dry_run=args.dry_run
+            )
+    return _finish(report)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    settings = load_settings()
+    if args.cache_dir is not None:
+        settings = dataclasses.replace(settings, cache_dir=args.cache_dir.resolve())
+    configure_logging(args.log_level or settings.log_level)
+    try:
+        return _run(args, settings)
+    except RepositoryError as exc:
+        logger.error("%s", exc)  # already stripped of row data
+        return EXIT_RUN_ERRORS
+    except (
+        SettingsError,
+        ScoringConfigError,
+        ScoringError,
+        DatasetError,
+        FetchError,
+    ) as exc:
+        logger.error("%s: %s", type(exc).__name__, exc)
+        return EXIT_BAD_CONFIG

@@ -1,0 +1,41 @@
+# Excitement score v1 (rule-based). All tunable numbers live here, never in code.
+# Changing a number means: edit this file, then `blindcard-ingest rescore --version 1`
+# (or copy to scoring_v2.toml and rescore with --version 2 to keep v1 intact).
+
+version = 1
+description = "Rule-based excitement score: pace, knockdowns, subs, swings, finishes, close decisions."
+
+[normalisation]
+# Count/rate features are clipped at this quantile of the calibration pool, then scaled to 0..1.
+cap_quantile = 0.99
+# Refuse to build a reference distribution from fewer fights than this.
+min_pool_size = 100
+
+# composite = sum(weight * normalised_feature). Negative weights penalise.
+[weights]
+pace            = 1.0   # combined significant strikes landed per minute
+knockdowns      = 1.0   # total knockdowns
+sub_attempts    = 0.6   # total submission attempts
+reversals       = 0.3   # total reversals
+swings          = 0.8   # round-to-round lead changes
+finish          = 0.5   # ended by KO/TKO or submission
+finish_lateness = 0.5   # how late the finish came, as a fraction of the scheduled time
+close_decision  = 0.4   # split or majority decision
+competitiveness = 0.8   # 1 - |A - B| / (A + B) on significant strikes landed
+control_share   = -0.5  # share of the fight spent under control (stalling)
+
+# Percentile (0-100) -> stars. Each entry: [lowest percentile that earns it, stars].
+# Strictly ascending, first entry starts at 0, half-star steps from 1.0 to 5.0.
+# Roughly: bottom 8% -> 1.0, top 3% -> 5.0. First guess; tune on real data.
+[stars]
+thresholds = [
+    [0,  1.0],
+    [8,  1.5],
+    [16, 2.0],
+    [28, 2.5],
+    [40, 3.0],
+    [55, 3.5],
+    [70, 4.0],
+    [85, 4.5],
+    [97, 5.0],
+]

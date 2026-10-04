@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blindcard-ingest"
+version = "0.1.0"
+description = "Blindcard ingest: scrape fight data, store it, compute excitement scores."
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27",
+    "selectolax>=0.3.21",
+    "pydantic>=2.7",
+    "psycopg[binary]>=3.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+blindcard-ingest = "blindcard_ingest.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "db: needs TEST_DATABASE_URL (a throwaway Postgres/Supabase database)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
