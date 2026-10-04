@@ -196,3 +196,19 @@ def test_the_margin_is_written_into_the_config_header(result: FitResult) -> None
         result, version=3, cap_quantile=0.99, min_pool_size=100, star_thresholds=THRESHOLDS
     )
     assert f"within {result.finish_leak} of neutral" in text
+
+
+def test_where_a_bout_sat_on_the_card_is_only_a_nudge() -> None:
+    """Main events are good for bonuses, but a main event is not good because it is one."""
+    rows = synthetic_rows()
+    boosted = [
+        dataclasses.replace(
+            r, raw={**r.raw, "main_event": float(r.card_position == 1)}, fotn=r.card_position == 1
+        )
+        for r in rows
+    ]
+    pool = [r.raw for r in boosted]
+    capped = fit_scoring(boosted, pool, cap_quantile=0.99, stakes_cap=0.2)
+    free = fit_scoring(boosted, pool, cap_quantile=0.99, stakes_cap=10.0)
+    assert free.weights["main_event"] > 0.2  # the labels alone would make it a driver
+    assert 0 < capped.weights["main_event"] <= 0.2

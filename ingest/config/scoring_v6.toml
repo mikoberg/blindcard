@@ -1,0 +1,53 @@
+# Excitement score v6: one score, weights fitted to the Fight / Performance
+# of the Night bonuses (regenerate with `blindcard-ingest fit-scoring`; do not edit).
+# Fitted on events before 2024, checked on the rest; shipped weights
+# are refitted on all labelled fights. Held-out numbers for this fit:
+#   Fight of the Night AUC 0.776, in the top 3 of its card 65%, Performance of the Night AUC 0.779
+#   AUC of the stars for 'was finished' 0.864 (0.5 = no information)
+#   shipped weights, all labelled fights: AUC for 'finished' 0.876
+# The score is 50.0% Fight of the Night fit and 50.0%
+# Performance of the Night fit: the largest share of the second that keeps
+# AUC(stars -> finished) within 0.4 of neutral on the training years.
+# A finish adds to a fight's score and never subtracts from it.
+
+version = 6
+description = "Fitted to the Fight/Performance of the Night bonuses: one score."
+
+[normalisation]
+cap_quantile = 0.99
+min_pool_size = 100
+
+# composite = sum(weight * normalised_feature). Negative weights penalise.
+[weights]
+pace                    = 0.269   # combined significant strikes landed per minute
+knockdowns              = 0.505   # total knockdowns
+sub_attempts            = 0.24    # total submission attempts
+reversals               = 0.272   # total reversals
+swings                  = 0.253   # round-to-round lead changes
+competitiveness         = 0.077   # 1 - |A - B| / (A + B) on significant strikes landed
+close_decision          = -0.14   # split or majority decision
+finish                  = 0.536   # ended by KO/TKO or submission (adds, never subtracts)
+control_share_nofinish  = -0.232  # share of the fight under control, when it did not end in a finish
+knockdowns_both         = 0.145   # both fighters scored a knockdown
+min_pace                = 0.391   # significant strikes per minute of the less active fighter
+takedown_rate           = 0.092   # takedowns landed per minute, both fighters
+early_finish            = 0.199   # how early a finish came (1 - share of the scheduled time used)
+main_event              = 0.2     # the main event of the card
+co_main                 = 0.2     # the co-main event
+title_fight             = 0.063   # a championship bout
+volume                  = 1.0     # significant strikes landed over the whole fight, both fighters
+five_rounds             = 0.128   # scheduled for five rounds
+
+# Percentile (0-100) -> stars, same curve as v1.
+[stars]
+thresholds = [
+    [0, 1.0],
+    [8, 1.5],
+    [16, 2.0],
+    [28, 2.5],
+    [40, 3.0],
+    [55, 3.5],
+    [70, 4.0],
+    [85, 4.5],
+    [97, 5.0],
+]

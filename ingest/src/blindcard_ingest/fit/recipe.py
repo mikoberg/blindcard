@@ -1,4 +1,4 @@
-"""The recipe behind score v5: one score, fitted to the night bonuses, written as TOML.
+"""The recipe behind score v6: one score, fitted to the night bonuses, written as TOML.
 
 The score blends two fits of the same features:
   * Fight of the Night: how worth watching a fight is (two-way action, pace, swings);
@@ -54,6 +54,11 @@ SCORE_FEATURES: tuple[str, ...] = (
 
 #: Share of the Performance fit blended into the score, tried in this order.
 BLEND_GRID: tuple[float, ...] = tuple(i / 40 for i in range(25))
+
+#: Where the bout sat on the card. Only a nudge: a main event is not good because it is a main
+#: event, so these weights are capped at this share of the largest weight (after scaling).
+STAKES_FEATURES: tuple[str, ...] = ("main_event", "co_main", "title_fight")
+DEFAULT_STAKES_CAP = 0.20
 
 #: Good for a fight by definition: they may add to a score but never subtract from it.
 NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(
@@ -164,14 +169,17 @@ def _predict(weights: Mapping[str, float], row: Mapping[str, float]) -> float:
     return sum(weight * row[name] for name, weight in weights.items())
 
 
-def _scaled(weights: Mapping[str, float]) -> dict[str, float]:
-    """Largest weight magnitude 1.0, rounded to 3 decimals, zero weights dropped.
+def _scaled(weights: Mapping[str, float], stakes_cap: float) -> dict[str, float]:
+    """Largest weight magnitude 1.0, stakes capped, rounded to 3 decimals, zeros dropped.
 
     The score is a percentile of the composite, so the scale does not matter; this only makes
     the file readable. The rounded numbers are what get evaluated and shipped.
     """
     top = max(abs(w) for w in weights.values())
     rounded = {name: round(w / top, 3) for name, w in weights.items()}
+    for name in STAKES_FEATURES:
+        if name in rounded:
+            rounded[name] = min(rounded[name], stakes_cap)
     return {name: w for name, w in rounded.items() if w != 0.0}
 
 
@@ -188,6 +196,7 @@ def _fit_blend(
     l2: float,
     blend: float | None,
     finish_leak: float = DEFAULT_FINISH_LEAK,
+    stakes_cap: float = DEFAULT_STAKES_CAP,
 ) -> _Fit:
     """Fit the score on these rows.
 
@@ -211,13 +220,13 @@ def _fit_blend(
         finished = [int(r.finished) for r in rows]
 
         def leaks_too_much(share: float) -> bool:
-            weights = _scaled(blended(share))
+            weights = _scaled(blended(share), stakes_cap)
             leak = auc([_predict(weights, n) for n in normalised], finished)
             return (NEUTRAL_LEAK if leak is None else leak) > NEUTRAL_LEAK + finish_leak
 
         allowed = [share for share in BLEND_GRID if not leaks_too_much(share)]
         blend = max(allowed) if allowed else BLEND_GRID[0]
-    return _Fit(weights=_scaled(blended(blend)), blend=blend)
+    return _Fit(weights=_scaled(blended(blend), stakes_cap), blend=blend)
 
 
 def evaluate(rows: Sequence[LabeledRow], scores: Sequence[float]) -> Metrics:
@@ -254,6 +263,7 @@ def fit_scoring(
     test_from_year: int = 2024,
     l2: float = 5.0,
     finish_leak: float = DEFAULT_FINISH_LEAK,
+    stakes_cap: float = DEFAULT_STAKES_CAP,
     baseline: Mapping[str, float] | None = None,
 ) -> FitResult:
     """Fit on the years before `test_from_year`, judge on the rest, ship weights fit on all years.
@@ -274,6 +284,7 @@ def fit_scoring(
         l2=l2,
         blend=None,
         finish_leak=finish_leak,
+        stakes_cap=stakes_cap,
     )
     test_rows = [rows[i] for i in test]
     test_norm = [normalised[i] for i in test]
@@ -281,7 +292,7 @@ def fit_scoring(
     if baseline is not None:
         metrics = {"v1": evaluate(test_rows, [baseline[r.fight_id] for r in test_rows]), **metrics}
 
-    final = _fit_blend(rows, normalised, l2=l2, blend=held_out.blend)
+    final = _fit_blend(rows, normalised, l2=l2, blend=held_out.blend, stakes_cap=stakes_cap)
     return FitResult(
         weights=final.weights,
         blend=held_out.blend,
