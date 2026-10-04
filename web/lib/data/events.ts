@@ -15,7 +15,8 @@ export async function listEvents(): Promise<CardEvent[]> {
   const result = await getSupabase()
     .from("events")
     .select(EVENT_COLUMNS)
-    .order("event_date", { ascending: false });
+    .order("event_date", { ascending: false })
+    .order("id");
   return ensure<EventRow[]>(result, "list events").map(mapEvent);
 }
 
@@ -33,6 +34,7 @@ export async function getLatestEventWithFights(): Promise<CardEvent | null> {
     .from("events")
     .select(EVENT_COLUMNS)
     .order("event_date", { ascending: false })
+    .order("id")
     .limit(10);
   for (const row of ensure<EventRow[]>(latest, "latest events")) {
     const { count, error } = await db

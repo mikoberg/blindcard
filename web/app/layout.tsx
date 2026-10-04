@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Barlow_Condensed, Inter } from "next/font/google";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
+import { getSiteUrl } from "@/lib/site";
 import "./globals.css";
 
 const body = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
@@ -13,7 +14,7 @@ const display = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(getSiteUrl()),
   title: { default: "Blindcard", template: "Blindcard – %s" },
   description: "Which fights are worth watching, with no spoilers.",
 };

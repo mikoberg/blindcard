@@ -36,8 +36,23 @@ describe("findLeaks (negative control: the scanner can fail)", () => {
     }
   });
 
+  it("flags bonuses and the method key in rendered output", () => {
+    for (const leaky of [
+      "Fight of the Night",
+      "Performance of the Night",
+      "performance of the night",
+      "FOTN",
+      "POTN",
+      '{"bonuses":["Fight of the Night"]}',
+      '{"bonuses":[]}',
+      '{"method":"x"}', // only the key itself, so the pattern is what flags it
+    ]) {
+      expect(findLeaks(leaky, HTML_LEAK_PATTERNS), leaky).not.toEqual([]);
+    }
+  });
+
   it("keeps the vocabulary patterns out of the client bundle list (format.ts legitimately holds those words)", () => {
-    for (const word of ["wins", "Submission", "No contest", "DQ", '"outcome":"win"', "endRound"]) {
+    for (const word of ["wins", "Submission", "No contest", "DQ", '"outcome":"win"', "endRound", '"bonuses"', "Fight of the Night"]) {
       expect(findLeaks(word, CHUNK_LEAK_PATTERNS), word).toEqual([]);
     }
   });

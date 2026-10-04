@@ -28,6 +28,9 @@ export const HTML_LEAK_PATTERNS: readonly RegExp[] = [
   /end_time/,
   /winner/i,
   /ufcstats\.com/i,
+  /Fight of the Night|Performance of the Night|\bFOTN\b|\bPOTN\b/i, // bonuses
+  /"bonuses"/, // the reveal JSON key; the client bundle holds it legitimately, so HTML only
+  /"method"/, // the reveal JSON key; HTML only, for the same reason
 ];
 
 /**

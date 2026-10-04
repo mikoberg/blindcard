@@ -28,6 +28,15 @@ npm run dev                            # http://localhost:3000
 The data must exist first: run `backfill` and `rescore --version 1` from `ingest/` (see the root
 README).
 
+## Deploy
+
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SITE_URL` are all
+required at build time: the pages prerender against the database, and the site URL goes into the
+canonical links, Open Graph tags, `sitemap.xml` and `robots.txt`. `NEXT_PUBLIC_SITE_URL` must be an
+absolute `http(s)` URL (for example `https://blindcard.example`). A production build without it
+fails with a clear error, unless Vercel's `VERCEL_PROJECT_PRODUCTION_URL` is available, which is
+then used. The service-role key is never set anywhere in this app.
+
 ## Checks
 
 ```powershell
