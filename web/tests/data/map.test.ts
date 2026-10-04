@@ -26,7 +26,7 @@ describe("buildCard", () => {
     const scores: ScoreRow[] = [{ fight_id: "f1", stars: 4.5, percentile: 93.25 }];
     const card = buildCard(fights, fighters, scores);
     expect(card.map((f) => f.id)).toEqual(["f1", "f2"]);
-    expect(card[0]?.fighterA).toEqual({ id: "p1", name: "One" });
+    expect(card[0]?.fighterA).toEqual({ id: "p1", name: "One", country: null });
     expect(card[0]?.isTitleFight).toBe(true);
     expect(card[0]?.rating).toEqual({ stars: 4.5, percentile: 93.25 });
     expect(card[1]?.rating).toBeNull();
@@ -136,5 +136,39 @@ describe("mapOverview", () => {
     expect(mapOverview({ ...row, event_date: "" })).toBeNull();
     expect(mapOverview({ ...row, name: "" })).toBeNull();
     warn.mockRestore();
+  });
+});
+
+
+describe("country and records in buildCard", () => {
+  const withCountry: FighterRow[] = [
+    { id: "p1", name: "One", country: "br" },
+    { id: "p2", name: "Two", country: "gb-sct" },
+    { id: "p3", name: "Three", country: "Brazil" },
+    { id: "p4", name: "Four", country: "../etc" },
+  ];
+
+  it("carries a well-formed country code and drops anything else (it ends up in an image path)", () => {
+    const card = buildCard(fights, withCountry, []);
+    expect(card[0]?.fighterA.country).toBe("br");
+    expect(card[0]?.fighterB.country).toBe("gb-sct");
+    expect(card[1]?.fighterA.country).toBeNull();
+    expect(card[1]?.fighterB.country).toBeNull();
+  });
+
+  it("maps the records going in, and treats a side with a bad shape as unknown", () => {
+    const good = { w: 23, l: 3, d: 0, nc: 0 };
+    const card = buildCard(
+      [
+        { ...fights[1]!, records: { a: good, b: { w: "x", l: 1, d: 0, nc: 0 } } },
+        { ...fights[0]!, records: { a: null, b: null } },
+        { ...fights[0]!, id: "f9", card_position: 9, records: "nope" },
+      ],
+      fighters,
+      [],
+    );
+    expect(card[0]?.records).toEqual({ a: good, b: null });
+    expect(card[1]?.records).toBeNull();
+    expect(card[2]?.records).toBeNull();
   });
 });

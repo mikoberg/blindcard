@@ -163,6 +163,21 @@ describe("YearNav", () => {
   });
 });
 
+describe("Monogram with a flag", () => {
+  it("puts the country's flag behind the initials", () => {
+    const html = renderToStaticMarkup(<Monogram name="Arman Tsarukyan" country="am" />);
+    expect(html).toContain("url(/flags/am.svg)");
+    expect(html).toContain(">AT<");
+  });
+
+  it("keeps the name-based colour when the country is unknown, or not a clean code", () => {
+    for (const country of [null, undefined, "", "../etc", "Brazil"]) {
+      const html = renderToStaticMarkup(<Monogram name="Arman Tsarukyan" country={country} />);
+      expect(html).not.toContain("/flags/");
+    }
+  });
+});
+
 describe("Monogram", () => {
   it("shows initials, is decorative, and takes its colour from the name", () => {
     const a = renderToStaticMarkup(<Monogram name="Arman Tsarukyan" />);

@@ -78,6 +78,18 @@ class LabeledFight:
 
 
 @dataclass(frozen=True)
+class FightSides:
+    """A stored fight with both fighters, for looking their pages up (all pre-fight facts)."""
+
+    fight_source_id: str
+    event_date: date
+    a_source_id: str
+    a_name: str
+    b_source_id: str
+    b_name: str
+
+
+@dataclass(frozen=True)
 class StoredScoringVersion:
     config: ScoringConfig
     reference: Reference
@@ -117,6 +129,18 @@ class Repository(Protocol):
 
         Returns how many existing fights were updated; unknown fights are ignored.
         """
+        ...
+
+    def fights_with_sides(self, source: str, from_year: int) -> list[FightSides]:
+        """Stored fights from `from_year` on, with both fighters' ids and names."""
+        ...
+
+    def set_fighter_countries(self, source: str, countries: Mapping[str, str]) -> int:
+        """Set `fighters.country` by fighter source id; returns how many rows changed."""
+        ...
+
+    def set_fight_records(self, source: str, records: Mapping[str, Mapping[str, Any]]) -> int:
+        """Set `fights.records` by fight source id; returns how many rows changed."""
         ...
 
     def refresh_career_context(self, source: str) -> int:
@@ -478,6 +502,56 @@ class PostgresRepository:
                 )
                 updated += cur.rowcount
         return updated
+
+    def fights_with_sides(self, source: str, from_year: int) -> list[FightSides]:
+        query = """
+            select f.source_id as fight_source_id, e.event_date,
+                   a.source_id as a_id, a.name as a_name, b.source_id as b_id, b.name as b_name
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fighters a on a.id = f.fighter_a_id
+            join public.fighters b on b.id = f.fighter_b_id
+            where f.source = %s and e.event_date >= make_date(%s, 1, 1)
+            order by e.event_date, f.card_position
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (source, from_year))
+            rows = cur.fetchall()
+        return [
+            FightSides(
+                fight_source_id=row["fight_source_id"],
+                event_date=row["event_date"],
+                a_source_id=row["a_id"],
+                a_name=row["a_name"],
+                b_source_id=row["b_id"],
+                b_name=row["b_name"],
+            )
+            for row in rows
+        ]
+
+    def set_fighter_countries(self, source: str, countries: Mapping[str, str]) -> int:
+        changed = 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            for fighter_source_id, code in countries.items():
+                cur.execute(
+                    "update public.fighters set country = %s"
+                    " where source = %s and source_id = %s and country is distinct from %s",
+                    (code, source, fighter_source_id, code),
+                )
+                changed += cur.rowcount
+        return changed
+
+    def set_fight_records(self, source: str, records: Mapping[str, Mapping[str, Any]]) -> int:
+        changed = 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            for fight_source_id, payload in records.items():
+                cur.execute(
+                    "update public.fights set records = %s"
+                    " where source = %s and source_id = %s and records is distinct from %s::jsonb",
+                    (Jsonb(dict(payload)), source, fight_source_id, Jsonb(dict(payload))),
+                )
+                changed += cur.rowcount
+        return changed
 
     def refresh_career_context(self, source: str) -> int:
         contexts = career_contexts(self._history_bouts())

@@ -10,6 +10,7 @@ export function makeFight(position: number, stars: number | null, extra: Extra =
     cardPosition: position,
     cardSegment: null,
     career: null,
+    records: null,
     weightClass: "Lightweight",
     isTitleFight: false,
     scheduledRounds: 3,

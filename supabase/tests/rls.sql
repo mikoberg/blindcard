@@ -56,6 +56,17 @@ insert into auth.users (id) values
 insert into public.ratings (fight_id, user_id, stars)
 values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c2', 2);
 
+-- Country: an ISO-style code only (as owner).
+do $$
+begin
+  begin
+    update public.fighters set country = 'Brazil' where source = 'test';
+    raise exception 'FAIL: fighters accepted a country that is not a code';
+  exception when check_violation then
+    raise notice 'PASS countries must be codes';
+  end;
+end $$;
+
 -- Card segment: only the three known values (as owner).
 do $$
 begin
@@ -201,6 +212,23 @@ begin
     raise exception 'FAIL: anon could write career context';
   exception when insufficient_privilege then
     raise notice 'PASS anon cannot write career context';
+  end;
+end $$;
+
+-- Fighter country and the records going into a bout are public pre-fight facts.
+do $$
+begin
+  begin
+    update public.fighters set country = 'br' where source = 'test';
+    raise exception 'FAIL: anon could write a fighter country';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot write fighter countries';
+  end;
+  begin
+    update public.fights set records = '{}'::jsonb where source = 'test';
+    raise exception 'FAIL: anon could write fight records';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot write fight records';
   end;
 end $$;
 

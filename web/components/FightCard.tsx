@@ -1,6 +1,7 @@
 import { fightBlurb } from "@/lib/card/blurb";
 import { isHiddenGem } from "@/lib/card/hiddenGem";
 import { SEGMENT_LABELS } from "@/lib/card/segments";
+import { recordLabels } from "@/lib/card/record";
 import { storyLabels } from "@/lib/card/story";
 import { formatStars } from "@/lib/card/stars";
 import type { CardFight } from "@/lib/card/types";
@@ -26,6 +27,11 @@ function RatingPlate({ stars }: { stars: number | null }) {
       {stars === null ? "–" : formatStars(stars)}
     </div>
   );
+}
+
+/** What was known before the fight: both records, then the storylines. */
+function before(fight: CardFight): string[] {
+  return [...recordLabels(fight), ...storyLabels(fight)];
 }
 
 export function FightCard({
@@ -64,9 +70,9 @@ export function FightCard({
           </div>
           <h3 className="mt-2 flex items-center gap-3 font-[family-name:var(--font-display)] text-2xl font-bold leading-tight">
             <span className="flex shrink-0">
-              <Monogram name={fight.fighterA.name} />
+              <Monogram name={fight.fighterA.name} country={fight.fighterA.country} />
               <span className="-ml-1.5 flex">
-                <Monogram name={fight.fighterB.name} />
+                <Monogram name={fight.fighterB.name} country={fight.fighterB.country} />
               </span>
             </span>
             <span className="min-w-0 break-words">
@@ -74,9 +80,9 @@ export function FightCard({
             </span>
           </h3>
           <p className="mt-1 text-sm text-[var(--muted)]">{fightBlurb(fight)}</p>
-          {storyLabels(fight).length > 0 && (
+          {before(fight).length > 0 && (
             <ul aria-label="Before the fight" className="mt-2 flex flex-wrap gap-1.5">
-              {storyLabels(fight).map((label) => (
+              {before(fight).map((label) => (
                 <li
                   key={label}
                   className="rounded-md bg-[var(--surface-2)] px-2 py-1 text-xs font-medium text-[var(--text)]/90"

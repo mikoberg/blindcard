@@ -1,5 +1,15 @@
+import { flagCode } from "@/lib/card/country";
 import { isValidStars } from "@/lib/card/stars";
-import type { CardEvent, CardFight, CardSegment, FightCareer, FighterCareer, Rating } from "@/lib/card/types";
+import type {
+  CardEvent,
+  CardFight,
+  CardSegment,
+  FightCareer,
+  FighterCareer,
+  FighterRecord,
+  FightRecords,
+  Rating,
+} from "@/lib/card/types";
 import type { EventSummary, MainEvent, RatedSlot } from "@/lib/overview/types";
 import { DataError } from "./ensure";
 
@@ -17,6 +27,7 @@ export interface FightRow {
   card_position: number;
   card_segment: string | null;
   career: unknown;
+  records?: unknown;
   weight_class: string | null;
   is_title_fight: boolean;
   scheduled_rounds: number | null;
@@ -27,6 +38,7 @@ export interface FightRow {
 export interface FighterRow {
   id: string;
   name: string;
+  country?: string | null;
 }
 
 /** `stars` and `percentile` are numeric columns; accept numbers or numeric strings. */
@@ -83,6 +95,22 @@ function toCareer(value: unknown): FightCareer | null {
   return { meetings: o.meetings, a, b };
 }
 
+function toRecord(value: unknown): FighterRecord | null {
+  const o = (value ?? {}) as Record<string, unknown>;
+  const counts = [o.w, o.l, o.d, o.nc];
+  if (!counts.every((n) => typeof n === "number" && Number.isInteger(n) && n >= 0)) return null;
+  return { w: o.w as number, l: o.l as number, d: o.d as number, nc: o.nc as number };
+}
+
+/** A side that does not have the expected shape is unknown, never guessed. */
+function toRecords(value: unknown): FightRecords | null {
+  if (typeof value !== "object" || value === null) return null;
+  const o = value as { a?: unknown; b?: unknown };
+  const a = toRecord(o.a);
+  const b = toRecord(o.b);
+  return a === null && b === null ? null : { a, b };
+}
+
 const SEGMENTS: readonly CardSegment[] = ["main", "prelim", "early_prelim"];
 
 /** An unknown value is treated as "no segment", never guessed. */
@@ -98,7 +126,9 @@ export function buildCard(
   fighters: readonly FighterRow[],
   scores: readonly ScoreRow[],
 ): CardFight[] {
-  const fighterById = new Map(fighters.map((row) => [row.id, { id: row.id, name: row.name }]));
+  const fighterById = new Map(
+    fighters.map((row) => [row.id, { id: row.id, name: row.name, country: flagCode(row.country) }]),
+  );
   const scoreByFight = new Map<string, ScoreRow>();
   for (const score of scores) {
     if (!scoreByFight.has(score.fight_id)) scoreByFight.set(score.fight_id, score);
@@ -114,6 +144,7 @@ export function buildCard(
         cardPosition: fight.card_position,
         cardSegment: toSegment(fight),
         career: toCareer(fight.career),
+        records: toRecords(fight.records),
         weightClass: fight.weight_class,
         isTitleFight: fight.is_title_fight,
         scheduledRounds: fight.scheduled_rounds,

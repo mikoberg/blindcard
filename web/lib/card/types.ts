@@ -1,6 +1,22 @@
 export interface CardFighter {
   id: string;
   name: string;
+  /** Lower-case ISO code (or gb-eng, gb-sct, gb-wls, gb-nir) for the flag; null = unknown. */
+  country?: string | null;
+}
+
+/** A fighter's professional record going into a bout. */
+export interface FighterRecord {
+  w: number;
+  l: number;
+  d: number;
+  nc: number;
+}
+
+/** The two fighters' records before the bout (a side is null when unknown). */
+export interface FightRecords {
+  a: FighterRecord | null;
+  b: FighterRecord | null;
 }
 
 export interface Rating {
@@ -37,6 +53,8 @@ export interface CardFight {
   cardSegment: CardSegment | null;
   /** null = not computed. */
   career: FightCareer | null;
+  /** Records before the bout, never after it. null = unknown. */
+  records: FightRecords | null;
   weightClass: string | null;
   isTitleFight: boolean;
   scheduledRounds: number | null;

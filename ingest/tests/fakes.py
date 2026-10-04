@@ -5,11 +5,17 @@ from __future__ import annotations
 import datetime as dt
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 from helpers import make_fight, rnd
 
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
-from blindcard_ingest.db.repository import FightScoringInput, LabeledFight, StoredScoringVersion
+from blindcard_ingest.db.repository import (
+    FightScoringInput,
+    FightSides,
+    LabeledFight,
+    StoredScoringVersion,
+)
 from blindcard_ingest.models import EventBundle, ParsedEvent, ParsedFight
 from blindcard_ingest.scoring.career import (
     CareerContext,
@@ -107,6 +113,8 @@ class FakeRepository:
     bonuses: dict[str, list[str]] = field(default_factory=dict)
     segments: dict[str, str] = field(default_factory=dict)
     career: dict[str, dict] = field(default_factory=dict)
+    countries: dict[str, str] = field(default_factory=dict)
+    records: dict[str, dict] = field(default_factory=dict)
     upserts: int = 0
 
     def complete_event_source_ids(self, source: str) -> set[str]:
@@ -217,6 +225,31 @@ class FakeRepository:
                 self.bonuses[fight_source_id] = list(bonuses)
                 updated += 1
         return updated
+
+    def fights_with_sides(self, source: str, from_year: int) -> list[FightSides]:
+        return [
+            FightSides(
+                fight_source_id=fight.source_id,
+                event_date=bundle.event.event_date,
+                a_source_id=fight.fighter_a.source_id,
+                a_name=fight.fighter_a.name,
+                b_source_id=fight.fighter_b.source_id,
+                b_name=fight.fighter_b.name,
+            )
+            for (src, _), bundle in self.events.items()
+            if src == source and bundle.event.event_date.year >= from_year
+            for fight in bundle.fights
+        ]
+
+    def set_fighter_countries(self, source: str, countries: Mapping[str, str]) -> int:
+        changed = sum(1 for k, v in countries.items() if self.countries.get(k) != v)
+        self.countries.update(countries)
+        return changed
+
+    def set_fight_records(self, source: str, records: Mapping[str, Mapping[str, Any]]) -> int:
+        changed = sum(1 for k, v in records.items() if self.records.get(k) != dict(v))
+        self.records.update({k: dict(v) for k, v in records.items()})
+        return changed
 
     def refresh_career_context(self, source: str) -> int:
         changed = 0

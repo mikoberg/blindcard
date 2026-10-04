@@ -76,3 +76,24 @@ describe("FightCard storylines", () => {
     expect(render(makeFight(2, 4))).not.toContain("Before the fight");
   });
 });
+
+
+describe("FightCard records and flags", () => {
+  const fight = makeFight(2, 4, {
+    fighterA: { id: "a", name: "Ann One", country: "br" },
+    fighterB: { id: "b", name: "Bea Two", country: "se" },
+    records: { a: { w: 23, l: 3, d: 0, nc: 0 }, b: { w: 14, l: 2, d: 0, nc: 0 } },
+  });
+
+  it("shows the records going in, before the storylines, and the flags", () => {
+    const html = render(fight);
+    expect(html).toContain("Ann One 23-3");
+    expect(html).toContain("Bea Two 14-2");
+    expect(html).toContain("url(/flags/br.svg)");
+    expect(html).toContain("url(/flags/se.svg)");
+  });
+
+  it("shows no records list for a fight without records", () => {
+    expect(render(makeFight(2, 4))).not.toContain("Before the fight");
+  });
+});

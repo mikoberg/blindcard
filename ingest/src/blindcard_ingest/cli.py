@@ -1,5 +1,5 @@
 """Command line: backfill, ingest-latest, ingest-bonuses, ingest-segments, ingest-context,
-fit-scoring, rescore.
+ingest-fighters, fit-scoring, rescore.
 
 Exit codes: 0 = ok, 1 = the run finished but reported errors (unscored fights, failed or
 overdue events), 2 = bad configuration or unusable input (nothing meaningful was done).
@@ -11,6 +11,7 @@ import argparse
 import dataclasses
 import datetime as dt
 import logging
+import tempfile
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
@@ -18,6 +19,7 @@ from pathlib import Path
 from blindcard_ingest.bonus_pipeline import BonusSource, run_ingest_bonuses
 from blindcard_ingest.context_pipeline import run_ingest_context
 from blindcard_ingest.db.repository import PostgresRepository, Repository, RepositoryError
+from blindcard_ingest.fighters_pipeline import run_ingest_fighters
 from blindcard_ingest.fit.run import run_fit_scoring
 from blindcard_ingest.http.cache import HtmlCache
 from blindcard_ingest.http.client import FetchError, PoliteClient
@@ -95,6 +97,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="store rematch, win streaks and unbeaten status (from earlier bouts) on each fight",
     )
 
+    fighters = commands.add_parser(
+        "ingest-fighters",
+        parents=[common],
+        help="store each fighter's country and the records going into every bout (Wikipedia)",
+    )
+    fighters.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
+
     fit = commands.add_parser(
         "fit-scoring",
         parents=[common],
@@ -153,6 +162,21 @@ def _open_source(settings: Settings) -> Iterator[FightDataSource]:
         min_interval_seconds=settings.request_interval_seconds,
     ) as client:
         yield UfcStatsCsvSource(client)
+
+
+@contextmanager
+def _open_wikipedia_scratch(settings: Settings) -> Iterator[WikipediaClient]:
+    """A Wikipedia client whose raw replies are thrown away afterwards: fighter pages are long
+    and only the few facts read from them are kept."""
+    with (
+        tempfile.TemporaryDirectory(prefix="blindcard-wiki-") as scratch,
+        PoliteClient(
+            settings.require_user_agent(),
+            HtmlCache(Path(scratch)),
+            min_interval_seconds=settings.request_interval_seconds,
+        ) as client,
+    ):
+        yield WikipediaClient(client)
 
 
 @contextmanager
@@ -227,6 +251,17 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
             logger.warning(
                 "only %.0f%% of events are labelled; see the local bonus_report.json",
                 100 * bonus_report.labeled_share,
+            )
+        return EXIT_OK
+
+    if args.command == "ingest-fighters":
+        with _open_repository(settings) as repo, _open_wikipedia_scratch(settings) as wiki:
+            run_ingest_fighters(
+                wiki,
+                repo,
+                source_name=SOURCE_NAME,
+                from_year=args.from_year,
+                dry_run=args.dry_run,
             )
         return EXIT_OK
 

@@ -55,12 +55,18 @@ class WikipediaClient:
         except (KeyError, TypeError) as exc:
             raise WikipediaError("the events list has no wikitext") from exc
 
-    def page_wikitexts(self, titles: Sequence[str]) -> dict[str, str]:
-        """Wikitext per REQUESTED title; titles whose page does not exist are absent."""
+    def page_wikitexts(
+        self, titles: Sequence[str], *, batch_size: int = BATCH_SIZE
+    ) -> dict[str, str]:
+        """Wikitext per REQUESTED title; titles whose page does not exist are absent.
+
+        Long pages (a fighter's career) need a small `batch_size`: the API cuts off a reply
+        that gets too large.
+        """
         result: dict[str, str] = {}
         unique = sorted(set(titles))
-        for start in range(0, len(unique), BATCH_SIZE):
-            batch = unique[start : start + BATCH_SIZE]
+        for start in range(0, len(unique), batch_size):
+            batch = unique[start : start + batch_size]
             data = self._get_json(
                 {
                     "action": "query",
@@ -92,5 +98,5 @@ class WikipediaClient:
                     final = forward[final]
                 if final in content:
                     result[requested] = content[final]
-        logger.info("fetched %d of %d requested event pages", len(result), len(unique))
+        logger.info("fetched %d of %d requested pages", len(result), len(unique))
         return result
