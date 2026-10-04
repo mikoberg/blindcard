@@ -15,8 +15,10 @@ from pathlib import Path
 import psycopg
 import pytest
 from fakes import make_bundle
+from helpers import make_fight
 
 from blindcard_ingest.db.repository import PostgresRepository, RepositoryError
+from blindcard_ingest.models import EventBundle, ParsedEvent
 from blindcard_ingest.pipeline import run_rescore
 from blindcard_ingest.settings import DEFAULT_SCORING_CONFIG_DIR
 
@@ -266,3 +268,32 @@ def test_card_segments_are_stored_survive_a_re_ingest_and_ignore_unknown_fights(
     assert dict(rows) == {first: "main", second: "early_prelim"}
     with pytest.raises(RepositoryError):
         repo.set_card_segments(SOURCE, {first: "headliner"})
+
+
+def test_career_context_is_written_for_fights_and_a_rerun_changes_nothing(
+    conn: psycopg.Connection, repo: PostgresRepository
+) -> None:
+    def rematch(event_id: str, date: dt.date) -> EventBundle:
+        return EventBundle(
+            event=ParsedEvent(source_id=event_id, name=f"Event {event_id}", event_date=date),
+            fights=[make_fight(source_id=f"{event_id}-f0")],  # always the same two fighters
+        )
+
+    early = rematch("car1", dt.date(2019, 3, 2))
+    later = rematch("car2", dt.date(2021, 3, 6))
+    repo.upsert_event_bundle(SOURCE, "UFC", early)
+    repo.upsert_event_bundle(SOURCE, "UFC", later)
+
+    assert repo.refresh_career_context(SOURCE) >= 2
+    assert repo.refresh_career_context(SOURCE) == 0
+
+    def meetings(bundle) -> int:
+        row = conn.execute(
+            "select career->>'meetings' from public.fights where source = %s and source_id = %s",
+            (SOURCE, bundle.fights[0].source_id),
+        ).fetchone()
+        assert row is not None
+        return int(row[0])
+
+    assert meetings(early) == 0
+    assert meetings(later) == 1

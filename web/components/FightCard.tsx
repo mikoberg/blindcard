@@ -1,6 +1,7 @@
 import { fightBlurb } from "@/lib/card/blurb";
 import { isHiddenGem } from "@/lib/card/hiddenGem";
 import { SEGMENT_LABELS } from "@/lib/card/segments";
+import { storyLabels } from "@/lib/card/story";
 import { formatStars } from "@/lib/card/stars";
 import type { CardFight } from "@/lib/card/types";
 import { Monogram } from "./Monogram";
@@ -73,6 +74,18 @@ export function FightCard({
             </span>
           </h3>
           <p className="mt-1 text-sm text-[var(--muted)]">{fightBlurb(fight)}</p>
+          {storyLabels(fight).length > 0 && (
+            <ul aria-label="Before the fight" className="mt-2 flex flex-wrap gap-1.5">
+              {storyLabels(fight).map((label) => (
+                <li
+                  key={label}
+                  className="rounded-md bg-[var(--surface-2)] px-2 py-1 text-xs font-medium text-[var(--text)]/90"
+                >
+                  {label}
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="mt-3">
             <StarRating stars={fight.rating?.stars ?? null} showNumber={false} />
           </div>

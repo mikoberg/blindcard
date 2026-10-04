@@ -80,6 +80,16 @@ jobs:
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-latest "${args[@]}"
 
+      # Rematch, win streaks and unbeaten status of each bout, from the fighters' earlier bouts.
+      - name: Career context
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          args=()
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          blindcard-ingest ingest-context "${args[@]}"
+
       # Which part of the card each fight was on (main card / prelims / early prelims), read
       # from the event's Wikipedia article. An event is only segmented when every fight matches,
       # so a card whose article is not updated yet simply shows no split until a later run.

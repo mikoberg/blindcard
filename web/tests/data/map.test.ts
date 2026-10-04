@@ -3,8 +3,8 @@ import { DataError } from "@/lib/data/ensure";
 import { buildCard, mapEvent, mapOverview, type FightRow, type FighterRow, type ScoreRow } from "@/lib/data/map";
 
 const fights: FightRow[] = [
-  { id: "f2", event_id: "e1", card_position: 2, card_segment: "prelim", weight_class: "Welterweight", is_title_fight: false, scheduled_rounds: 3, fighter_a_id: "p3", fighter_b_id: "p4" },
-  { id: "f1", event_id: "e1", card_position: 1, card_segment: "main", weight_class: "Lightweight", is_title_fight: true, scheduled_rounds: 5, fighter_a_id: "p1", fighter_b_id: "p2" },
+  { id: "f2", event_id: "e1", card_position: 2, card_segment: "prelim", career: null, weight_class: "Welterweight", is_title_fight: false, scheduled_rounds: 3, fighter_a_id: "p3", fighter_b_id: "p4" },
+  { id: "f1", event_id: "e1", card_position: 1, card_segment: "main", career: null, weight_class: "Lightweight", is_title_fight: true, scheduled_rounds: 5, fighter_a_id: "p1", fighter_b_id: "p2" },
 ];
 const fighters: FighterRow[] = [
   { id: "p1", name: "One" },

@@ -20,7 +20,7 @@ from psycopg.types.json import Jsonb
 
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
-from blindcard_ingest.scoring.career import HistoryBout, career_contexts
+from blindcard_ingest.scoring.career import HistoryBout, career_contexts, career_json
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import ScoringInput
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
@@ -116,6 +116,13 @@ class Repository(Protocol):
         """Set `fight_results.bonuses` (private, result-side) for fights by their source id.
 
         Returns how many existing fights were updated; unknown fights are ignored.
+        """
+        ...
+
+    def refresh_career_context(self, source: str) -> int:
+        """Compute `fights.career` (rematch, streaks, unbeaten) for every fight of `source`.
+
+        Built from the fighters' history before each bout. Returns how many rows changed.
         """
         ...
 
@@ -471,6 +478,24 @@ class PostgresRepository:
                 )
                 updated += cur.rowcount
         return updated
+
+    def refresh_career_context(self, source: str) -> int:
+        contexts = career_contexts(self._history_bouts())
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("select id::text as id from public.fights where source = %s", (source,))
+            ids = [row["id"] for row in cur.fetchall()]
+            changed = 0
+            for fight_id in ids:
+                context = contexts.get(fight_id)
+                if context is None:
+                    continue
+                cur.execute(
+                    "update public.fights set career = %s"
+                    " where id = %s::uuid and career is distinct from %s::jsonb",
+                    (Jsonb(career_json(context)), fight_id, Jsonb(career_json(context))),
+                )
+                changed += cur.rowcount
+        return changed
 
     def set_card_segments(self, source: str, segments_by_fight: Mapping[str, str]) -> int:
         if not segments_by_fight:

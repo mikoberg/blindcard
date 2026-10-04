@@ -1,4 +1,5 @@
-"""Command line: backfill, ingest-latest, ingest-bonuses, ingest-segments, fit-scoring, rescore.
+"""Command line: backfill, ingest-latest, ingest-bonuses, ingest-segments, ingest-context,
+fit-scoring, rescore.
 
 Exit codes: 0 = ok, 1 = the run finished but reported errors (unscored fights, failed or
 overdue events), 2 = bad configuration or unusable input (nothing meaningful was done).
@@ -15,6 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from blindcard_ingest.bonus_pipeline import BonusSource, run_ingest_bonuses
+from blindcard_ingest.context_pipeline import run_ingest_context
 from blindcard_ingest.db.repository import PostgresRepository, Repository, RepositoryError
 from blindcard_ingest.fit.run import run_fit_scoring
 from blindcard_ingest.http.cache import HtmlCache
@@ -86,6 +88,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="store which part of the card (main / prelims / early prelims) each fight was on",
     )
     segments.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
+
+    commands.add_parser(
+        "ingest-context",
+        parents=[common],
+        help="store rematch, win streaks and unbeaten status (from earlier bouts) on each fight",
+    )
 
     fit = commands.add_parser(
         "fit-scoring",
@@ -220,6 +228,11 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 "only %.0f%% of events are labelled; see the local bonus_report.json",
                 100 * bonus_report.labeled_share,
             )
+        return EXIT_OK
+
+    if args.command == "ingest-context":
+        with _open_repository(settings) as repo:
+            run_ingest_context(repo, source_name=SOURCE_NAME, dry_run=args.dry_run)
         return EXIT_OK
 
     if args.command == "ingest-segments":

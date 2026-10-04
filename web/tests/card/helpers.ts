@@ -9,6 +9,7 @@ export function makeFight(position: number, stars: number | null, extra: Extra =
     id: `fight-${position}`,
     cardPosition: position,
     cardSegment: null,
+    career: null,
     weightClass: "Lightweight",
     isTitleFight: false,
     scheduledRounds: 3,

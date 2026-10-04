@@ -64,6 +64,20 @@ describe("EventPoster type", () => {
     expect(html).toContain("poster-type");
   });
 
+  it("puts the event's own title on the poster: the series line over the family names", () => {
+    const html = renderToStaticMarkup(
+      <EventPoster
+        event={event({ name: "UFC 332: Silva vs. Wang", mainEvent: { a: "Natalia Silva", b: "Wang Cong", title: true } })}
+        size="md"
+      />,
+    );
+    expect(html).toContain("poster-label");
+    expect(html).toContain(">UFC 332<");
+    expect(html.indexOf(">UFC 332<")).toBeLessThan(html.indexOf(">Silva<"));
+    expect(html).toContain(">Wang<");
+    expect(html).not.toContain(">Cong<");
+  });
+
   it("marks a title fight on the poster and not otherwise", () => {
     const title = renderToStaticMarkup(
       <EventPoster event={event({ mainEvent: { a: "A One", b: "B Two", title: true } })} size="md" />,

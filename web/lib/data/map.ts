@@ -1,5 +1,5 @@
 import { isValidStars } from "@/lib/card/stars";
-import type { CardEvent, CardFight, CardSegment, Rating } from "@/lib/card/types";
+import type { CardEvent, CardFight, CardSegment, FightCareer, FighterCareer, Rating } from "@/lib/card/types";
 import type { EventSummary, MainEvent, RatedSlot } from "@/lib/overview/types";
 import { DataError } from "./ensure";
 
@@ -16,6 +16,7 @@ export interface FightRow {
   event_id: string;
   card_position: number;
   card_segment: string | null;
+  career: unknown;
   weight_class: string | null;
   is_title_fight: boolean;
   scheduled_rounds: number | null;
@@ -64,6 +65,24 @@ function toRating(score: ScoreRow | undefined): Rating | null {
   return { stars, percentile };
 }
 
+function toFighterCareer(value: unknown): FighterCareer | null {
+  const o = (value ?? {}) as { streak?: unknown; unbeaten?: unknown };
+  if (typeof o.streak !== "number" || !Number.isInteger(o.streak) || o.streak < 0) return null;
+  if (typeof o.unbeaten !== "boolean") return null;
+  return { streak: o.streak, unbeaten: o.unbeaten };
+}
+
+/** Anything that does not have the expected shape is treated as "no context", never guessed. */
+function toCareer(value: unknown): FightCareer | null {
+  if (typeof value !== "object" || value === null) return null;
+  const o = value as { meetings?: unknown; a?: unknown; b?: unknown };
+  const a = toFighterCareer(o.a);
+  const b = toFighterCareer(o.b);
+  if (typeof o.meetings !== "number" || !Number.isInteger(o.meetings) || o.meetings < 0) return null;
+  if (a === null || b === null) return null;
+  return { meetings: o.meetings, a, b };
+}
+
 const SEGMENTS: readonly CardSegment[] = ["main", "prelim", "early_prelim"];
 
 /** An unknown value is treated as "no segment", never guessed. */
@@ -94,6 +113,7 @@ export function buildCard(
         id: fight.id,
         cardPosition: fight.card_position,
         cardSegment: toSegment(fight),
+        career: toCareer(fight.career),
         weightClass: fight.weight_class,
         isTitleFight: fight.is_title_fight,
         scheduledRounds: fight.scheduled_rounds,

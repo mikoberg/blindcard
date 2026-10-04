@@ -114,3 +114,15 @@ html {
   color: var(--accent);
   text-shadow: none;
 }
+
+/* The event's series line at the top of a poster ("UFC 332"): small, tracked, plain text. */
+.poster-label {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.9;
+  white-space: nowrap;
+}

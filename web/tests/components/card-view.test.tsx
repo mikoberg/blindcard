@@ -57,8 +57,12 @@ describe("CardView", () => {
 
   it("does not use the site's branding with a promotion name", () => {
     const html = render();
-    // The event name is a plain fact from the database; nothing else may contain it.
-    expect(html.replace("UFC Fight Night: Alpha vs. Beta", "")).not.toMatch(/UFC|Octagon/);
+    // The event name is a plain fact from the database (also as the poster's series line);
+    // nothing else may contain the promotion's name.
+    const withoutEventName = html
+      .replaceAll("UFC Fight Night: Alpha vs. Beta", "")
+      .replaceAll("UFC Fight Night", "");
+    expect(withoutEventName).not.toMatch(/UFC|Octagon/);
   });
 });
 

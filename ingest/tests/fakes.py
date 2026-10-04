@@ -11,7 +11,12 @@ from helpers import make_fight, rnd
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.db.repository import FightScoringInput, LabeledFight, StoredScoringVersion
 from blindcard_ingest.models import EventBundle, ParsedEvent, ParsedFight
-from blindcard_ingest.scoring.career import CareerContext, HistoryBout, career_contexts
+from blindcard_ingest.scoring.career import (
+    CareerContext,
+    HistoryBout,
+    career_contexts,
+    career_json,
+)
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import ScoringInput
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
@@ -101,6 +106,7 @@ class FakeRepository:
     scores: dict[tuple[str, int], ScoredFight] = field(default_factory=dict)
     bonuses: dict[str, list[str]] = field(default_factory=dict)
     segments: dict[str, str] = field(default_factory=dict)
+    career: dict[str, dict] = field(default_factory=dict)
     upserts: int = 0
 
     def complete_event_source_ids(self, source: str) -> set[str]:
@@ -211,6 +217,15 @@ class FakeRepository:
                 self.bonuses[fight_source_id] = list(bonuses)
                 updated += 1
         return updated
+
+    def refresh_career_context(self, source: str) -> int:
+        changed = 0
+        for fight_id, context in self._contexts().items():
+            payload = career_json(context)
+            if self.career.get(fight_id) != payload:
+                self.career[fight_id] = payload
+                changed += 1
+        return changed
 
     def set_card_segments(self, source: str, segments_by_fight: Mapping[str, str]) -> int:
         known = {

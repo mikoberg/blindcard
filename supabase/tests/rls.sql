@@ -189,6 +189,21 @@ begin
   end;
 end $$;
 
+-- Career context is a public pre-fight fact: readable, not writable.
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from public.fights where source = 'test' and career is null;
+  if n <> 1 then raise exception 'FAIL: seeded fight should have no career context yet'; end if;
+  begin
+    update public.fights set career = '{}'::jsonb where source = 'test';
+    raise exception 'FAIL: anon could write career context';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot write career context';
+  end;
+end $$;
+
 -- Score breakdown reveal: one fight per call, active version only, same config as the features.
 do $$
 declare

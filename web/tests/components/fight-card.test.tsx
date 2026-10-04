@@ -55,3 +55,24 @@ describe("FightCard", () => {
     expect(html).not.toMatch(/KO\/TKO|Submission|Decision|winner|wins/i);
   });
 });
+
+
+describe("FightCard storylines", () => {
+  const withCareer = makeFight(2, 4, {
+    fighterA: { id: "a", name: "Ann One" },
+    fighterB: { id: "b", name: "Bea Two" },
+    career: { meetings: 1, a: { streak: 5, unbeaten: false }, b: { streak: 0, unbeaten: true } },
+  });
+
+  it("shows what was known before the fight", () => {
+    const html = render(withCareer);
+    expect(html).toContain('aria-label="Before the fight"');
+    expect(html).toContain("Rematch");
+    expect(html).toContain("Ann One has won 5 in a row");
+    expect(html).toContain("Bea Two is unbeaten in the promotion");
+  });
+
+  it("shows no list at all when there is no storyline", () => {
+    expect(render(makeFight(2, 4))).not.toContain("Before the fight");
+  });
+});

@@ -10,6 +10,22 @@ export interface Rating {
   percentile: number;
 }
 
+/** What was known about a fighter before the bout (from earlier bouts only). */
+export interface FighterCareer {
+  /** Wins in a row going into the bout. */
+  streak: number;
+  /** No UFC loss, after at least a few fights. */
+  unbeaten: boolean;
+}
+
+/** What was known about the two fighters before the bout: a pre-fight fact. */
+export interface FightCareer {
+  /** How often the two met before. */
+  meetings: number;
+  a: FighterCareer;
+  b: FighterCareer;
+}
+
 /** Which part of the card a fight was on. A pre-fight fact (the running order is announced). */
 export type CardSegment = "main" | "prelim" | "early_prelim";
 
@@ -19,6 +35,8 @@ export interface CardFight {
   cardPosition: number;
   /** null = unknown: the event's segments could not be established completely. */
   cardSegment: CardSegment | null;
+  /** null = not computed. */
+  career: FightCareer | null;
   weightClass: string | null;
   isTitleFight: boolean;
   scheduledRounds: number | null;

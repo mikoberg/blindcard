@@ -13,6 +13,7 @@ import datetime as dt
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,22 @@ class CareerContext:
 
 
 UNBEATEN_MIN_FIGHTS = 5
+#: Our history starts in 2001. Someone whose first stored bout is earlier than this much later
+#: may have fought (and lost) before it, so "unbeaten" is only claimed for later debuts.
+UNBEATEN_RELIABLE_FROM = dt.date(2003, 1, 1)
+
+
+def career_json(context: CareerContext) -> dict[str, Any]:
+    """The public shape stored in `fights.career` (a/b follow the fight's fighter_a / fighter_b).
+
+    Only what the card shows: earlier meetings, each fighter's current win streak, and whether
+    they are unbeaten. All of it comes from EARLIER bouts, so it says nothing about this one.
+    """
+    return {
+        "meetings": context.prior_meetings,
+        "a": {"streak": context.win_streaks[0], "unbeaten": context.unbeaten[0]},
+        "b": {"streak": context.win_streaks[1], "unbeaten": context.unbeaten[1]},
+    }
 
 
 @dataclass
@@ -54,6 +71,7 @@ class _Record:
     losses: int = 0
     streak: int = 0
     headliners: int = 0
+    first_seen: dt.date | None = None
 
 
 def career_contexts(bouts: Sequence[HistoryBout]) -> dict[str, CareerContext]:
@@ -76,10 +94,7 @@ def career_contexts(bouts: Sequence[HistoryBout]) -> dict[str, CareerContext]:
                 win_streaks=(a.streak, b.streak),
                 prior_fights=(a.fights, b.fights),
                 prior_headliners=(a.headliners, b.headliners),
-                unbeaten=(
-                    a.fights >= UNBEATEN_MIN_FIGHTS and a.losses == 0,
-                    b.fights >= UNBEATEN_MIN_FIGHTS and b.losses == 0,
-                ),
+                unbeaten=(_unbeaten(a), _unbeaten(b)),
             )
         # ... then let them count for later days.
         for bout in todays:
@@ -87,6 +102,15 @@ def career_contexts(bouts: Sequence[HistoryBout]) -> dict[str, CareerContext]:
                 continue
             _apply(bout, records, meetings)
     return contexts
+
+
+def _unbeaten(record: _Record) -> bool:
+    return (
+        record.fights >= UNBEATEN_MIN_FIGHTS
+        and record.losses == 0
+        and record.first_seen is not None
+        and record.first_seen >= UNBEATEN_RELIABLE_FROM
+    )
 
 
 def _apply(
@@ -99,6 +123,8 @@ def _apply(
     headliner = bout.card_position == 1 or bout.is_title_fight
     for fighter in pair:
         record = records[fighter]
+        if record.first_seen is None:
+            record.first_seen = bout.event_date
         record.fights += 1
         record.headliners += headliner
         if bout.outcome == "no_contest":

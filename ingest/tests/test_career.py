@@ -146,3 +146,27 @@ def test_the_order_of_the_input_does_not_matter() -> None:
         bout("f3", 60, "ann", "cat", "ann"),
     ]
     assert career_contexts(bouts) == career_contexts(list(reversed(bouts)))
+
+
+def test_unbeaten_is_only_claimed_for_debuts_after_our_history_is_reliable() -> None:
+    """History starts in 2001: a veteran's earlier losses may be missing, so no claim."""
+    old = dt.date(2001, 6, 1)
+    veteran = [
+        HistoryBout(f"v{i}", old + dt.timedelta(days=60 * i), 5, False, "vet", f"o{i}", "vet")
+        for i in range(UNBEATEN_MIN_FIGHTS + 1)
+    ]
+    assert career_contexts(veteran)[f"v{UNBEATEN_MIN_FIGHTS}"].unbeaten == (False, False)
+
+    newcomer = [
+        HistoryBout(
+            f"n{i}",
+            dt.date(2010, 1, 1) + dt.timedelta(days=60 * i),
+            5,
+            False,
+            "new",
+            f"o{i}",
+            "new",
+        )
+        for i in range(UNBEATEN_MIN_FIGHTS + 1)
+    ]
+    assert career_contexts(newcomer)[f"n{UNBEATEN_MIN_FIGHTS}"].unbeaten == (True, False)
