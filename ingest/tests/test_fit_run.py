@@ -49,6 +49,7 @@ def run(
         source_name="ufcstats",
         test_from_year=2024,
         l2=5.0,
+        finish_leak=0.25,
         dry_run=dry_run,
         overwrite=overwrite,
     )
@@ -103,8 +104,8 @@ def test_writes_the_config_unless_dry_run(tmp_path: Path, monkeypatch: pytest.Mo
     result = run(repo, tmp_path)
     assert run(repo, tmp_path, overwrite=True) == result  # --force replaces it
     written = load_scoring_config(tmp_path, 2)
-    assert written.weights == result.public_weights
-    assert written.performance_weights == result.performance_weights
+    assert written.weights == result.weights
+    assert written.performance_weights == {}
     assert (
         written.star_thresholds
         == load_scoring_config(DEFAULT_SCORING_CONFIG_DIR, 1).star_thresholds

@@ -1,0 +1,47 @@
+# Excitement score v3: one score, weights fitted to the Fight / Performance
+# of the Night bonuses (regenerate with `blindcard-ingest fit-scoring`; do not edit).
+# Fitted on events before 2024, checked on the rest; shipped weights
+# are refitted on all labelled fights. Held-out numbers for this fit:
+#   Fight of the Night AUC 0.752, in the top 3 of its card 62%, Performance of the Night AUC 0.677
+#   AUC of the stars for 'was finished' 0.728 (0.5 = no information)
+#   shipped weights, all labelled fights: AUC for 'finished' 0.726
+# The score is 67.5% Fight of the Night fit and 32.5%
+# Performance of the Night fit: the largest share of the second that keeps
+# AUC(stars -> finished) within 0.25 of neutral on the training years.
+# A finish adds to a fight's score and never subtracts from it.
+
+version = 3
+description = "Fitted to the Fight/Performance of the Night bonuses: one score."
+
+[normalisation]
+cap_quantile = 0.99
+min_pool_size = 100
+
+# composite = sum(weight * normalised_feature). Negative weights penalise.
+[weights]
+pace                    = 0.53    # combined significant strikes landed per minute
+knockdowns              = 0.383   # total knockdowns
+sub_attempts            = 0.204   # total submission attempts
+reversals               = 0.368   # total reversals
+swings                  = 0.559   # round-to-round lead changes
+competitiveness         = 0.074   # 1 - |A - B| / (A + B) on significant strikes landed
+close_decision          = -0.006  # split or majority decision
+finish                  = 0.302   # ended by KO/TKO or submission (adds, never subtracts)
+control_share_nofinish  = -0.227  # share of the fight under control, when it did not end in a finish
+knockdowns_both         = 0.264   # both fighters scored a knockdown
+min_pace                = 1.0     # significant strikes per minute of the less active fighter
+takedown_rate           = -0.015  # takedowns landed per minute, both fighters
+
+# Percentile (0-100) -> stars, same curve as v1.
+[stars]
+thresholds = [
+    [0, 1.0],
+    [8, 1.5],
+    [16, 2.0],
+    [28, 2.5],
+    [40, 3.0],
+    [55, 3.5],
+    [70, 4.0],
+    [85, 4.5],
+    [97, 5.0],
+]

@@ -22,6 +22,7 @@ def run_fit_scoring(
     source_name: str,
     test_from_year: int,
     l2: float,
+    finish_leak: float,
     dry_run: bool,
     overwrite: bool = False,
 ) -> FitResult:
@@ -67,6 +68,7 @@ def run_fit_scoring(
             cap_quantile=active.config.cap_quantile,
             test_from_year=test_from_year,
             l2=l2,
+            finish_leak=finish_leak,
             baseline=baseline,
         )
     except ValueError as exc:  # unusable labels or split: a configuration problem, not a crash

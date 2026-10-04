@@ -103,6 +103,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     fit.add_argument("--l2", type=float, default=5.0, help="ridge penalty (default 5.0)")
     fit.add_argument(
+        "--finish-leak",
+        type=float,
+        default=0.25,
+        metavar="AUC",
+        help=(
+            "how far above 0.5 the public stars may predict 'finished' (default 0.25); "
+            "higher gives finishes more credit and tells more about the result"
+        ),
+    )
+    fit.add_argument(
         "--force", action="store_true", help="replace an existing scoring_vN.toml (never v1)"
     )
 
@@ -185,6 +195,7 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 source_name=SOURCE_NAME,
                 test_from_year=args.test_from_year,
                 l2=args.l2,
+                finish_leak=args.finish_leak,
                 dry_run=args.dry_run,
                 overwrite=args.force,
             )
