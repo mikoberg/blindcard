@@ -335,6 +335,45 @@ def test_logs_never_echo_record_values(caplog: pytest.LogCaptureFixture) -> None
         assert forbidden not in caplog.text
 
 
+@pytest.mark.parametrize(
+    ("stat_kwargs", "field_name"),
+    [
+        ({"ctrl": "Q9Z9Q9"}, "control time"),
+        ({"sig": "S7S7 of"}, "significant strikes"),
+        ({"kd": "K4K4K"}, "knockdowns"),
+    ],
+)
+def test_malformed_stat_cells_are_named_but_never_echoed(
+    stat_kwargs: dict[str, str], field_name: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The cell is result data and logs may be public: log which field, never its content."""
+    caplog.set_level(logging.DEBUG)
+    data = synthetic(
+        result_row("f1").replace(",3,5:00,", ",1,5:00,"),
+        stat_row("Ann Aa", **stat_kwargs) + stat_row("Bob Bb"),
+    )
+
+    assert data.bundles["ev1"].fights[0].rounds == []
+    assert field_name in caplog.text
+    for token in ("Q9Z9Q9", "S7S7", "K4K4K"):
+        assert token not in caplog.text
+
+
+def test_malformed_result_cells_are_never_echoed(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    bad_time = synthetic(result_row("f1").replace(",5:00,", ",T7T7T,"), "")
+    bad_round = synthetic(result_row("f2").replace(",3,5:00,", ",R8R8R,5:00,"), "")
+    bad_outcome = synthetic(result_row("f3", outcome="O5O5O"), "")
+
+    assert bad_time.bundles["ev1"].fights[0].result is None
+    assert bad_round.bundles["ev1"].fights[0].result is None
+    assert "ev1" in bad_outcome.event_errors
+    assert "end round" in caplog.text
+    for token in ("T7T7T", "R8R8R", "O5O5O"):
+        assert token not in caplog.text
+        assert token not in bad_outcome.event_errors["ev1"]
+
+
 # --- field helpers ------------------------------------------------------------------------
 
 

@@ -91,24 +91,28 @@ class ParsedDataset:
 # --- small field parsers (each raises ValueError on anything unexpected) ----------------------
 
 
-def _count(value: str) -> int:
+# The field parsers below name the field but never echo the cell: their messages reach logs
+# (possibly public), and the cells are result data (round, time, strikes, ...).
+
+
+def _count(value: str, *, what: str) -> int:
     text = value.strip()
     if re.fullmatch(r"\d+(\.0)?", text):
         return int(float(text))
-    raise ValueError(f"not a count: {value!r}")
+    raise ValueError(f"{what} is not a count")
 
 
-def _landed_of_attempted(value: str) -> tuple[int, int]:
+def _landed_of_attempted(value: str, *, what: str) -> tuple[int, int]:
     match = re.fullmatch(r"(\d+) of (\d+)", value.strip())
     if match is None:
-        raise ValueError(f"not 'x of y': {value!r}")
+        raise ValueError(f"{what} is not 'x of y'")
     return int(match[1]), int(match[2])
 
 
 def _minutes_seconds(value: str, *, what: str) -> int:
     match = re.fullmatch(r"(\d+):(\d{2})", value.strip())
     if match is None:
-        raise ValueError(f"{what} not recorded or malformed: {value!r}")
+        raise ValueError(f"{what} not recorded or malformed")
     return int(match[1]) * 60 + int(match[2])
 
 
@@ -119,7 +123,7 @@ def fighter_key(name: str) -> str:
 def source_id_from_url(url: str) -> str:
     tail = url.strip().rstrip("/").rsplit("/", 1)[-1]
     if not tail:
-        raise ValueError(f"no id in url: {url!r}")
+        raise ValueError("url has no id")
     return tail
 
 
@@ -278,7 +282,7 @@ def _parse_result(
 ) -> ParsedResult | None:
     outcome_code = row["OUTCOME"].strip()
     if outcome_code not in _OUTCOMES:
-        raise DatasetError(f"fight {fight_id}: unknown outcome {outcome_code!r}")
+        raise DatasetError(f"fight {fight_id}: unknown outcome code")
     outcome, winner_index = _OUTCOMES[outcome_code]
     method = row["METHOD"].strip()
     details = row["DETAILS"].strip()
@@ -288,7 +292,7 @@ def _parse_result(
             winner_source_id=fighters[winner_index].source_id if winner_index is not None else None,
             method=method,
             method_detail=None if method.startswith("Decision") else (details or None),
-            end_round=_count(row["ROUND"]),
+            end_round=_count(row["ROUND"], what="end round"),
             end_time_seconds=_minutes_seconds(row["TIME"], what="time"),
             scorecards=parse_scorecards(method, details),
             bonuses=[],  # not in this dataset (Fight/Performance of the Night)
@@ -309,26 +313,30 @@ def _parse_rounds(
         for row in stat_rows:
             label = row["ROUND"].strip()
             if not label.startswith("Round "):
-                raise ValueError(f"empty or unknown round label {label!r}")
+                raise ValueError("empty or unknown round label")
             fighter = row["FIGHTER"].strip()
             if fighter not in keys_by_name:
-                raise ValueError(f"stats for {fighter!r}, who is not in the bout")
-            sig_landed, sig_attempted = _landed_of_attempted(row["SIG.STR."])
-            total_landed, total_attempted = _landed_of_attempted(row["TOTAL STR."])
-            td_landed, td_attempted = _landed_of_attempted(row["TD"])
+                raise ValueError("stats for a fighter who is not in the bout")
+            sig_landed, sig_attempted = _landed_of_attempted(
+                row["SIG.STR."], what="significant strikes"
+            )
+            total_landed, total_attempted = _landed_of_attempted(
+                row["TOTAL STR."], what="total strikes"
+            )
+            td_landed, td_attempted = _landed_of_attempted(row["TD"], what="takedowns")
             rounds.append(
                 ParsedRound(
-                    round_number=_count(label.removeprefix("Round ")),
+                    round_number=_count(label.removeprefix("Round "), what="round number"),
                     fighter_source_id=keys_by_name[fighter],
-                    knockdowns=_count(row["KD"]),
+                    knockdowns=_count(row["KD"], what="knockdowns"),
                     sig_strikes_landed=sig_landed,
                     sig_strikes_attempted=sig_attempted,
                     total_strikes_landed=total_landed,
                     total_strikes_attempted=total_attempted,
                     takedowns_landed=td_landed,
                     takedowns_attempted=td_attempted,
-                    sub_attempts=_count(row["SUB.ATT"]),
-                    reversals=_count(row["REV."]),
+                    sub_attempts=_count(row["SUB.ATT"], what="submission attempts"),
+                    reversals=_count(row["REV."], what="reversals"),
                     control_seconds=_minutes_seconds(row["CTRL"], what="control time"),
                 )
             )
