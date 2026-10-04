@@ -12,7 +12,6 @@ export interface EventSummary {
   /** ISO date, e.g. "2026-09-26". */
   eventDate: string;
   location: string | null;
-  fightCount: number;
   /** Rated fights in card order; unrated fights are simply absent. */
   ratings: RatedSlot[];
 }

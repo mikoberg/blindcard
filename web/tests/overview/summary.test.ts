@@ -8,7 +8,6 @@ const event = (patch: Partial<EventSummary> = {}): EventSummary => ({
   name: "Event",
   eventDate: "2026-09-12",
   location: null,
-  fightCount: 6,
   ratings: [
     { position: 1, stars: 4 },
     { position: 3, stars: 2.5 },
@@ -29,8 +28,8 @@ describe("eventStats", () => {
 
 describe("stripLabel", () => {
   it("says how many fights are rated and the best rating, nothing about results", () => {
-    expect(stripLabel(event())).toBe("3 of 6 fights rated, best 4.5 out of 5");
-    expect(stripLabel(event({ fightCount: 3 }))).toBe("3 fights rated, best 4.5 out of 5");
+    expect(stripLabel(event())).toBe("3 fights rated, best 4.5 out of 5");
+    expect(stripLabel(event({ ratings: [{ position: 1, stars: 3 }] }))).toBe("1 fight rated, best 3.0 out of 5");
   });
 
   it("says ratings are on their way when there are none", () => {

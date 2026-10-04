@@ -99,35 +99,47 @@ export interface OverviewRow {
   name: string;
   event_date: string;
   location: string | null;
-  fight_count: number;
   /** jsonb array of { p: card position, s: stars } in card order. */
   ratings: unknown;
 }
 
-/** Keeps only well-formed slots: a bad slot is dropped (shown as not rated), never guessed. */
-function toSlots(value: unknown, eventId: string): RatedSlot[] {
-  if (!Array.isArray(value)) return [];
+/** Keeps only well-formed slots; returns how many were dropped so the caller can log once. */
+function toSlots(value: unknown): { slots: RatedSlot[]; dropped: number } {
+  if (!Array.isArray(value)) return { slots: [], dropped: 0 };
   const slots: RatedSlot[] = [];
+  let dropped = 0;
   for (const item of value) {
     const slot = (item ?? {}) as { p?: unknown; s?: unknown };
     const stars = toNumber(slot.s as number | string | null);
     if (typeof slot.p === "number" && Number.isInteger(slot.p) && slot.p >= 1 && isValidStars(stars)) {
       slots.push({ position: slot.p, stars });
     } else {
-      console.warn(`invalid rating slot in event ${eventId}; showing it as not rated`);
+      dropped += 1;
     }
   }
-  return slots.sort((a, b) => a.position - b.position);
+  return { slots: slots.sort((a, b) => a.position - b.position), dropped };
 }
 
-export function mapOverview(row: OverviewRow): EventSummary {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Maps one overview row. A row that cannot be shown (no usable date or name) is skipped, and
+ * a malformed rating slot is dropped (shown as not rated), never guessed. The log names the
+ * event id only, once per event.
+ */
+export function mapOverview(row: OverviewRow): EventSummary | null {
+  if (!ISO_DATE.test(row.event_date) || typeof row.name !== "string" || row.name === "") {
+    console.warn(`unusable overview row for event ${row.id}; skipped`);
+    return null;
+  }
+  const { slots, dropped } = toSlots(row.ratings);
+  if (dropped > 0) console.warn(`${dropped} invalid rating slot(s) in event ${row.id}; shown as not rated`);
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
     eventDate: row.event_date,
     location: row.location,
-    fightCount: row.fight_count,
-    ratings: toSlots(row.ratings, row.id),
+    ratings: slots,
   };
 }

@@ -13,7 +13,6 @@ const event = (patch: Partial<EventSummary> = {}): EventSummary => ({
   name: "Fight Night: Alpha vs. Beta",
   eventDate: "2026-09-12",
   location: "Las Vegas, Nevada",
-  fightCount: 5,
   ratings: [
     { position: 1, stars: 4.5 },
     { position: 2, stars: 3 },
@@ -34,7 +33,7 @@ describe("EventPoster", () => {
 
   it("describes the strip with counts and the best rating only", () => {
     const html = renderToStaticMarkup(<EventPoster event={event()} size="md" />);
-    expect(html).toContain('aria-label="4 of 5 fights rated, best 4.5 out of 5"');
+    expect(html).toContain('aria-label="4 fights rated, best 4.5 out of 5"');
   });
 
   it("shows a flat baseline and says ratings are coming when nothing is rated", () => {
@@ -90,7 +89,7 @@ describe("EventHeader", () => {
     expect(html).toContain("Fight Night: Alpha vs. Beta");
     expect(html).toContain("Sat 12 Sep 2026");
     expect(html).toContain("Las Vegas, Nevada");
-    expect(html).toContain("4 of 5 fights rated");
+    expect(html).toContain("4 fights rated");
   });
 
   it("omits the location line when there is none", () => {

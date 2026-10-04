@@ -152,7 +152,7 @@ begin
   select count(*) into n
   from information_schema.columns
   where table_schema = 'public' and table_name = 'event_overview'
-    and column_name not in ('id', 'slug', 'name', 'event_date', 'location', 'fight_count', 'ratings');
+    and column_name not in ('id', 'slug', 'name', 'event_date', 'location', 'ratings');
   if n <> 0 then raise exception 'FAIL: event_overview has unexpected columns'; end if;
   raise notice 'PASS event_overview is public, active version only';
 end $$;

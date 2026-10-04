@@ -4,13 +4,15 @@ import { OVERVIEW_COLUMNS } from "./columns";
 import { ensure } from "./ensure";
 import { mapOverview, type OverviewRow } from "./map";
 
-const PAGE = 500; // below the 1000 rows a single Supabase request may return
+const PAGE = 500; // at most this many rows per request (the server may send fewer)
 
 /** Every event with at least one fight, newest first, with its public star ratings. */
 export async function listEventSummaries(): Promise<EventSummary[]> {
   const db = getSupabase();
   const rows: OverviewRow[] = [];
-  for (let from = 0; ; from += PAGE) {
+  // Advance by what actually came back: a lower server-side row limit must not end the loop
+  // early. Only an empty page means everything has been read.
+  for (let from = 0; ; ) {
     const page = ensure<OverviewRow[]>(
       await db
         .from("event_overview")
@@ -20,8 +22,9 @@ export async function listEventSummaries(): Promise<EventSummary[]> {
         .range(from, from + PAGE - 1),
       "list event overview",
     );
+    if (page.length === 0) break;
     rows.push(...page);
-    if (page.length < PAGE) break;
+    from += page.length;
   }
-  return rows.map(mapOverview);
+  return rows.flatMap((row) => mapOverview(row) ?? []);
 }

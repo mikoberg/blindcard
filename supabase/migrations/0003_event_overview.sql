@@ -1,9 +1,12 @@
 -- 0003: one public summary row per event, for the homepage overview.
 --
 -- Only public, pre-fight facts and the ACTIVE version's star ratings: the fights' card
--- positions and stars, in card order. No percentile, no result data. The view runs with the
+-- positions and stars, in card order. No percentile, no result data, and no fight count: a
+-- gap between fights and ratings would show which fights could not be rated. The view runs with the
 -- caller's rights (security_invoker), so the active-version rule of excitement_scores applies
 -- on top of the explicit join below. Events without any fight are left out.
+--
+-- Apply this migration BEFORE deploying the web app that reads it: the homepage depends on it.
 
 create or replace view public.event_overview
 with (security_invoker = true) as
@@ -13,7 +16,6 @@ select
   e.name,
   e.event_date,
   e.location,
-  count(f.id)::integer as fight_count,
   coalesce(
     jsonb_agg(jsonb_build_object('p', f.card_position, 's', s.stars) order by f.card_position)
       filter (where s.stars is not null),

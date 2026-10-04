@@ -15,8 +15,7 @@ export function eventStats(event: EventSummary): EventStats {
 export function stripLabel(event: EventSummary): string {
   const { ratedCount, bestStars } = eventStats(event);
   if (bestStars === null) return "Ratings are on their way";
-  const of = ratedCount === event.fightCount ? "" : ` of ${event.fightCount}`;
-  return `${ratedCount}${of} fights rated, best ${bestStars.toFixed(1)} out of 5`;
+  return `${ratedCount} ${ratedCount === 1 ? "fight" : "fights"} rated, best ${bestStars.toFixed(1)} out of 5`;
 }
 
 export function summariesByYear(
@@ -40,7 +39,6 @@ export function summaryFromCard(event: CardEvent, fights: readonly CardFight[]):
     name: event.name,
     eventDate: event.eventDate,
     location: event.location,
-    fightCount: fights.length,
     ratings: fights
       .filter((fight) => fight.rating !== null)
       .map((fight) => ({ position: fight.cardPosition, stars: (fight.rating as { stars: number }).stars }))

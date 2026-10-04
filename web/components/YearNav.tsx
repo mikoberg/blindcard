@@ -5,7 +5,7 @@ export function YearNav({ years }: { years: readonly string[] }) {
       aria-label="Years"
       className="sticky top-0 z-20 -mx-4 border-b border-[var(--border)] bg-[var(--bg)]/90 px-4 backdrop-blur"
     >
-      <ul className="-ml-3 flex gap-1 overflow-x-auto py-1">
+      <ul className="-ml-4 flex gap-1 overflow-x-auto px-1 py-1">
         {years.map((year) => (
           <li key={year} className="shrink-0">
             <a

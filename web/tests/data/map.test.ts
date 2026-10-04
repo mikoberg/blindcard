@@ -80,7 +80,6 @@ describe("mapOverview", () => {
     name: "Event",
     event_date: "2026-09-12",
     location: "Las Vegas",
-    fight_count: 3,
     ratings: [
       { p: 3, s: 2.5 },
       { p: 1, s: "4.0" },
@@ -94,7 +93,6 @@ describe("mapOverview", () => {
       name: "Event",
       eventDate: "2026-09-12",
       location: "Las Vegas",
-      fightCount: 3,
       ratings: [
         { position: 1, stars: 4 },
         { position: 3, stars: 2.5 },
@@ -102,10 +100,21 @@ describe("mapOverview", () => {
     });
   });
 
-  it("drops malformed slots (never guesses a rating) and survives a non-array", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("drops malformed slots (never guesses a rating), logs once per event, and survives a non-array", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const bad = [{ p: 1, s: 4.3 }, { p: 0, s: 3 }, { p: 2 }, null, { p: 4, s: 3 }];
-    expect(mapOverview({ ...row, ratings: bad }).ratings).toEqual([{ position: 4, stars: 3 }]);
-    expect(mapOverview({ ...row, ratings: "x" }).ratings).toEqual([]);
+    expect(mapOverview({ ...row, ratings: bad })?.ratings).toEqual([{ position: 4, stars: 3 }]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain("e1");
+    expect(mapOverview({ ...row, ratings: "x" })?.ratings).toEqual([]);
+    warn.mockRestore();
+  });
+
+  it("skips a row without a usable date or name instead of breaking the year grouping", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(mapOverview({ ...row, event_date: "2026-9-12" })).toBeNull();
+    expect(mapOverview({ ...row, event_date: "" })).toBeNull();
+    expect(mapOverview({ ...row, name: "" })).toBeNull();
+    warn.mockRestore();
   });
 });

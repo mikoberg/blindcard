@@ -26,11 +26,14 @@ export function EventPoster({
   event,
   size,
   animate = false,
+  decorative = false,
   children,
 }: {
   event: EventSummary;
   size: Size;
   animate?: boolean;
+  /** Hide the strip from assistive tech (the surrounding card already says it in words). */
+  decorative?: boolean;
   children?: React.ReactNode;
 }) {
   const art = posterArt(event.name);
@@ -47,8 +50,9 @@ export function EventPoster({
       <div aria-hidden="true" className="poster-stripes absolute inset-0 -z-10" />
       {children}
       <div
-        role="img"
-        aria-label={stripLabel(event)}
+        role={decorative ? undefined : "img"}
+        aria-label={decorative ? undefined : stripLabel(event)}
+        aria-hidden={decorative ? true : undefined}
         className={`absolute inset-x-0 bottom-0 flex items-end gap-[3px] px-4 ${STRIP_HEIGHT[size]}`}
       >
         {event.ratings.length === 0 ? (

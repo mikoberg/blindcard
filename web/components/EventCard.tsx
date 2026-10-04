@@ -12,7 +12,7 @@ export function EventCard({ event, featured = false }: { event: EventSummary; fe
       href={`/events/${event.slug}`}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] transition-colors hover:border-[var(--accent)]"
     >
-      <EventPoster event={event} size={featured ? "md" : "sm"} animate={featured} />
+      <EventPoster event={event} size={featured ? "md" : "sm"} animate={featured} decorative />
       <div className="flex flex-1 items-start justify-between gap-3 p-4">
         <div className="min-w-0">
           <h3
