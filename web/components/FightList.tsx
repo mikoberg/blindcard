@@ -26,7 +26,7 @@ export function FightList({ fights }: { fights: readonly CardFight[] }) {
               type="button"
               aria-pressed={mode === option.mode}
               onClick={() => setMode(option.mode)}
-              className="min-h-10 rounded-md px-3 text-sm font-semibold aria-pressed:bg-[var(--accent)] aria-pressed:text-[var(--accent-ink)]"
+              className="min-h-11 rounded-md px-3 text-sm font-semibold aria-pressed:bg-[var(--accent)] aria-pressed:text-[var(--accent-ink)]"
             >
               {option.label}
             </button>

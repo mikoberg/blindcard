@@ -26,12 +26,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header className="flex items-center justify-between py-5">
             <Link
               href="/"
-              className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-wide"
+              className="inline-flex min-h-11 items-center font-[family-name:var(--font-display)] text-2xl font-bold tracking-wide"
             >
               Blind<span className="text-[var(--accent)]">card</span>
             </Link>
             <nav aria-label="Main">
-              <Link href="/events" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
+              <Link href="/events" className="inline-flex min-h-11 items-center text-sm text-[var(--muted)] hover:text-[var(--text)]">
                 All events
               </Link>
             </nav>
