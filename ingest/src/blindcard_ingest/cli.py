@@ -1,4 +1,4 @@
-"""Command line: backfill, ingest-latest, ingest-bonuses, rescore.
+"""Command line: backfill, ingest-latest, ingest-bonuses, fit-scoring, rescore.
 
 Exit codes: 0 = ok, 1 = the run finished but reported errors (unscored fights, failed or
 overdue events), 2 = bad configuration or unusable input (nothing meaningful was done).
@@ -16,6 +16,7 @@ from pathlib import Path
 
 from blindcard_ingest.bonus_pipeline import BonusSource, run_ingest_bonuses
 from blindcard_ingest.db.repository import PostgresRepository, Repository, RepositoryError
+from blindcard_ingest.fit.run import run_fit_scoring
 from blindcard_ingest.http.cache import HtmlCache
 from blindcard_ingest.http.client import FetchError, PoliteClient
 from blindcard_ingest.logging_setup import configure_logging
@@ -77,6 +78,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="label fights with Fight/Performance of the Night (from Wikipedia)",
     )
     bonuses.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
+
+    fit = commands.add_parser(
+        "fit-scoring",
+        parents=[common],
+        help="fit a new score version to the bonus labels and write its config file",
+    )
+    fit.add_argument("--version", type=int, required=True, metavar="N")
+    fit.add_argument(
+        "--test-from",
+        dest="test_from_year",
+        type=int,
+        default=2024,
+        metavar="YEAR",
+        help="judge on events from this year on, fit on the years before (default 2024)",
+    )
+    fit.add_argument("--l2", type=float, default=5.0, help="ridge penalty (default 5.0)")
 
     rescore = commands.add_parser(
         "rescore", parents=[common], help="rebuild the reference and rescore all fights"
@@ -146,6 +163,19 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
             rescore.unscorable,
             " (dry run)" if args.dry_run else "",
         )
+        return EXIT_OK
+
+    if args.command == "fit-scoring":
+        with _open_repository(settings) as repo:
+            run_fit_scoring(
+                repo,
+                settings.scoring_config_dir,
+                args.version,
+                source_name=SOURCE_NAME,
+                test_from_year=args.test_from_year,
+                l2=args.l2,
+                dry_run=args.dry_run,
+            )
         return EXIT_OK
 
     # Fail on missing configuration before anything is fetched.

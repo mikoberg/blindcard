@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -30,10 +30,12 @@ class ScoringConfig:
     min_pool_size: int
     weights: dict[str, float]
     star_thresholds: tuple[StarThreshold, ...]
+    #: Optional second axis, scored privately and shown only after a reveal. Empty = none.
+    performance_weights: dict[str, float] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
         """JSON snapshot stored in `scoring_versions.config` for reproducibility."""
-        return {
+        snapshot: dict[str, Any] = {
             "version": self.version,
             "description": self.description,
             "cap_quantile": self.cap_quantile,
@@ -41,6 +43,9 @@ class ScoringConfig:
             "weights": dict(self.weights),
             "star_thresholds": [[t.min_percentile, t.stars] for t in self.star_thresholds],
         }
+        if self.performance_weights:
+            snapshot["performance_weights"] = dict(self.performance_weights)
+        return snapshot
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any]) -> ScoringConfig:
@@ -54,6 +59,9 @@ class ScoringConfig:
             star_thresholds=tuple(
                 StarThreshold(float(p), float(s)) for p, s in data["star_thresholds"]
             ),
+            performance_weights={
+                str(k): float(v) for k, v in data.get("performance_weights", {}).items()
+            },
         )
 
 
@@ -76,17 +84,12 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
     if not isinstance(min_pool_size, int) or min_pool_size < 1:
         raise ScoringConfigError("normalisation.min_pool_size must be an integer >= 1")
 
-    if not raw_weights:
-        raise ScoringConfigError("weights must name at least one feature")
-    unknown = sorted(set(raw_weights) - set(FEATURE_NAMES))
-    if unknown:
-        raise ScoringConfigError(f"weights name an unknown feature: {unknown}")
-    weights: dict[str, float] = {}
-    for name, value in raw_weights.items():
-        is_number = isinstance(value, int | float) and not isinstance(value, bool)
-        if not is_number or not math.isfinite(value):
-            raise ScoringConfigError(f"weight {name!r} must be a finite number")
-        weights[name] = float(value)
+    weights = _parse_weights(raw_weights, "weights")
+    performance_weights: dict[str, float] = {}
+    if "performance" in data:
+        performance_weights = _parse_weights(
+            data["performance"].get("weights"), "performance weights"
+        )
 
     thresholds = tuple(_parse_threshold(entry) for entry in raw_thresholds)
     _validate_thresholds(thresholds)
@@ -98,7 +101,23 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
         min_pool_size=min_pool_size,
         weights=weights,
         star_thresholds=thresholds,
+        performance_weights=performance_weights,
     )
+
+
+def _parse_weights(raw_weights: Any, label: str) -> dict[str, float]:
+    if not raw_weights:
+        raise ScoringConfigError(f"{label} must name at least one feature")
+    unknown = sorted(set(raw_weights) - set(FEATURE_NAMES))
+    if unknown:
+        raise ScoringConfigError(f"{label} name an unknown feature: {unknown}")
+    weights: dict[str, float] = {}
+    for name, value in raw_weights.items():
+        is_number = isinstance(value, int | float) and not isinstance(value, bool)
+        if not is_number or not math.isfinite(value):
+            raise ScoringConfigError(f"{label}: {name!r} must be a finite number")
+        weights[name] = float(value)
+    return weights
 
 
 def _parse_threshold(entry: Any) -> StarThreshold:

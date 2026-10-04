@@ -8,7 +8,7 @@ scored against that fixed distribution, so existing ratings never drift when eve
 from __future__ import annotations
 
 import bisect
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,20 +27,45 @@ class Reference:
     caps: dict[str, float]
     knots: list[float]  # QUANTILE_STEPS + 1 composite quantiles, ascending
     pool_size: int
+    #: Same for the private performance axis; None when the version has no such axis.
+    performance_knots: list[float] | None = None
 
     def to_json(self) -> dict[str, Any]:
-        return {"caps": dict(self.caps), "knots": list(self.knots), "pool_size": self.pool_size}
+        data: dict[str, Any] = {
+            "caps": dict(self.caps),
+            "knots": list(self.knots),
+            "pool_size": self.pool_size,
+        }
+        if self.performance_knots is not None:
+            data["performance_knots"] = list(self.performance_knots)
+        return data
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any]) -> Reference:
-        knots = [float(x) for x in data["knots"]]
-        if len(knots) != QUANTILE_STEPS + 1:
-            raise ScoringError(f"reference has {len(knots)} knots, expected {QUANTILE_STEPS + 1}")
+        knots = _checked_knots(data["knots"])
+        performance = data.get("performance_knots")
         return cls(
             caps={str(k): float(v) for k, v in data["caps"].items()},
             knots=knots,
             pool_size=int(data["pool_size"]),
+            performance_knots=None if performance is None else _checked_knots(performance),
         )
+
+
+def _checked_knots(raw: Sequence[Any]) -> list[float]:
+    knots = [float(x) for x in raw]
+    if len(knots) != QUANTILE_STEPS + 1:
+        raise ScoringError(f"reference has {len(knots)} knots, expected {QUANTILE_STEPS + 1}")
+    return knots
+
+
+@dataclass(frozen=True)
+class PerformanceScore:
+    """The private second axis. Never public: it tracks finishes almost perfectly."""
+
+    composite: float
+    percentile: float
+    stars: float
 
 
 @dataclass(frozen=True)
@@ -50,10 +75,18 @@ class ScoredFight:
     stars: float
     raw: dict[str, float]
     normalised: dict[str, float]
+    performance: PerformanceScore | None = None
 
     def features_json(self) -> dict[str, Any]:
         """The private feature payload stored in `excitement_features.features`."""
-        return {"raw": dict(self.raw), "normalised": dict(self.normalised)}
+        payload: dict[str, Any] = {"raw": dict(self.raw), "normalised": dict(self.normalised)}
+        if self.performance is not None:
+            payload["performance"] = {
+                "composite": self.performance.composite,
+                "percentile": self.performance.percentile,
+                "stars": self.performance.stars,
+            }
+        return payload
 
 
 def quantile(sorted_values: Sequence[float], q: float) -> float:
@@ -68,8 +101,12 @@ def quantile(sorted_values: Sequence[float], q: float) -> float:
 
 
 def features_of(config: ScoringConfig) -> tuple[str, ...]:
-    """The features a version weights, in the canonical order (so sums are reproducible)."""
-    return tuple(name for name in FEATURE_NAMES if name in config.weights)
+    """The features a version weights (either axis), in the canonical order."""
+    return tuple(
+        name
+        for name in FEATURE_NAMES
+        if name in config.weights or name in config.performance_weights
+    )
 
 
 def normalise(
@@ -88,7 +125,16 @@ def normalise(
 
 
 def composite_of(config: ScoringConfig, normalised: Mapping[str, float]) -> float:
-    return sum(config.weights[name] * normalised[name] for name in features_of(config))
+    return _weighted_sum(config.weights, normalised)
+
+
+def performance_composite_of(config: ScoringConfig, normalised: Mapping[str, float]) -> float:
+    return _weighted_sum(config.performance_weights, normalised)
+
+
+def _weighted_sum(weights: Mapping[str, float], normalised: Mapping[str, float]) -> float:
+    # Canonical feature order, so the float sum is reproducible whatever the config's key order.
+    return sum(weights[name] * normalised[name] for name in FEATURE_NAMES if name in weights)
 
 
 def percentile_of(knots: Sequence[float], composite: float) -> float:
@@ -135,17 +181,42 @@ def build_reference(config: ScoringConfig, pool: Sequence[Mapping[str, float]]) 
     caps = {
         name: quantile(sorted(raw[name] for raw in pool), config.cap_quantile)
         for name in CAPPED_FEATURES
-        if name in config.weights
+        if name in features_of(config)
     }
-    composites = sorted(composite_of(config, normalise(config, caps, raw)) for raw in pool)
-    knots = [quantile(composites, i / QUANTILE_STEPS) for i in range(QUANTILE_STEPS + 1)]
-    return Reference(caps=caps, knots=knots, pool_size=len(pool))
+    normalised = [normalise(config, caps, raw) for raw in pool]
+    performance_knots = None
+    if config.performance_weights:
+        performance_knots = _knots(performance_composite_of(config, n) for n in normalised)
+    return Reference(
+        caps=caps,
+        knots=_knots(composite_of(config, n) for n in normalised),
+        pool_size=len(pool),
+        performance_knots=performance_knots,
+    )
+
+
+def _knots(composites: Iterable[float]) -> list[float]:
+    ordered = sorted(composites)
+    return [quantile(ordered, i / QUANTILE_STEPS) for i in range(QUANTILE_STEPS + 1)]
 
 
 def score(config: ScoringConfig, reference: Reference, raw: Mapping[str, float]) -> ScoredFight:
     normalised = normalise(config, reference.caps, raw)
     composite = composite_of(config, normalised)
     percentile = round(percentile_of(reference.knots, composite), 2)
+    performance = None
+    if config.performance_weights:
+        if reference.performance_knots is None:
+            raise ScoringError("reference lacks the performance axis this config asks for")
+        performance_composite = performance_composite_of(config, normalised)
+        performance_percentile = round(
+            percentile_of(reference.performance_knots, performance_composite), 2
+        )
+        performance = PerformanceScore(
+            composite=performance_composite,
+            percentile=performance_percentile,
+            stars=stars_for_percentile(config, performance_percentile),
+        )
     return ScoredFight(
         composite=composite,
         percentile=percentile,
@@ -153,4 +224,5 @@ def score(config: ScoringConfig, reference: Reference, raw: Mapping[str, float])
         # Only what this version weights: extra candidate features never leak into its record.
         raw={name: raw[name] for name in features_of(config)},
         normalised=normalised,
+        performance=performance,
     )

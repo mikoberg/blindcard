@@ -1,0 +1,63 @@
+# Excitement score v2: weights fitted to the Fight / Performance of the Night
+# bonuses (regenerate with `blindcard-ingest fit-scoring`; do not edit by hand).
+# Fitted on events before 2024, checked on the rest; shipped weights
+# are refitted on all labelled fights. Held-out numbers for this fit:
+#   public axis: FOTN AUC 0.806, FOTN in the top 3 of its card 66%, AUC for 'finished' 0.487
+#   performance axis (private): POTN AUC 0.842
+# The public axis blends 15% of the Performance fit into the Fight fit,
+# chosen so the stars say (almost) nothing about whether a fight was finished.
+
+version = 2
+description = "Fitted to the Fight/Performance of the Night bonuses: a public fight axis plus a private performance axis."
+
+[normalisation]
+cap_quantile = 0.99
+min_pool_size = 100
+
+# Public axis: composite = sum(weight * normalised_feature). Negative weights penalise.
+[weights]
+pace                    = 0.553   # combined significant strikes landed per minute
+knockdowns              = 0.413   # total knockdowns
+sub_attempts            = 0.271   # total submission attempts
+reversals               = 0.397   # total reversals
+swings                  = 0.532   # round-to-round lead changes
+competitiveness         = 0.018   # 1 - |A - B| / (A + B) on significant strikes landed
+close_decision          = -0.03   # split or majority decision
+ko_finish               = -0.139  # ended by KO/TKO
+sub_finish              = -0.176  # ended by submission
+control_share_nofinish  = -0.448  # share of the fight under control, when it did not end in a finish
+knockdowns_both         = 0.292   # both fighters scored a knockdown
+min_pace                = 1.0     # significant strikes per minute of the less active fighter
+takedown_rate           = 0.063   # takedowns landed per minute, both fighters
+
+# Private axis, shown only after a reveal (it tracks finishes almost perfectly).
+[performance.weights]
+pace                    = -0.073  # combined significant strikes landed per minute
+knockdowns              = 0.478   # total knockdowns
+sub_attempts            = 0.095   # total submission attempts
+reversals               = -0.068  # total reversals
+swings                  = 0.138   # round-to-round lead changes
+competitiveness         = 0.1     # 1 - |A - B| / (A + B) on significant strikes landed
+close_decision          = -0.418  # split or majority decision
+ko_finish               = 0.995   # ended by KO/TKO
+sub_finish              = 1.0     # ended by submission
+control_share_nofinish  = -0.488  # share of the fight under control, when it did not end in a finish
+knockdowns_both         = -0.234  # both fighters scored a knockdown
+min_pace                = -0.089  # significant strikes per minute of the less active fighter
+takedown_rate           = -0.122  # takedowns landed per minute, both fighters
+early_finish            = 0.165   # 1 - fraction of the scheduled time used, for finishes
+time_fraction           = -0.518  # fraction of the scheduled time used
+
+# Percentile (0-100) -> stars, same curve as v1.
+[stars]
+thresholds = [
+    [0, 1.0],
+    [8, 1.5],
+    [16, 2.0],
+    [28, 2.5],
+    [40, 3.0],
+    [55, 3.5],
+    [70, 4.0],
+    [85, 4.5],
+    [97, 5.0],
+]

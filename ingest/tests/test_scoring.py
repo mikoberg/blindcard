@@ -321,3 +321,92 @@ def test_a_config_with_few_features_only_needs_and_caps_those(
         1.0 * min(pool[10]["pace"], reference.caps["pace"]) / reference.caps["pace"]
         + 2.0 * pool[10]["finish"]
     )
+
+
+# --- performance axis: a second, private score (shown only after a reveal) -----------------
+
+
+def _with_performance(config: ScoringConfig) -> ScoringConfig:
+    return dataclasses.replace(
+        config,
+        weights={"pace": 1.0, "swings": 1.0},
+        performance_weights={"ko_finish": 2.0, "control_share_nofinish": -1.0},
+    )
+
+
+def _pool_with_new_features(pool: list[dict[str, float]]) -> list[dict[str, float]]:
+    return [
+        {**raw, "ko_finish": float(i % 3 == 0), "control_share_nofinish": (i % 4) / 4}
+        for i, raw in enumerate(pool)
+    ]
+
+
+def test_performance_weights_are_optional_and_validated(config: ScoringConfig) -> None:
+    assert config.performance_weights == {}
+    data = _config_dict(config)
+    data["performance"] = {"weights": {"ko_finish": 2.0}}
+    assert parse_scoring_config(data).performance_weights == {"ko_finish": 2.0}
+    data["performance"] = {"weights": {"charisma": 1.0}}
+    with pytest.raises(ScoringConfigError, match="performance.*unknown feature"):
+        parse_scoring_config(data)
+    data["performance"] = {"weights": {}}
+    with pytest.raises(ScoringConfigError, match="performance.*at least one"):
+        parse_scoring_config(data)
+
+
+def test_config_snapshot_round_trips_and_v1_snapshot_has_no_performance_key(
+    config: ScoringConfig,
+) -> None:
+    assert "performance_weights" not in config.to_json()
+    both = _with_performance(config)
+    assert ScoringConfig.from_json(both.to_json()) == both
+
+
+def test_reference_holds_performance_knots_only_when_configured(
+    config: ScoringConfig, pool: list[dict[str, float]]
+) -> None:
+    assert build_reference(config, pool).performance_knots is None
+    assert "performance_knots" not in build_reference(config, pool).to_json()
+    both = _with_performance(config)
+    reference = build_reference(both, _pool_with_new_features(pool))
+    assert reference.performance_knots is not None
+    assert len(reference.performance_knots) == QUANTILE_STEPS + 1
+    assert Reference.from_json(reference.to_json()) == reference
+
+
+def test_performance_score_is_private_and_leaves_the_public_score_untouched(
+    config: ScoringConfig, pool: list[dict[str, float]]
+) -> None:
+    both = _with_performance(config)
+    plain = dataclasses.replace(both, performance_weights={})
+    rich_pool = _pool_with_new_features(pool)
+    with_perf = score(both, build_reference(both, rich_pool), rich_pool[7])
+    without = score(plain, build_reference(plain, rich_pool), rich_pool[7])
+
+    assert (with_perf.composite, with_perf.percentile, with_perf.stars) == (
+        without.composite,
+        without.percentile,
+        without.stars,
+    )
+    assert with_perf.performance is not None
+    assert without.performance is None
+    payload = with_perf.features_json()
+    assert set(payload["performance"]) == {"composite", "percentile", "stars"}
+    assert "performance" not in without.features_json()
+    # both axes' features are stored (the private breakdown needs them)
+    assert set(with_perf.raw) == {"pace", "swings", "ko_finish", "control_share_nofinish"}
+
+
+def test_performance_axis_ranks_by_its_own_weights(
+    config: ScoringConfig, pool: list[dict[str, float]]
+) -> None:
+    both = _with_performance(config)
+    rich_pool = _pool_with_new_features(pool)
+    reference = build_reference(both, rich_pool)
+    knockout = {**rich_pool[0], "ko_finish": 1.0, "control_share_nofinish": 0.0}
+    decision = {**rich_pool[0], "ko_finish": 0.0, "control_share_nofinish": 1.0}
+    top, bottom = score(both, reference, knockout), score(both, reference, decision)
+    assert top.performance is not None and bottom.performance is not None
+    assert top.performance.percentile > bottom.performance.percentile
+    assert top.performance.stars > bottom.performance.stars
+    assert top.stars == bottom.stars  # the public axis does not see either feature
