@@ -8,6 +8,7 @@ const event = (patch: Partial<EventSummary> = {}): EventSummary => ({
   name: "Event",
   eventDate: "2026-09-12",
   location: null,
+  mainEvent: null,
   ratings: [
     { position: 1, stars: 4 },
     { position: 3, stars: 2.5 },

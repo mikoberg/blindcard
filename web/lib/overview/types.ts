@@ -4,6 +4,13 @@ export interface RatedSlot {
   stars: number;
 }
 
+/** The main event: two fighters (in the usual a/b order, never by result) and the title flag. */
+export interface MainEvent {
+  a: string;
+  b: string;
+  title: boolean;
+}
+
 /** What the overview shows of an event. Public, pre-fight facts and star ratings only. */
 export interface EventSummary {
   id: string;
@@ -12,6 +19,8 @@ export interface EventSummary {
   /** ISO date, e.g. "2026-09-26". */
   eventDate: string;
   location: string | null;
+  /** null when the event's card is not known. */
+  mainEvent: MainEvent | null;
   /** Rated fights in card order; unrated fights are simply absent. */
   ratings: RatedSlot[];
 }

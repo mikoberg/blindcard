@@ -96,6 +96,9 @@ describe("mapOverview", () => {
     name: "Event",
     event_date: "2026-09-12",
     location: "Las Vegas",
+    main_event_a: "Raoni Barcelos",
+    main_event_b: "Raul Rosas Jr.",
+    main_event_title: true,
     ratings: [
       { p: 3, s: 2.5 },
       { p: 1, s: "4.0" },
@@ -109,6 +112,7 @@ describe("mapOverview", () => {
       name: "Event",
       eventDate: "2026-09-12",
       location: "Las Vegas",
+      mainEvent: { a: "Raoni Barcelos", b: "Raul Rosas Jr.", title: true },
       ratings: [
         { position: 1, stars: 4 },
         { position: 3, stars: 2.5 },

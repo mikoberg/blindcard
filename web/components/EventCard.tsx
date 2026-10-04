@@ -15,6 +15,12 @@ export function EventCard({ event, featured = false }: { event: EventSummary; fe
       <EventPoster event={event} size={featured ? "md" : "sm"} animate={featured} decorative />
       <div className="flex flex-1 items-start justify-between gap-3 p-4">
         <div className="min-w-0">
+          {event.mainEvent && (
+            <p className="sr-only">
+              Main event: {event.mainEvent.a} versus {event.mainEvent.b}
+              {event.mainEvent.title ? ", title fight" : ""}
+            </p>
+          )}
           <h3
             className={`break-words font-[family-name:var(--font-display)] font-bold leading-tight ${featured ? "text-3xl" : "text-xl"}`}
           >

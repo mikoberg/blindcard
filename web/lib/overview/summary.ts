@@ -1,6 +1,6 @@
 import { isHiddenGemRating } from "@/lib/card/hiddenGem";
 import type { CardEvent, CardFight } from "@/lib/card/types";
-import type { EventStats, EventSummary } from "./types";
+import type { EventStats, EventSummary, MainEvent } from "./types";
 
 export function eventStats(event: EventSummary): EventStats {
   const stars = event.ratings.map((slot) => slot.stars);
@@ -31,6 +31,12 @@ export function summariesByYear(
   return groups;
 }
 
+function mainEventOf(fights: readonly CardFight[]): MainEvent | null {
+  const first = [...fights].sort((a, b) => a.cardPosition - b.cardPosition)[0];
+  if (!first) return null;
+  return { a: first.fighterA.name, b: first.fighterB.name, title: first.isTitleFight };
+}
+
 /** The overview shape for an event page that already holds the event and its card. */
 export function summaryFromCard(event: CardEvent, fights: readonly CardFight[]): EventSummary {
   return {
@@ -39,6 +45,7 @@ export function summaryFromCard(event: CardEvent, fights: readonly CardFight[]):
     name: event.name,
     eventDate: event.eventDate,
     location: event.location,
+    mainEvent: mainEventOf(fights),
     ratings: fights
       .filter((fight) => fight.rating !== null)
       .map((fight) => ({ position: fight.cardPosition, stars: (fight.rating as { stars: number }).stars }))

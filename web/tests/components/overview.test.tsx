@@ -13,6 +13,7 @@ const event = (patch: Partial<EventSummary> = {}): EventSummary => ({
   name: "Fight Night: Alpha vs. Beta",
   eventDate: "2026-09-12",
   location: "Las Vegas, Nevada",
+  mainEvent: { a: "Raoni Barcelos", b: "Raul Rosas Jr.", title: false },
   ratings: [
     { position: 1, stars: 4.5 },
     { position: 2, stars: 3 },
@@ -53,6 +54,43 @@ describe("EventPoster", () => {
   });
 });
 
+describe("EventPoster type", () => {
+  it("sets the main event's family names large, in the same order as everywhere else", () => {
+    const html = renderToStaticMarkup(<EventPoster event={event()} size="md" />);
+    expect(html).toContain("Barcelos");
+    expect(html).toContain("Rosas");
+    expect(html.indexOf("Barcelos")).toBeLessThan(html.indexOf("Rosas"));
+    expect(html).not.toContain("Jr.");
+    expect(html).toContain("poster-type");
+  });
+
+  it("marks a title fight on the poster and not otherwise", () => {
+    const title = renderToStaticMarkup(
+      <EventPoster event={event({ mainEvent: { a: "A One", b: "B Two", title: true } })} size="md" />,
+    );
+    expect(title).toContain("Title fight");
+    expect(renderToStaticMarkup(<EventPoster event={event()} size="md" />)).not.toContain("Title fight");
+  });
+
+  it("falls back to the event's name when the main event is not known", () => {
+    const html = renderToStaticMarkup(<EventPoster event={event({ mainEvent: null })} size="sm" />);
+    expect(html).toContain("Fight Night: Alpha vs. Beta");
+  });
+
+  it("hides the type from assistive tech (the card says it in words)", () => {
+    const html = renderToStaticMarkup(<EventPoster event={event()} size="md" />);
+    expect(html).toMatch(/class="poster-type"[^>]*aria-hidden="true"/);
+  });
+
+  it("puts header and footer around the type on the event page", () => {
+    const html = renderToStaticMarkup(
+      <EventPoster event={event()} size="lg" header={<p>HEADER</p>} footer={<p>FOOTER</p>} />,
+    );
+    expect(html.indexOf("HEADER")).toBeLessThan(html.indexOf("Barcelos"));
+    expect(html.indexOf("Barcelos")).toBeLessThan(html.indexOf("FOOTER"));
+  });
+});
+
 describe("EventCard", () => {
   it("links to the event and shows name, date, location and the best fight", () => {
     const html = renderToStaticMarkup(<EventCard event={event()} />);
@@ -67,6 +105,11 @@ describe("EventCard", () => {
     expect(renderToStaticMarkup(<EventCard event={event()} />)).toContain("1 hidden gem");
     expect(renderToStaticMarkup(<EventCard event={event({ ratings: [{ position: 6, stars: 4 }, { position: 7, stars: 5 }] })} />)).toContain("2 hidden gems");
     expect(renderToStaticMarkup(<EventCard event={event({ ratings: [{ position: 1, stars: 2 }] })} />)).not.toContain("hidden gem");
+  });
+
+  it("says the main event in words for screen readers", () => {
+    const html = renderToStaticMarkup(<EventCard event={event()} />);
+    expect(html).toContain("Main event: Raoni Barcelos versus Raul Rosas Jr.");
   });
 
   it("shows no best-fight rating for an event without ratings", () => {

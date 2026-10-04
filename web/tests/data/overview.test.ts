@@ -15,6 +15,9 @@ const row = (id: string) => ({
   name: `Event ${id}`,
   event_date: "2026-01-02",
   location: null,
+  main_event_a: "A One",
+  main_event_b: "B Two",
+  main_event_title: false,
   ratings: [],
 });
 const page = (ids: string[]) => ({ data: ids.map(row), error: null });

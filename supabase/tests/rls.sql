@@ -163,8 +163,14 @@ begin
   select count(*) into n
   from information_schema.columns
   where table_schema = 'public' and table_name = 'event_overview'
-    and column_name not in ('id', 'slug', 'name', 'event_date', 'location', 'ratings');
+    and column_name not in ('id', 'slug', 'name', 'event_date', 'location', 'ratings',
+                            'main_event_a', 'main_event_b', 'main_event_title');
   if n <> 0 then raise exception 'FAIL: event_overview has unexpected columns'; end if;
+  -- The headliners are the card-position-1 fighters (the seed's Fighter A / Fighter B).
+  if (select main_event_a || '|' || main_event_b from public.event_overview
+       where id = '00000000-0000-0000-0000-0000000000e1') <> 'Fighter A|Fighter B' then
+    raise exception 'FAIL: event_overview should name the main event fighters';
+  end if;
   raise notice 'PASS event_overview is public, active version only';
 end $$;
 

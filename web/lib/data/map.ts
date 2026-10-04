@@ -1,6 +1,6 @@
 import { isValidStars } from "@/lib/card/stars";
 import type { CardEvent, CardFight, CardSegment, Rating } from "@/lib/card/types";
-import type { EventSummary, RatedSlot } from "@/lib/overview/types";
+import type { EventSummary, MainEvent, RatedSlot } from "@/lib/overview/types";
 import { DataError } from "./ensure";
 
 export interface EventRow {
@@ -113,6 +113,9 @@ export interface OverviewRow {
   location: string | null;
   /** jsonb array of { p: card position, s: stars } in card order. */
   ratings: unknown;
+  main_event_a: string | null;
+  main_event_b: string | null;
+  main_event_title: boolean | null;
 }
 
 /** Keeps only well-formed slots; returns how many were dropped so the caller can log once. */
@@ -130,6 +133,12 @@ function toSlots(value: unknown): { slots: RatedSlot[]; dropped: number } {
     }
   }
   return { slots: slots.sort((a, b) => a.position - b.position), dropped };
+}
+
+function toMainEvent(row: OverviewRow): MainEvent | null {
+  const { main_event_a: a, main_event_b: b } = row;
+  if (typeof a !== "string" || a.trim() === "" || typeof b !== "string" || b.trim() === "") return null;
+  return { a, b, title: row.main_event_title === true };
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -152,6 +161,7 @@ export function mapOverview(row: OverviewRow): EventSummary | null {
     name: row.name,
     eventDate: row.event_date,
     location: row.location,
+    mainEvent: toMainEvent(row),
     ratings: slots,
   };
 }

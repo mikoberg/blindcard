@@ -10,4 +10,4 @@ export const FIGHTER_COLUMNS = "id, name";
 export const SCORE_COLUMNS = "fight_id, stars, percentile";
 export const VERSION_COLUMNS = "version";
 export const ID_COLUMN = "id";
-export const OVERVIEW_COLUMNS = "id, slug, name, event_date, location, ratings";
+export const OVERVIEW_COLUMNS = "id, slug, name, event_date, location, ratings, main_event_a, main_event_b, main_event_title";
