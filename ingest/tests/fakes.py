@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from helpers import make_fight, rnd
 
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
-from blindcard_ingest.db.repository import FightScoringInput, StoredScoringVersion
+from blindcard_ingest.db.repository import FightScoringInput, LabeledFight, StoredScoringVersion
 from blindcard_ingest.models import EventBundle, ParsedEvent, ParsedFight
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import ScoringInput
@@ -187,6 +187,27 @@ class FakeRepository:
                 self.bonuses[fight_source_id] = list(bonuses)
                 updated += 1
         return updated
+
+    def labeled_fights(self, source: str) -> list[LabeledFight]:
+        labeled: list[LabeledFight] = []
+        for item in self.scoring_inputs(source=source):
+            bundle = self.events[(source, item.event_source_id)]
+            if not any(self.bonuses.get(f.source_id) for f in bundle.fights):
+                continue
+            fight = next(f for f in bundle.fights if f.source_id == item.fight_id)
+            labeled.append(
+                LabeledFight(
+                    fight_id=item.fight_id,
+                    event_source_id=item.event_source_id,
+                    event_date=bundle.event.event_date,
+                    card_position=fight.card_position,
+                    fights_on_card=len(bundle.fights),
+                    is_title_fight=fight.is_title_fight,
+                    bonuses=tuple(self.bonuses.get(fight.source_id, ())),
+                    input=item.input,
+                )
+            )
+        return labeled
 
     def events_for_bonus_matching(self, source: str, from_year: int) -> list[EventToLabel]:
         return [

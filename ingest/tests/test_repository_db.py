@@ -224,3 +224,24 @@ def test_set_bonuses_is_idempotent_and_ignores_unknown_fights(
     assert row is not None
     assert row[0] == ["fight_of_the_night"]
     assert repo.set_bonuses(SOURCE, {}) == 0
+
+
+def test_labeled_fights_come_only_from_events_with_a_stored_bonus(
+    conn: psycopg.Connection, repo: PostgresRepository
+) -> None:
+    labeled = make_bundle("lab1", DATE, seed=5)
+    unlabeled = make_bundle("lab2", DATE, seed=6)
+    repo.upsert_event_bundle(SOURCE, "UFC", labeled)
+    repo.upsert_event_bundle(SOURCE, "UFC", unlabeled)
+    repo.set_bonuses(SOURCE, {labeled.fights[0].source_id: ["fight_of_the_night"]})
+
+    fights = repo.labeled_fights(SOURCE)
+
+    assert {f.event_source_id for f in fights} == {labeled.event.source_id}
+    assert len(fights) == len(labeled.fights)
+    assert all(f.fights_on_card == len(labeled.fights) for f in fights)
+    flagged = {f.fight_id: f.bonuses for f in fights if f.bonuses}
+    assert list(flagged.values()) == [("fight_of_the_night",)]
+    assert sorted(f.card_position for f in fights) == sorted(
+        f.card_position for f in labeled.fights
+    )

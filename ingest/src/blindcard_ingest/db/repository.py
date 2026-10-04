@@ -10,6 +10,7 @@ import logging
 from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, Protocol
 
 import psycopg
@@ -59,6 +60,23 @@ class FightScoringInput:
 
 
 @dataclass(frozen=True)
+class LabeledFight:
+    """A scorable fight of an event that has bonus labels, for fitting and analysing scores.
+
+    Result-side data (bonuses, method, rounds): never shipped anywhere public.
+    """
+
+    fight_id: str
+    event_source_id: str
+    event_date: date
+    card_position: int
+    fights_on_card: int
+    is_title_fight: bool
+    bonuses: tuple[str, ...]
+    input: ScoringInput
+
+
+@dataclass(frozen=True)
 class StoredScoringVersion:
     config: ScoringConfig
     reference: Reference
@@ -87,6 +105,10 @@ class Repository(Protocol):
 
     def save_scores(self, version: int, scored: Sequence[tuple[str, ScoredFight]]) -> None:
         """Upsert scores (public) and features (private) for the given fights."""
+        ...
+
+    def labeled_fights(self, source: str) -> list[LabeledFight]:
+        """Scorable fights of events with at least one stored bonus, in event/card order."""
         ...
 
     def set_bonuses(self, source: str, bonuses_by_fight: Mapping[str, Sequence[str]]) -> int:
@@ -405,6 +427,45 @@ class PostgresRepository:
                 )
                 updated += cur.rowcount
         return updated
+
+    def labeled_fights(self, source: str) -> list[LabeledFight]:
+        meta_query = """
+            select f.id, e.source_id as event_source_id, e.event_date, f.card_position,
+                   f.is_title_fight, r.bonuses,
+                   count(*) over (partition by e.id) as fights_on_card
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fight_results r on r.fight_id = f.id
+            where e.source = %s
+              and exists (
+                    select 1 from public.fights f2
+                    join public.fight_results r2 on r2.fight_id = f2.id
+                    where f2.event_id = e.id and cardinality(r2.bonuses) > 0)
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(meta_query, (source,))
+            meta = {str(row["id"]): row for row in cur.fetchall()}
+        if not meta:
+            return []
+        event_ids = {row["event_source_id"] for row in meta.values()}
+        labeled: list[LabeledFight] = []
+        for item in self.scoring_inputs(source=source, event_source_ids=event_ids):
+            row = meta.get(item.fight_id)
+            if row is None:
+                continue
+            labeled.append(
+                LabeledFight(
+                    fight_id=item.fight_id,
+                    event_source_id=item.event_source_id,
+                    event_date=row["event_date"],
+                    card_position=row["card_position"],
+                    fights_on_card=row["fights_on_card"],
+                    is_title_fight=row["is_title_fight"],
+                    bonuses=tuple(row["bonuses"] or ()),
+                    input=item.input,
+                )
+            )
+        return labeled
 
     def events_for_bonus_matching(self, source: str, from_year: int) -> list[EventToLabel]:
         query = """
