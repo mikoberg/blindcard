@@ -1,3 +1,4 @@
+import dataclasses
 import random
 import tomllib
 
@@ -5,11 +6,13 @@ import pytest
 
 from blindcard_ingest.fit.dataset import LabeledRow
 from blindcard_ingest.fit.recipe import (
+    BLEND_GRID,
     FIGHT_FEATURES,
     PERFORMANCE_FEATURES,
     FitResult,
     fit_scoring,
     format_report,
+    neutrality_problems,
     render_config_toml,
 )
 from blindcard_ingest.scoring.config import (
@@ -140,3 +143,18 @@ def test_rendered_toml_parses_back_to_the_same_weights(result: FitResult) -> Non
         (90.0, 5.0),
     ]
     assert "Held-out numbers" in text
+
+
+def test_the_shipped_weights_are_checked_for_finish_neutrality(result: FitResult) -> None:
+    assert 0.0 <= result.shipped_finish_auc <= 1.0
+    assert "shipped public weights" in format_report(result)
+    assert "shipped weights, all labelled fights" in render_config_toml(
+        result, version=2, cap_quantile=0.99, min_pool_size=100, star_thresholds=THRESHOLDS
+    )
+
+
+def test_a_leaking_or_grid_edge_fit_is_flagged(result: FitResult) -> None:
+    leaky = dataclasses.replace(result, shipped_finish_auc=0.9, blend=BLEND_GRID[-1])
+    problems = neutrality_problems(leaky)
+    assert len(problems) == 2 and "WARNING" in format_report(leaky)
+    assert neutrality_problems(dataclasses.replace(result, shipped_finish_auc=0.5, blend=0.1)) == []

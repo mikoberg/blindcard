@@ -33,7 +33,14 @@ def labelled(repo: FakeRepository) -> None:
         repo.bonuses[fight_id] = ["fight_of_the_night"]
 
 
-def run(repo: FakeRepository, tmp_path: Path, *, version: int = 2, dry_run: bool = False):
+def run(
+    repo: FakeRepository,
+    tmp_path: Path,
+    *,
+    version: int = 2,
+    dry_run: bool = False,
+    overwrite: bool = False,
+):
     return fit_run.run_fit_scoring(
         repo,
         tmp_path,
@@ -42,6 +49,7 @@ def run(repo: FakeRepository, tmp_path: Path, *, version: int = 2, dry_run: bool
         test_from_year=2024,
         l2=5.0,
         dry_run=dry_run,
+        overwrite=overwrite,
     )
 
 
@@ -53,9 +61,24 @@ def test_needs_an_active_version_and_labels(tmp_path: Path) -> None:
 
 
 def test_the_active_version_is_never_overwritten(tmp_path: Path) -> None:
+    repo = repo_with_active_v1()
+    repo.versions[2] = repo.versions[1]
+    repo.active_version = 2
     with pytest.raises(ScoringError, match="active version"):
-        run(repo_with_active_v1(), tmp_path, version=1)
+        run(repo, tmp_path, version=2)
     assert list(tmp_path.iterdir()) == []
+
+
+def test_v1_and_existing_files_are_never_replaced_by_accident(tmp_path: Path) -> None:
+    repo = repo_with_active_v1()
+    repo.versions[2] = repo.versions[1]
+    repo.active_version = 2  # v1 is no longer active: still not regenerable
+    with pytest.raises(ScoringError, match="never regenerated"):
+        run(repo, tmp_path, version=1)
+    (tmp_path / "scoring_v3.toml").write_text("keep me", encoding="utf-8")
+    with pytest.raises(ScoringError, match="--force"):
+        run(repo, tmp_path, version=3)
+    assert (tmp_path / "scoring_v3.toml").read_text(encoding="utf-8") == "keep me"
 
 
 def test_unusable_labels_are_a_configuration_error(tmp_path: Path) -> None:
@@ -76,6 +99,7 @@ def test_writes_the_config_unless_dry_run(tmp_path: Path, monkeypatch: pytest.Mo
     assert list(tmp_path.iterdir()) == []
 
     result = run(repo, tmp_path)
+    assert run(repo, tmp_path, overwrite=True) == result  # --force replaces it
     written = load_scoring_config(tmp_path, 2)
     assert written.weights == result.public_weights
     assert written.performance_weights == result.performance_weights

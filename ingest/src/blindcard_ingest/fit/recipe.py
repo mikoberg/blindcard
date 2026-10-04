@@ -50,6 +50,8 @@ PERFORMANCE_FEATURES: tuple[str, ...] = (*FIGHT_FEATURES, "early_finish", "time_
 BLEND_GRID: tuple[float, ...] = tuple(i / 20 for i in range(11))
 
 NEUTRAL_LEAK = 0.5  # AUC(stars -> finished) of a score that says nothing about finishes
+#: How far the shipped public weights may sit from neutral before the report warns.
+LEAK_TOLERANCE = 0.1
 
 FEATURE_NOTES: dict[str, str] = {
     "pace": "combined significant strikes landed per minute",
@@ -97,6 +99,9 @@ class FitResult:
     l2: float
     #: Held-out metrics keyed "v1", "public", "performance" (v1 only when a baseline was given).
     metrics: dict[str, Metrics]
+    #: AUC(shipped public weights -> finished) over all labelled fights (the weights are refitted
+    #: on all years, so the held-out numbers describe a slightly different model).
+    shipped_finish_auc: float
 
 
 def feature_caps(pool: Sequence[Mapping[str, float]], cap_quantile: float) -> dict[str, float]:
@@ -253,6 +258,12 @@ def fit_scoring(
         test_from_year=test_from_year,
         l2=l2,
         metrics=metrics,
+        shipped_finish_auc=_required(
+            auc(
+                [_predict(final.public, n) for n in normalised],
+                [int(r.finished) for r in rows],
+            )
+        ),
     )
 
 
@@ -271,10 +282,26 @@ def format_report(result: FitResult) -> str:
             f"{m.fotn_recall_at_3:8.3f}{m.fotn_mean_rank:6.2f}{m.any_bonus_recall_at_3:7.3f}"
             f"{m.finish_auc:7.3f}{m.round_one_finish_auc:6.3f}"
         )
+    lines.append(
+        f"shipped public weights, all labelled fights: ->fin {result.shipped_finish_auc:.3f}"
+    )
+    lines.extend(f"WARNING: {problem}" for problem in neutrality_problems(result))
     lines.append("FOTN@k: share of Fight of the Night picks in the top k of their own card.")
     lines.append("->fin / ->R1: AUC of the score for 'was finished' / 'finished in round 1';")
     lines.append("  0.5 means the stars say nothing about it, 1.0 would give every finish away.")
     return "\n".join(lines)
+
+
+def neutrality_problems(result: FitResult) -> list[str]:
+    """Reasons not to trust the public axis as finish-neutral. Empty = fine."""
+    problems: list[str] = []
+    if abs(result.shipped_finish_auc - NEUTRAL_LEAK) > LEAK_TOLERANCE:
+        problems.append(
+            f"shipped public weights predict 'finished' (AUC {result.shipped_finish_auc:.3f})"
+        )
+    if result.blend >= BLEND_GRID[-1]:
+        problems.append("the blend share hit the end of its grid; neutrality may be out of reach")
+    return problems
 
 
 def render_config_toml(
@@ -300,6 +327,8 @@ def render_config_toml(
         "# are refitted on all labelled fights. Held-out numbers for this fit:",
         f"#   public axis: FOTN AUC {public.fotn_auc:.3f}, FOTN in the top 3 of its card "
         f"{public.fotn_recall_at_3:.0%}, AUC for 'finished' {public.finish_auc:.3f}",
+        f"#   shipped weights, all labelled fights: AUC for 'finished' "
+        f"{result.shipped_finish_auc:.3f}",
         f"#   performance axis (private): POTN AUC {performance.potn_auc:.3f}",
         f"# The public axis blends {result.blend:.0%} of the Performance fit into the Fight fit,",
         "# chosen so the stars say (almost) nothing about whether a fight was finished.",

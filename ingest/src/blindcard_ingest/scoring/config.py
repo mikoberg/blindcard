@@ -87,9 +87,10 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
     weights = _parse_weights(raw_weights, "weights")
     performance_weights: dict[str, float] = {}
     if "performance" in data:
-        performance_weights = _parse_weights(
-            data["performance"].get("weights"), "performance weights"
-        )
+        performance = data["performance"]
+        if not isinstance(performance, Mapping):
+            raise ScoringConfigError("performance must be a table with weights")
+        performance_weights = _parse_weights(performance.get("weights"), "performance weights")
 
     thresholds = tuple(_parse_threshold(entry) for entry in raw_thresholds)
     _validate_thresholds(thresholds)

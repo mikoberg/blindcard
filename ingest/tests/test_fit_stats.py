@@ -87,3 +87,16 @@ def test_group_metrics() -> None:
     # rank 1 in a, rank 3 in b (0.2 is the lowest of three)
     assert mean_rank_in_group(scores, labels, groups) == pytest.approx(2.0)
     assert recall_at_k_per_group(scores, [0] * 10, groups, k=1) is None
+
+
+def test_recall_gives_tied_positives_fractional_credit() -> None:
+    # Two fights tie for the top place on one card; the positive is as likely first as second.
+    scores, labels, groups = [0.9, 0.9, 0.1], [1, 0, 0], ["a", "a", "a"]
+    assert recall_at_k_per_group(scores, labels, groups, k=1) == pytest.approx(0.5)
+    assert recall_at_k_per_group(scores, labels, groups, k=2) == pytest.approx(1.0)
+    assert mean_rank_in_group(scores, labels, groups) == pytest.approx(1.5)
+
+
+def test_logistic_fit_refuses_to_pretend_it_converged() -> None:
+    with pytest.raises(ValueError, match="did not converge"):
+        logistic_fit([[0.0], [0.4], [0.6], [1.0]], [0, 1, 0, 1], l2=0.001, max_iter=1)

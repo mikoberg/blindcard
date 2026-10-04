@@ -23,6 +23,7 @@ def run_fit_scoring(
     test_from_year: int,
     l2: float,
     dry_run: bool,
+    overwrite: bool = False,
 ) -> FitResult:
     """Fit against the stored bonus labels and (unless `dry_run`) write `scoring_v{version}.toml`.
 
@@ -32,8 +33,14 @@ def run_fit_scoring(
     active = repo.get_active_scoring_version()
     if active is None:
         raise ScoringError("no active score version to compare against: run `rescore` first")
+    if version == 1:
+        raise ScoringError("v1 is the baseline and its config is never regenerated")
     if version == active.config.version:
         raise ScoringError(f"v{version} is the active version: pick a new version number")
+
+    target = config_dir / f"scoring_v{version}.toml"
+    if target.exists() and not overwrite and not dry_run:
+        raise ScoringError(f"{target.name} already exists: pass --force to replace it")
 
     rows, skipped = build_rows(repo.labeled_fights(source_name))
     if not rows:
@@ -74,7 +81,6 @@ def run_fit_scoring(
         min_pool_size=active.config.min_pool_size,
         star_thresholds=active.config.star_thresholds,
     )
-    target = config_dir / f"scoring_v{version}.toml"
     if dry_run:
         logger.info("dry run: not writing %s", target.name)
     else:

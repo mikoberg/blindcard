@@ -349,6 +349,9 @@ def test_performance_weights_are_optional_and_validated(config: ScoringConfig) -
     data["performance"] = {"weights": {"charisma": 1.0}}
     with pytest.raises(ScoringConfigError, match="performance.*unknown feature"):
         parse_scoring_config(data)
+    data["performance"] = "weights"
+    with pytest.raises(ScoringConfigError, match="performance must be a table"):
+        parse_scoring_config(data)
     data["performance"] = {"weights": {}}
     with pytest.raises(ScoringConfigError, match="performance.*at least one"):
         parse_scoring_config(data)

@@ -32,12 +32,23 @@ insert into public.fight_rounds (fight_id, round_number, fighter_id, knockdowns)
 values ('00000000-0000-0000-0000-0000000000f1', 1, '00000000-0000-0000-0000-0000000000a1', 0),
        ('00000000-0000-0000-0000-0000000000f1', 1, '00000000-0000-0000-0000-0000000000b1', 1);
 
+-- A populated database already has an active version: deactivate it inside this transaction
+-- (rolled back at the end) and seed our own, so the script runs on empty and filled databases.
+update public.scoring_versions set is_active = false;
 insert into public.scoring_versions (version, config, reference, is_active)
-values (1, '{}'::jsonb, '{}'::jsonb, true);
+values (9001, '{"version": 9001}'::jsonb, '{}'::jsonb, true);
 insert into public.excitement_scores (fight_id, version, percentile, stars)
-values ('00000000-0000-0000-0000-0000000000f1', 1, 91.50, 4.5);
+values ('00000000-0000-0000-0000-0000000000f1', 9001, 91.50, 4.5);
 insert into public.excitement_features (fight_id, version, features, composite)
-values ('00000000-0000-0000-0000-0000000000f1', 1, '{"finish": 1}'::jsonb, 1.23);
+values ('00000000-0000-0000-0000-0000000000f1', 9001, '{"finish": 1}'::jsonb, 1.23);
+
+-- A later, not yet active version with features of its own: reveal_score must ignore it.
+insert into public.scoring_versions (version, config, reference, is_active)
+values (9002, '{"version": 9002}'::jsonb, '{}'::jsonb, false);
+insert into public.excitement_features (fight_id, version, features, composite)
+values ('00000000-0000-0000-0000-0000000000f1', 9002, '{"finish": 0}'::jsonb, 0.5);
+insert into public.excitement_scores (fight_id, version, percentile, stars)
+values ('00000000-0000-0000-0000-0000000000f1', 9002, 12.00, 1.5);
 
 insert into auth.users (id) values
   ('00000000-0000-0000-0000-0000000000c1'),
@@ -83,13 +94,16 @@ begin
     end;
   end loop;
 
-  -- Public tables: readable.
-  select count(*) into n from public.fights;
+  -- Public tables: readable (counts scoped to the seeded rows: a filled database has more).
+  select count(*) into n from public.fights where source = 'test';
   if n <> 1 then raise exception 'FAIL: anon should see 1 fight, saw %', n; end if;
-  select count(*) into n from public.events;
+  select count(*) into n from public.events where source = 'test';
   if n <> 1 then raise exception 'FAIL: anon should see 1 event, saw %', n; end if;
-  select count(*) into n from public.excitement_scores;
+  select count(*) into n from public.excitement_scores where version = 9001;
   if n <> 1 then raise exception 'FAIL: anon should see 1 score, saw %', n; end if;
+  -- A version that is not active yet stays invisible (two versions side by side can leak).
+  select count(*) into n from public.excitement_scores where version = 9002;
+  if n <> 0 then raise exception 'FAIL: anon can read scores of an inactive version'; end if;
   raise notice 'PASS anon can read public card data';
 
   -- Public tables: not writable.
@@ -120,6 +134,24 @@ begin
   select count(*) into n from public.reveal_fight('00000000-0000-0000-0000-00000000dead');
   if n <> 0 then raise exception 'FAIL: reveal_fight leaked a row for an unknown fight'; end if;
   raise notice 'PASS reveal_fight returns one fight at a time';
+end $$;
+
+-- Score breakdown reveal: one fight per call, active version only, same config as the features.
+do $$
+declare
+  n integer;
+  v integer;
+  cfg jsonb;
+begin
+  select count(*) into n from public.reveal_score('00000000-0000-0000-0000-0000000000f1');
+  select r.version, r.config into v, cfg
+  from public.reveal_score('00000000-0000-0000-0000-0000000000f1') r;
+  if n <> 1 or v <> 9001 or cfg->>'version' <> '9001' then
+    raise exception 'FAIL: reveal_score should return the active version''s row, got % rows', n;
+  end if;
+  select count(*) into n from public.reveal_score('00000000-0000-0000-0000-00000000dead');
+  if n <> 0 then raise exception 'FAIL: reveal_score leaked a row for an unknown fight'; end if;
+  raise notice 'PASS reveal_score returns one fight at a time';
 end $$;
 
 reset role;

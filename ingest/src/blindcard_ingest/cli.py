@@ -94,6 +94,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="judge on events from this year on, fit on the years before (default 2024)",
     )
     fit.add_argument("--l2", type=float, default=5.0, help="ridge penalty (default 5.0)")
+    fit.add_argument(
+        "--force", action="store_true", help="replace an existing scoring_vN.toml (never v1)"
+    )
 
     rescore = commands.add_parser(
         "rescore", parents=[common], help="rebuild the reference and rescore all fights"
@@ -175,6 +178,7 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 test_from_year=args.test_from_year,
                 l2=args.l2,
                 dry_run=args.dry_run,
+                overwrite=args.force,
             )
         return EXIT_OK
 

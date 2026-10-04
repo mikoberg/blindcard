@@ -132,40 +132,49 @@ def logistic_fit(
         beta = [b + s for b, s in zip(beta, step, strict=True)]
         if max(abs(s) for s in step) < tolerance:
             break
+    else:
+        raise ValueError(f"logistic fit did not converge in {max_iter} iterations")
     return LogisticFit(intercept=beta[0], coefficients=tuple(beta[1:]))
 
 
-def _positive_ranks(
+def _positive_places(
     scores: Sequence[float], labels: Sequence[int], groups: Sequence[Hashable]
-) -> list[float]:
-    """Rank (1 = best, ties share the average) of every positive within its own group."""
+) -> list[tuple[int, int]]:
+    """For every positive: (fights strictly above it, other fights tied with it) in its group."""
     members: dict[Hashable, list[int]] = defaultdict(list)
     for index, group in enumerate(groups):
         members[group].append(index)
-    ranks: list[float] = []
+    places: list[tuple[int, int]] = []
     for indices in members.values():
         for i in indices:
             if not labels[i]:
                 continue
             higher = sum(1 for j in indices if scores[j] > scores[i])
             tied = sum(1 for j in indices if scores[j] == scores[i] and j != i)
-            ranks.append(1 + higher + tied / 2)
-    return ranks
+            places.append((higher, tied))
+    return places
 
 
 def recall_at_k_per_group(
     scores: Sequence[float], labels: Sequence[int], groups: Sequence[Hashable], *, k: int
 ) -> float | None:
-    """Share of positives ranked in the top k of their own group (e.g. their own card)."""
-    ranks = _positive_ranks(scores, labels, groups)
-    if not ranks:
+    """Share of positives ranked in the top k of their own group (e.g. their own card).
+
+    A positive tied with others is equally likely to sit at any of the tied places, so it earns
+    the fraction of those places that fall inside the top k.
+    """
+    places = _positive_places(scores, labels, groups)
+    if not places:
         return None
-    return sum(1 for r in ranks if r <= k) / len(ranks)
+    credit = sum(min(1.0, max(0.0, (k - higher) / (tied + 1))) for higher, tied in places)
+    return credit / len(places)
 
 
 def mean_rank_in_group(
     scores: Sequence[float], labels: Sequence[int], groups: Sequence[Hashable]
 ) -> float | None:
     """Average within-group rank of the positives (1 = always the top fight of its card)."""
-    ranks = _positive_ranks(scores, labels, groups)
-    return _mean(ranks) if ranks else None
+    places = _positive_places(scores, labels, groups)
+    if not places:
+        return None
+    return _mean([1 + higher + tied / 2 for higher, tied in places])
