@@ -45,8 +45,9 @@ npm run build            # next build
 
 ### Live spoiler regression suite
 
-`tests/spoiler/rendered.test.ts` fetches a running production build and scans the HTML, the Next
-data payloads and the client bundles for result data. It is skipped unless
+`tests/spoiler/rendered.test.ts` fetches a running production build and scans the HTML, the RSC
+(Flight) payloads and the client bundles of `/`, `/events` and the first few event pages (taken
+from the sitemap) for result data, and exercises the reveal route. It is skipped unless
 `SPOILER_TEST_BASE_URL` is set. Step by step (Windows, PowerShell, from `web/`):
 
 ```powershell
@@ -56,8 +57,10 @@ npm run build
 # 2. Start the production server on port 3100 in the background
 $p = Start-Process -FilePath "npm.cmd" -ArgumentList "run","start","--","-p","3100" -PassThru -WindowStyle Hidden
 
-# 3. Wait until it answers
-do { Start-Sleep -Seconds 1; try { $up = (Invoke-WebRequest http://localhost:3100/robots.txt -UseBasicParsing).StatusCode -eq 200 } catch { $up = $false } } until ($up)
+# 3. Wait until it answers (gives up after about 60 seconds and stops the server again)
+$n = 0; $up = $false
+while (-not $up -and $n -lt 60) { $n++; Start-Sleep -Seconds 1; try { $up = (Invoke-WebRequest http://localhost:3100/robots.txt -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch { $up = $false } }
+if (-not $up) { taskkill /PID $p.Id /T /F; throw "Server did not answer on port 3100 within 60 s" }
 
 # 4. Run the live suite
 $env:SPOILER_TEST_BASE_URL = "http://localhost:3100"
@@ -71,9 +74,12 @@ Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue
 
 ## Spoiler rules in code
 
-- Only `lib/data/*` queries the database, with explicit column lists (`lib/data/columns.ts`).
-  `tests/columns.test.ts` is the guard: it fails if a result column, a result table, `select *`
-  or a `source_id` appears.
+- Only `lib/data/*` runs table queries (`.from` / `.select`), with explicit column lists
+  (`lib/data/columns.ts`). The one other database call is the `reveal_fight` RPC in
+  `lib/reveal/service.ts`.
+- `tests/columns.test.ts` is the guard: it fails if a result column, a result table, `select *`
+  or a `source_id` appears in the code. It is a static check on the source, not proof that no
+  result reaches the browser; the live spoiler suite is what scans the rendered output.
 - Results are served only by `POST /api/reveal/[fightId]`, one fight per call, with
   `Cache-Control: no-store`.
 - A fight without a score always renders as "Not rated yet". An unscored fight and a
@@ -88,8 +94,8 @@ Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue
 app/          routes: /, /events, /events/[slug], /api/reveal/[fightId], sitemap, robots, OG image
 components/   CardView, FightList, FightCard, StarRating, WatchThese, RevealButton, ...
 lib/card/     pure card logic: stars, sort, "Watch these", "Hidden gem", state, blurb
-lib/reveal/   reveal service, response shaping, client, formatting
-lib/data/     the only database access (columns, events, card, mapping, guards)
+lib/reveal/   reveal service (the `reveal_fight` RPC), response shaping, client, formatting
+lib/data/     table queries (columns, events, card, mapping, error helpers)
 lib/supabase/ server client
 tests/        vitest: unit tests, columns guard, spoiler regression (tests/spoiler)
 ```
