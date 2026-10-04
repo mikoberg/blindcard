@@ -32,6 +32,10 @@ DATE = dt.date(2026, 1, 1)
 
 
 def _cleanup(conn: psycopg.Connection) -> None:
+    # `rescore` scores the whole database pool, so on a populated database the test version
+    # also owns scores of real fights: remove those before the version row itself.
+    conn.execute("delete from public.excitement_scores where version = %s", (VERSION,))
+    conn.execute("delete from public.excitement_features where version = %s", (VERSION,))
     conn.execute("delete from public.events where source = %s", (SOURCE,))
     conn.execute("delete from public.fighters where source = %s", (SOURCE,))
     conn.execute("delete from public.scoring_versions where version = %s", (VERSION,))
@@ -180,3 +184,43 @@ def test_rescore_stores_valid_scores_and_is_repeatable(
     assert first == second
     assert len(first) >= 18
     assert count(conn, "excitement_features", "version = %s", VERSION) == len(first)
+
+
+def test_bonuses_survive_a_re_ingest_of_the_event(
+    conn: psycopg.Connection, repo: PostgresRepository
+) -> None:
+    """Bonuses are labels owned by the bonus ingester: re-ingesting results must not wipe them."""
+    bundle = make_bundle("bonus1", DATE, seed=3)
+    repo.upsert_event_bundle(SOURCE, "UFC", bundle)
+    fight_source_id = bundle.fights[0].source_id
+
+    assert repo.set_bonuses(SOURCE, {fight_source_id: ["performance_of_the_night"]}) == 1
+    repo.upsert_event_bundle(SOURCE, "UFC", bundle)  # rewrites the result row, bonuses = []
+
+    row = conn.execute(
+        "select r.bonuses from public.fight_results r join public.fights f on f.id = r.fight_id "
+        "where f.source = %s and f.source_id = %s",
+        (SOURCE, fight_source_id),
+    ).fetchone()
+    assert row is not None
+    assert row[0] == ["performance_of_the_night"]
+
+
+def test_set_bonuses_is_idempotent_and_ignores_unknown_fights(
+    conn: psycopg.Connection, repo: PostgresRepository
+) -> None:
+    bundle = make_bundle("bonus2", DATE, seed=4)
+    repo.upsert_event_bundle(SOURCE, "UFC", bundle)
+    known = bundle.fights[1].source_id
+    awards = {known: ["fight_of_the_night"], "no-such-fight": ["performance_of_the_night"]}
+
+    assert repo.set_bonuses(SOURCE, awards) == 1  # only the existing fight is updated
+    assert repo.set_bonuses(SOURCE, awards) == 1  # same again: same state
+    row = conn.execute(
+        "select r.bonuses from public.fight_results r join public.fights f on f.id = r.fight_id "
+        "where f.source = %s and f.source_id = %s",
+        (SOURCE, known),
+    ).fetchone()
+    assert row is not None
+    assert row[0] == ["fight_of_the_night"]
+    assert repo.set_bonuses(SOURCE, {}) == 0

@@ -7,7 +7,7 @@ psycopg 3. Writes are idempotent upserts keyed on natural keys, one transaction 
 from __future__ import annotations
 
 import logging
-from collections.abc import Collection, Iterator, Sequence
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -86,6 +86,13 @@ class Repository(Protocol):
 
     def save_scores(self, version: int, scored: Sequence[tuple[str, ScoredFight]]) -> None:
         """Upsert scores (public) and features (private) for the given fights."""
+        ...
+
+    def set_bonuses(self, source: str, bonuses_by_fight: Mapping[str, Sequence[str]]) -> int:
+        """Set `fight_results.bonuses` (private, result-side) for fights by their source id.
+
+        Returns how many existing fights were updated; unknown fights are ignored.
+        """
         ...
 
     def replace_version(
@@ -221,7 +228,10 @@ class PostgresRepository:
                   set outcome = excluded.outcome, winner_fighter_id = excluded.winner_fighter_id,
                       method = excluded.method, method_detail = excluded.method_detail,
                       end_round = excluded.end_round, end_time_seconds = excluded.end_time_seconds,
-                      scorecards = excluded.scorecards, bonuses = excluded.bonuses
+                      scorecards = excluded.scorecards
+                  -- `bonuses` is deliberately NOT updated here: it is owned by the bonus
+                  -- ingester (set_bonuses), and the results source never carries bonuses, so
+                  -- re-ingesting an event must not wipe them.
                 """,
                 (
                     fight_id,
@@ -372,6 +382,24 @@ class PostgresRepository:
     def save_scores(self, version: int, scored: Sequence[tuple[str, ScoredFight]]) -> None:
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             self._write_scores(cur, version, scored)
+
+    def set_bonuses(self, source: str, bonuses_by_fight: Mapping[str, Sequence[str]]) -> int:
+        if not bonuses_by_fight:
+            return 0
+        updated = 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            for fight_source_id, bonuses in bonuses_by_fight.items():
+                cur.execute(
+                    """
+                    update public.fight_results r
+                    set bonuses = %s
+                    from public.fights f
+                    where f.id = r.fight_id and f.source = %s and f.source_id = %s
+                    """,
+                    (list(bonuses), source, fight_source_id),
+                )
+                updated += cur.rowcount
+        return updated
 
     def replace_version(
         self,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from helpers import make_fight, rnd
@@ -97,6 +97,7 @@ class FakeRepository:
     versions: dict[int, tuple[ScoringConfig, Reference]] = field(default_factory=dict)
     active_version: int | None = None
     scores: dict[tuple[str, int], ScoredFight] = field(default_factory=dict)
+    bonuses: dict[str, list[str]] = field(default_factory=dict)
     upserts: int = 0
 
     def complete_event_source_ids(self, source: str) -> set[str]:
@@ -171,6 +172,20 @@ class FakeRepository:
         self.save_scores(config.version, scored)
         if activate:
             self.active_version = config.version
+
+    def set_bonuses(self, source: str, bonuses_by_fight: Mapping[str, Sequence[str]]) -> int:
+        known = {
+            fight.source_id
+            for (src, _), bundle in self.events.items()
+            if src == source
+            for fight in bundle.fights
+        }
+        updated = 0
+        for fight_source_id, bonuses in bonuses_by_fight.items():
+            if fight_source_id in known:
+                self.bonuses[fight_source_id] = list(bonuses)
+                updated += 1
+        return updated
 
     def close(self) -> None:
         return None
