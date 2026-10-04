@@ -1,11 +1,14 @@
 import { getSupabase } from "@/lib/supabase/server";
 import { RevealUnavailableError } from "./errors";
+import { buildScoreBreakdown } from "./breakdown";
 import { rowToResponse } from "./response";
-import type { RevealResponse, RevealRow } from "./types";
+import type { RevealResponse, RevealRow, RevealScore, ScoreRow } from "./types";
 
 /**
  * The single place that asks the database for a result. `reveal_fight` returns at most one
- * row for one fight; anything else is treated as a failure.
+ * row for one fight; anything else is treated as a failure. The score breakdown comes from
+ * `reveal_score` (same rule: one fight, active version) and is an extra: if it is missing or
+ * cannot be read, the result is still revealed, just without "why this rating".
  */
 export async function revealFight(fightId: string): Promise<RevealResponse | null> {
   const { data, error } = await getSupabase().rpc("reveal_fight", { p_fight_id: fightId });
@@ -13,5 +16,11 @@ export async function revealFight(fightId: string): Promise<RevealResponse | nul
   if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
   if (data.length === 0) return null;
   if (data.length > 1) throw new RevealUnavailableError("multiple_rows");
-  return rowToResponse(data[0] as RevealRow);
+  return rowToResponse(data[0] as RevealRow, await revealScore(fightId));
+}
+
+async function revealScore(fightId: string): Promise<RevealScore | null> {
+  const { data, error } = await getSupabase().rpc("reveal_score", { p_fight_id: fightId });
+  if (error || !Array.isArray(data) || data.length !== 1) return null;
+  return buildScoreBreakdown(data[0] as ScoreRow);
 }

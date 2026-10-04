@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { revealReducer, type RevealState } from "@/lib/reveal/state";
 
-const view = { headline: "X wins", method: "KO/TKO", when: "Round 1, 0:30", scorecards: [] };
+const view = { headline: "X wins", method: "KO/TKO", when: "Round 1, 0:30", scorecards: [], score: null };
 const hidden: RevealState = { status: "hidden" };
 const loading: RevealState = { status: "loading" };
 const shown: RevealState = { status: "shown", view };

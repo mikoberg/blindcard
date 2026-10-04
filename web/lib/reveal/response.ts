@@ -1,5 +1,6 @@
 import { RevealParseError } from "./errors";
-import type { RevealResponse, RevealRow } from "./types";
+import { isValidStars } from "@/lib/card/stars";
+import type { PerformanceAxis, RevealResponse, RevealRow, RevealScore, ScoreAxis } from "./types";
 
 const OUTCOMES = ["win", "draw", "no_contest"] as const;
 
@@ -12,7 +13,7 @@ function strings(value: unknown): string[] {
 }
 
 /** Maps the database row to the JSON the route returns. */
-export function rowToResponse(row: RevealRow): RevealResponse {
+export function rowToResponse(row: RevealRow, score: RevealScore | null = null): RevealResponse {
   if (!isOutcome(row.outcome)) throw new RevealParseError("unknown outcome");
   return {
     outcome: row.outcome,
@@ -23,7 +24,46 @@ export function rowToResponse(row: RevealRow): RevealResponse {
     endTimeSeconds: row.end_time_seconds,
     scorecards: strings(row.scorecards),
     bonuses: strings(row.bonuses),
+    score,
   };
+}
+
+function parseAxis(value: unknown, label: string): ScoreAxis {
+  if (typeof value !== "object" || value === null) throw new RevealParseError(label);
+  const factors = (value as Record<string, unknown>).factors;
+  if (!Array.isArray(factors)) throw new RevealParseError(`${label} factors`);
+  return {
+    factors: factors.map((item) => {
+      const f = (item ?? {}) as Record<string, unknown>;
+      if (
+        typeof f.feature !== "string" ||
+        typeof f.raw !== "number" ||
+        !Number.isFinite(f.raw) ||
+        typeof f.contribution !== "number" ||
+        !Number.isFinite(f.contribution)
+      ) {
+        throw new RevealParseError(`${label} factor`);
+      }
+      return { feature: f.feature, raw: f.raw, contribution: f.contribution };
+    }),
+  };
+}
+
+function parseScore(value: unknown): RevealScore | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "object") throw new RevealParseError("score");
+  const o = value as Record<string, unknown>;
+  if (typeof o.version !== "number" || !Number.isInteger(o.version)) {
+    throw new RevealParseError("score version");
+  }
+  let performance: PerformanceAxis | null = null;
+  if (o.performance !== null && o.performance !== undefined) {
+    const axis = parseAxis(o.performance, "performance");
+    const stars = (o.performance as Record<string, unknown>).stars;
+    if (!isValidStars(stars)) throw new RevealParseError("performance stars");
+    performance = { ...axis, stars };
+  }
+  return { version: o.version, fight: parseAxis(o.fight, "fight"), performance };
 }
 
 /** Validates what the browser received. Error bodies and odd shapes are rejected. */
@@ -68,5 +108,6 @@ export function parseRevealResponse(json: unknown): RevealResponse {
     endTimeSeconds: o.endTimeSeconds,
     scorecards: o.scorecards as string[],
     bonuses: o.bonuses as string[],
+    score: parseScore(o.score),
   };
 }

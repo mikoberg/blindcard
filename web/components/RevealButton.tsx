@@ -5,6 +5,7 @@ import type { CardFighter } from "@/lib/card/types";
 import { fetchReveal } from "@/lib/reveal/client";
 import { formatReveal } from "@/lib/reveal/format";
 import { revealReducer } from "@/lib/reveal/state";
+import { ScoreBreakdown } from "./ScoreBreakdown";
 
 interface Props {
   fightId: string;
@@ -68,6 +69,7 @@ export function RevealButton({ fightId, fighterA, fighterB }: Props) {
                 ))}
               </ul>
             )}
+            {state.view.score && <ScoreBreakdown score={state.view.score} />}
           </div>
         )}
       </div>

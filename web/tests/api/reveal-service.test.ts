@@ -6,6 +6,23 @@ vi.mock("@/lib/supabase/server", () => ({ getSupabase: () => ({ rpc }) }));
 
 import { revealFight } from "@/lib/reveal/service";
 
+const scoreRow = {
+  fight_id: "f1",
+  version: 2,
+  composite: 1,
+  config: { weights: { pace: 1 }, performance_weights: { ko_finish: 1 } },
+  features: {
+    raw: { pace: 9, ko_finish: 1 },
+    normalised: { pace: 0.5, ko_finish: 1 },
+    performance: { composite: 1, percentile: 90, stars: 4.5 },
+  },
+};
+
+/** reveal_fight answers with `fight`, reveal_score with `score`. */
+function answer(fight: unknown, score: unknown) {
+  rpc.mockImplementation(async (name: string) => (name === "reveal_fight" ? fight : score));
+}
+
 const row = {
   fight_id: "f1",
   outcome: "win",
@@ -26,6 +43,31 @@ describe("revealFight", () => {
     const result = await revealFight("f1");
     expect(rpc).toHaveBeenCalledWith("reveal_fight", { p_fight_id: "f1" });
     expect(result).toMatchObject({ outcome: "win", winnerFighterId: "w1", endRound: 1 });
+  });
+
+  it("adds the score breakdown from reveal_score (one more call, same fight)", async () => {
+    answer({ data: [row], error: null }, { data: [scoreRow], error: null });
+    const result = await revealFight("f1");
+    expect(rpc).toHaveBeenCalledWith("reveal_score", { p_fight_id: "f1" });
+    expect(result?.score?.fight.factors).toEqual([{ feature: "pace", raw: 9, contribution: 0.5 }]);
+    expect(result?.score?.performance?.stars).toBe(4.5);
+  });
+
+  it.each([
+    ["an error", { data: null, error: { code: "42883" } }],
+    ["no row", { data: [], error: null }],
+    ["two rows", { data: [scoreRow, scoreRow], error: null }],
+    ["a malformed row", { data: [{ ...scoreRow, features: "x" }], error: null }],
+  ])("still reveals the result when reveal_score gives %s", async (_label, score) => {
+    answer({ data: [row], error: null }, score);
+    const result = await revealFight("f1");
+    expect(result).toMatchObject({ outcome: "win", score: null });
+  });
+
+  it("does not ask for the breakdown of a fight without a result", async () => {
+    answer({ data: [], error: null }, { data: [scoreRow], error: null });
+    expect(await revealFight("f1")).toBeNull();
+    expect(rpc).not.toHaveBeenCalledWith("reveal_score", expect.anything());
   });
 
   it("returns null when the fight has no result row", async () => {

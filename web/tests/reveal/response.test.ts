@@ -26,6 +26,7 @@ describe("rowToResponse", () => {
       endTimeSeconds: 123,
       scorecards: ["A 29 - 28"],
       bonuses: ["x"],
+      score: null,
     });
   });
 
@@ -62,5 +63,35 @@ describe("parseRevealResponse", () => {
     ["missing bonuses", { ...ok, bonuses: undefined }],
   ])("rejects %s", (_label, input) => {
     expect(() => parseRevealResponse(input)).toThrow(RevealParseError);
+  });
+});
+
+describe("the score breakdown in a reveal response", () => {
+  const score = {
+    version: 2,
+    fight: { factors: [{ feature: "pace", raw: 9, contribution: 0.5 }] },
+    performance: { stars: 4.5, factors: [{ feature: "ko_finish", raw: 1, contribution: 1 }] },
+  };
+
+  it("is carried through the database mapping and the browser parse", () => {
+    const response = rowToResponse(row, score);
+    expect(response.score).toEqual(score);
+    expect(parseRevealResponse(JSON.parse(JSON.stringify(response))).score).toEqual(score);
+  });
+
+  it("is optional: no score, or a response from before it existed, parses to null", () => {
+    expect(parseRevealResponse({ ...rowToResponse(row), score: undefined }).score).toBeNull();
+    expect(parseRevealResponse(rowToResponse(row)).score).toBeNull();
+  });
+
+  it.each([
+    ["a non-object score", "x"],
+    ["a fractional version", { ...score, version: 1.5 }],
+    ["missing fight factors", { ...score, fight: {} }],
+    ["a factor without a feature", { ...score, fight: { factors: [{ raw: 1, contribution: 1 }] } }],
+    ["a non-finite contribution", { ...score, fight: { factors: [{ feature: "p", raw: 1, contribution: null }] } }],
+    ["invalid performance stars", { ...score, performance: { ...score.performance, stars: 4.3 } }],
+  ])("rejects %s", (_label, bad) => {
+    expect(() => parseRevealResponse({ ...rowToResponse(row), score: bad })).toThrow(RevealParseError);
   });
 });
