@@ -1,3 +1,4 @@
+import dataclasses
 import datetime as dt
 from pathlib import Path
 
@@ -62,7 +63,8 @@ def test_needs_an_active_version_and_labels(tmp_path: Path) -> None:
 
 def test_the_active_version_is_never_overwritten(tmp_path: Path) -> None:
     repo = repo_with_active_v1()
-    repo.versions[2] = repo.versions[1]
+    config, reference = repo.versions[1]
+    repo.versions[2] = (dataclasses.replace(config, version=2), reference)
     repo.active_version = 2
     with pytest.raises(ScoringError, match="active version"):
         run(repo, tmp_path, version=2)
