@@ -150,9 +150,7 @@ describe("data access guards", () => {
     expect(violations(findResultTableStrings)).toEqual([]);
   });
 
-  // Skipped until Task 6: lib/reveal/service.ts does not exist yet.
-  // Re-enabled in Task 6 once lib/reveal/service.ts exists (change it.skip back to it).
-  it.skip("the reveal_fight RPC is called from exactly one file", () => {
+  it("the reveal_fight RPC is called from exactly one file", () => {
     const callers = tree.filter((path) => /\.rpc\(/.test(read(path))).map(rel);
     expect(callers).toEqual(["lib/reveal/service.ts"]);
   });
