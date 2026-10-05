@@ -1,6 +1,13 @@
 import { isValidSlug } from "@/lib/slug";
 import { getSupabase } from "@/lib/supabase/server";
-import type { UpcomingBout, UpcomingEvent, UpcomingFighter, UpcomingSegment } from "@/lib/upcoming/types";
+import type {
+  BoutPrediction,
+  PredictionReason,
+  UpcomingBout,
+  UpcomingEvent,
+  UpcomingFighter,
+  UpcomingSegment,
+} from "@/lib/upcoming/types";
 import { UPCOMING_BOUT_COLUMNS, UPCOMING_EVENT_COLUMNS } from "./columns";
 import { ensure } from "./ensure";
 
@@ -26,6 +33,9 @@ interface BoutRow {
   is_title_fight: boolean;
   fighter_a_name: string;
   fighter_b_name: string;
+  predicted_stars: number | string | null;
+  prediction_basis: string | null;
+  prediction_why: unknown;
   fighter_a: FighterJoin | null;
   fighter_b: FighterJoin | null;
 }
@@ -37,6 +47,25 @@ function fighter(name: string, joined: FighterJoin | null): UpcomingFighter {
   return { name, slug, country: joined?.country ?? null };
 }
 
+function reasons(value: unknown): PredictionReason[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const r = (item ?? {}) as Record<string, unknown>;
+    return typeof r.label === "string" && typeof r.amount === "number" && Number.isFinite(r.amount)
+      ? [{ label: r.label, amount: r.amount }]
+      : [];
+  });
+}
+
+/** null unless the stored expectation is complete and inside the rating scale. */
+export function mapPrediction(row: Pick<BoutRow, "predicted_stars" | "prediction_basis" | "prediction_why">): BoutPrediction | null {
+  const stars = row.predicted_stars === null ? NaN : Number(row.predicted_stars);
+  const basis = row.prediction_basis;
+  if (!(stars >= 1 && stars <= 5)) return null;
+  if (basis !== "both" && basis !== "one" && basis !== "none") return null;
+  return { stars, basis, why: reasons(row.prediction_why) };
+}
+
 function bout(row: BoutRow): UpcomingBout {
   return {
     id: row.id,
@@ -46,6 +75,7 @@ function bout(row: BoutRow): UpcomingBout {
     isTitleFight: row.is_title_fight,
     a: fighter(row.fighter_a_name, row.fighter_a),
     b: fighter(row.fighter_b_name, row.fighter_b),
+    prediction: mapPrediction(row),
   };
 }
 

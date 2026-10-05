@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { formatEventDate } from "@/lib/format";
 import { eventLabel, posterNames } from "@/lib/overview/matchup";
+import { expectedCardRating } from "@/lib/upcoming/prediction";
 import type { UpcomingEvent } from "@/lib/upcoming/types";
+import { ExpectedPlate } from "./ExpectedPlate";
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
@@ -31,6 +33,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
   const names = headliners(event);
   const days = daysUntil(event.eventDate, today);
   const title = event.bouts.some((b) => b.position <= 2 && b.isTitleFight);
+  const expected = expectedCardRating(event.bouts);
   return (
     <Link
       href={`/upcoming/${event.slug}`}
@@ -60,6 +63,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
           {title && <span className="redact px-1.5 text-xs font-bold leading-5">Title fight</span>}
         </p>
       </div>
+      {expected !== null && <ExpectedPlate stars={expected} />}
     </Link>
   );
 }

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { UpcomingCard } from "@/components/UpcomingCard";
 import { UpcomingSection } from "@/components/UpcomingSection";
 import { UpcomingView } from "@/components/UpcomingView";
+import { mapPrediction } from "@/lib/data/upcoming";
+import { expectedCardRating } from "@/lib/upcoming/prediction";
 import type { UpcomingBout, UpcomingEvent } from "@/lib/upcoming/types";
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 
@@ -16,6 +18,7 @@ const bout = (patch: Partial<UpcomingBout> = {}): UpcomingBout => ({
   isTitleFight: true,
   a: { name: "Alexander Volkanovski", slug: "alexander-volkanovski", country: "au" },
   b: { name: "Movsar Evloev", slug: null, country: null },
+  prediction: null,
   ...patch,
 });
 
@@ -109,5 +112,81 @@ describe("UpcomingView", () => {
       />,
     );
     expect(html).not.toContain("<img src=x");
+  });
+});
+
+describe("expected ratings", () => {
+  const predicted = (stars: number, patch: Partial<UpcomingBout> = {}): UpcomingBout =>
+    bout({
+      prediction: {
+        stars,
+        basis: "both",
+        why: [
+          { label: "Spot on the card", amount: 0.74 },
+          { label: "Earlier fights of both fighters", amount: -0.2 },
+        ],
+      },
+      ...patch,
+    });
+
+  it("draws the expectation dashed, with a tilde and the word expected, never as a gold plate", () => {
+    const html = renderToStaticMarkup(
+      <UpcomingView event={event({ bouts: [predicted(4.34)] })} today={TODAY} />,
+    );
+    expect(html).toContain('aria-label="Expected rating 4.3 out of 5"');
+    expect(html).toContain("border-dashed");
+    expect(html).toContain("expected");
+    expect(html).not.toMatch(/gold|classic/i);
+  });
+
+  it("explains how it got there in stars, and says how much history it rests on", () => {
+    const html = renderToStaticMarkup(
+      <UpcomingView event={event({ bouts: [predicted(3.3)] })} today={TODAY} />,
+    );
+    expect(html).toContain("How we got this");
+    expect(html).toContain("+0.7 stars");
+    expect(html).toContain("−0.2 stars");
+    expect(html).toContain("earlier rated fights of both fighters");
+    expect(html).toContain("About the expected ratings");
+  });
+
+  it("shows the expected card rating only when at least half the bouts have an expectation", () => {
+    const some = event({ bouts: [predicted(4), predicted(3, { id: "b2", position: 2 }), bout({ id: "b3", position: 3 })] });
+    expect(renderToStaticMarkup(<UpcomingView event={some} today={TODAY} />)).toContain("Expected card rating");
+    const few = event({ bouts: [predicted(4), bout({ id: "b2", position: 2 }), bout({ id: "b3", position: 3 })] });
+    expect(renderToStaticMarkup(<UpcomingView event={few} today={TODAY} />)).not.toContain("Expected card rating");
+    expect(expectedCardRating(some.bouts)).toBe(3.5);
+    expect(expectedCardRating(few.bouts)).toBeNull();
+    expect(expectedCardRating([])).toBeNull();
+  });
+
+  it("puts the expected card rating on the home tile", () => {
+    const html = renderToStaticMarkup(
+      <UpcomingCard event={event({ bouts: [predicted(3.8)] })} today={TODAY} />,
+    );
+    expect(html).toContain("~");
+    expect(html).toContain("3.8");
+  });
+
+  it("uses no result words anywhere on the page", () => {
+    const html = renderToStaticMarkup(
+      <UpcomingView event={event({ bouts: [predicted(3.8)] })} today={TODAY} />,
+    );
+    expect(html).not.toMatch(/winner|\bwins\b|\bDraw\b|KO\/TKO|Decision - /i);
+  });
+});
+
+describe("mapPrediction", () => {
+  const complete = { predicted_stars: "3.45", prediction_basis: "one", prediction_why: [{ label: "x", amount: 0.2 }, { nope: 1 }] };
+
+  it("reads a complete expectation and drops malformed reasons", () => {
+    expect(mapPrediction(complete)).toEqual({ stars: 3.45, basis: "one", why: [{ label: "x", amount: 0.2 }] });
+  });
+
+  it("is null when anything is missing or out of range", () => {
+    expect(mapPrediction({ ...complete, predicted_stars: null })).toBeNull();
+    expect(mapPrediction({ ...complete, predicted_stars: 5.5 })).toBeNull();
+    expect(mapPrediction({ ...complete, prediction_basis: "guess" })).toBeNull();
+    expect(mapPrediction({ ...complete, prediction_why: "oops" })?.why).toEqual([]);
   });
 });

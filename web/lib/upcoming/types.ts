@@ -6,6 +6,22 @@ export interface UpcomingFighter {
   country: string | null;
 }
 
+/** A reason behind an expected rating: what moved it, in stars, against an average fight. */
+export interface PredictionReason {
+  label: string;
+  amount: number;
+}
+
+/**
+ * The expected rating of a bout that has not been fought: a number on the same scale as a real
+ * rating, learned from public ratings only. `basis` says how much history it rests on.
+ */
+export interface BoutPrediction {
+  stars: number;
+  basis: "both" | "one" | "none";
+  why: PredictionReason[];
+}
+
 export type UpcomingSegment = "main" | "prelim" | "early_prelim";
 
 /** One announced bout. Pre-fight facts only: no record, streak or rating-of-the-fight yet. */
@@ -18,6 +34,8 @@ export interface UpcomingBout {
   isTitleFight: boolean;
   a: UpcomingFighter;
   b: UpcomingFighter;
+  /** null until the model has run for this bout. */
+  prediction: BoutPrediction | null;
 }
 
 export interface UpcomingEvent {
