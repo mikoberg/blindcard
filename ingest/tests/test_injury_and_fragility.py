@@ -91,7 +91,7 @@ def test_expected_ko_only_for_real_ko_and_is_symmetric() -> None:
 
 
 def test_recipe_has_the_editorial_weights_and_leaves_out_the_split_decision() -> None:
-    assert FIXED_WEIGHTS["cut_short"] < 0 and FIXED_WEIGHTS["fragile_ko"] < 0
+    assert FIXED_WEIGHTS["cut_short"] < 0 and "fragile_ko" not in FIXED_WEIGHTS
     assert "cut_short" in SCORE_FEATURES and "close_decision" not in SCORE_FEATURES
 
 

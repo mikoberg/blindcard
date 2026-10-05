@@ -59,19 +59,17 @@ SCORE_FEATURES: tuple[str, ...] = (
     "unbeaten_fighter",
     "experience",
     "cut_short",
-    "fragile_ko",
 )
 
 #: Editorial weights, set by hand instead of fitted (relative to the largest fitted weight, 1.0).
+#: (A discount for KOs of fighters who are often stopped was tried and removed: it cannot tell who
+#: was stopped without revealing the result, so it also penalised fights the fragile fighter won.)
 #: The bonus labels cannot teach these: a fight that was stopped by an injury hardly ever earns
 #: a bonus but there are too few of them to show it, and the labels reward a KO of a fighter
 #: who is often stopped as much as any other. They say what a fan means by "worth watching".
 FIXED_WEIGHTS: dict[str, float] = {
     # A fight stopped early by an injury (or "could not continue") did not get to happen.
     "cut_short": -0.6,
-    # Stopping a fighter who is rarely stopped is worth more than stopping one who often is:
-    # only a KO-loss history clearly above the usual counts.
-    "fragile_ko": -0.5,
 }
 
 #: Compared with fights of their own era: strikes per minute grew over the years, so a typical
