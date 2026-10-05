@@ -201,9 +201,27 @@ begin
   select count(*) into n
   from information_schema.columns
   where table_schema = 'public' and table_name = 'fighter_ratings'
-    and column_name not in ('id', 'name', 'country', 'rated_fights', 'avg_stars');
+    and column_name not in ('id', 'name', 'country', 'rated_fights', 'avg_stars', 'slug');
   if n <> 0 then raise exception 'FAIL: fighter_ratings has unexpected columns'; end if;
   raise notice 'PASS fighter_ratings is public, active version only';
+end $$;
+
+-- The rated fights behind a fighter's average: public, active version only, no result columns.
+do $$
+declare
+  n integer;
+  r record;
+begin
+  select count(*) into n from public.fighter_fights;
+  if n <> 2 then raise exception 'FAIL: anon should see one fight per seeded fighter in fighter_fights, saw %', n; end if;
+  select * into r from public.fighter_fights where opponent_name = 'Fighter B';
+  if r.stars <> 4.5 then raise exception 'FAIL: fighter_fights should hold the active version only, got %', r.stars; end if;
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'fighter_fights'
+    and column_name not in ('fighter_slug', 'event_slug', 'event_name', 'event_date', 'opponent_name', 'stars');
+  if n <> 0 then raise exception 'FAIL: fighter_fights has unexpected columns'; end if;
+  raise notice 'PASS fighter_fights is public, active version only';
 end $$;
 
 -- Card segments are a public, pre-fight fact: readable, but only the three known values.

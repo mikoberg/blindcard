@@ -1,4 +1,9 @@
-import type { FighterRatingRow, LeaderboardEntry } from "./types";
+import type {
+  FighterFightRow,
+  FighterProfile,
+  FighterRatingRow,
+  LeaderboardEntry,
+} from "./types";
 
 /**
  * A fighter needs this many rated fights to be ranked, so a couple of lucky fights cannot put
@@ -27,9 +32,54 @@ export function rankFighters(rows: readonly FighterRatingRow[]): LeaderboardEntr
     .map((r, index) => ({
       rank: index + 1,
       id: r.row.id,
+      slug: r.row.slug,
       name: r.row.name,
       country: r.row.country,
       fights: r.fights,
       average: r.average,
     }));
+}
+
+/** Ratings can arrive as numbers or numeric strings; anything else is not a rating. */
+function toStars(value: number | string): number | null {
+  const stars = Number(value);
+  return Number.isFinite(stars) && stars >= 1 && stars <= 5 ? stars : null;
+}
+
+/**
+ * The fighter page: the rated fights behind the average, newest first, and the average computed
+ * from exactly those fights (so what is listed always adds up to the number shown).
+ */
+export function buildProfile(
+  fighter: Pick<FighterRatingRow, "name" | "country" | "slug">,
+  rows: readonly FighterFightRow[],
+): FighterProfile | null {
+  const fights = rows
+    .flatMap((row) => {
+      const stars = toStars(row.stars);
+      return stars === null
+        ? []
+        : [
+            {
+              eventSlug: row.event_slug,
+              eventName: row.event_name,
+              eventDate: row.event_date,
+              opponent: row.opponent_name,
+              stars,
+            },
+          ];
+    })
+    .sort(
+      (a, b) =>
+        b.eventDate.localeCompare(a.eventDate) || a.eventSlug.localeCompare(b.eventSlug),
+    );
+  if (fights.length === 0) return null;
+  const total = fights.reduce((sum, fight) => sum + fight.stars, 0);
+  return {
+    name: fighter.name,
+    country: fighter.country,
+    slug: fighter.slug,
+    average: Math.round((total / fights.length) * 100) / 100,
+    fights,
+  };
 }

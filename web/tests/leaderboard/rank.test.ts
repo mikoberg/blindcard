@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MIN_FIGHTS, rankFighters } from "@/lib/leaderboard/rank";
-import type { FighterRatingRow } from "@/lib/leaderboard/types";
+import { MIN_FIGHTS, buildProfile, rankFighters } from "@/lib/leaderboard/rank";
+import type { FighterFightRow, FighterRatingRow } from "@/lib/leaderboard/types";
 
 const row = (id: string, fights: number, avg: number | string, name = id): FighterRatingRow => ({
   id,
@@ -8,6 +8,7 @@ const row = (id: string, fights: number, avg: number | string, name = id): Fight
   country: null,
   rated_fights: fights,
   avg_stars: avg,
+  slug: id,
 });
 
 describe("rankFighters", () => {
@@ -41,5 +42,38 @@ describe("rankFighters", () => {
 
   it("returns nothing for no rows", () => {
     expect(rankFighters([])).toEqual([]);
+  });
+});
+
+describe("buildProfile", () => {
+  const fighter = { name: "Ann One", country: "nl", slug: "ann-one" };
+  const fight = (event: string, date: string, stars: number | string, opponent = "Bea"): FighterFightRow => ({
+    event_slug: event,
+    event_name: `Event ${event}`,
+    event_date: date,
+    opponent_name: opponent,
+    stars,
+  });
+
+  it("lists the rated fights newest first and averages exactly those", () => {
+    const profile = buildProfile(fighter, [
+      fight("a", "2024-01-01", 4),
+      fight("c", "2026-03-01", "3.5"),
+      fight("b", "2025-02-01", 5),
+    ]);
+    expect(profile?.fights.map((f) => f.eventSlug)).toEqual(["c", "b", "a"]);
+    expect(profile?.average).toBe(4.17);
+    expect(profile!.fights.reduce((sum, f) => sum + f.stars, 0) / 3).toBeCloseTo(profile!.average, 2);
+  });
+
+  it("leaves out unusable ratings and returns null when nothing is left", () => {
+    expect(buildProfile(fighter, [fight("a", "2024-01-01", "nope"), fight("b", "2024-02-01", 7)])).toBeNull();
+    expect(buildProfile(fighter, [])).toBeNull();
+  });
+
+  it("carries only what the page shows", () => {
+    const profile = buildProfile(fighter, [fight("a", "2024-01-01", 4)])!;
+    expect(Object.keys(profile).sort()).toEqual(["average", "country", "fights", "name", "slug"]);
+    expect(Object.keys(profile.fights[0]!).sort()).toEqual(["eventDate", "eventName", "eventSlug", "opponent", "stars"]);
   });
 });

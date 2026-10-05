@@ -23,7 +23,13 @@ live("the running app serves no result data", () => {
     expect(eventPaths.length).toBeGreaterThan(0);
 
     const chunkUrls = new Set<string>();
-    for (const path of ["/", ...eventPaths]) {
+    const fighters = await get("/fighters");
+    const fighterPaths = [...fighters.text.matchAll(/href="(\/fighters\/[a-z0-9-]+)"/g)]
+      .map((match) => match[1] as string)
+      .slice(0, 4);
+    expect(fighterPaths.length).toBeGreaterThan(0);
+
+    for (const path of ["/", "/best", "/fighters", ...fighterPaths, ...eventPaths]) {
       const html = await get(path);
       expect(html.status, path).toBe(200);
       expect(findLeaks(html.text, HTML_LEAK_PATTERNS), `HTML ${path}`).toEqual([]);

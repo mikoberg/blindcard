@@ -1,7 +1,9 @@
-import type { FighterRatingRow } from "@/lib/leaderboard/types";
+import { buildProfile } from "@/lib/leaderboard/rank";
+import type { FighterFightRow, FighterProfile, FighterRatingRow } from "@/lib/leaderboard/types";
 import { getSupabase } from "@/lib/supabase/server";
-import { FIGHTER_RATING_COLUMNS } from "./columns";
-import { ensure } from "./ensure";
+import { FIGHTER_FIGHT_COLUMNS, FIGHTER_RATING_COLUMNS } from "./columns";
+import { ensure, ensureOptional } from "./ensure";
+import { isValidSlug } from "./events";
 
 const PAGE = 500; // at most this many rows per request (the server may send fewer)
 
@@ -24,4 +26,20 @@ export async function listFighterRatings(): Promise<FighterRatingRow[]> {
     from += page.length;
   }
   return rows;
+}
+
+/** A fighter's page data: who they are and the rated fights behind their average. */
+export async function getFighterProfile(slug: string): Promise<FighterProfile | null> {
+  if (!isValidSlug(slug)) return null;
+  const db = getSupabase();
+  const fighter = ensureOptional<FighterRatingRow>(
+    await db.from("fighter_ratings").select(FIGHTER_RATING_COLUMNS).eq("slug", slug).maybeSingle(),
+    "load fighter",
+  );
+  if (!fighter) return null;
+  const fights = ensure<FighterFightRow[]>(
+    await db.from("fighter_fights").select(FIGHTER_FIGHT_COLUMNS).eq("fighter_slug", slug),
+    "load fighter fights",
+  );
+  return buildProfile(fighter, fights);
 }
