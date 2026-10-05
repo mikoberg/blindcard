@@ -82,3 +82,12 @@ but that happens on only about 6% of fights. Honest reading: a small lean, not a
 The page says so and shows the walk-forward accuracy next to every pick.
 
 Never shown next to a result: picks go when their bout goes. Logs carry counts and accuracy only.
+
+Head-to-head and dominance (added after a question about an earlier meeting): the model now also sees
+the net wins in earlier meetings (capped at two) and who won the latest one, and a finish moves the Elo
+ratings more than a decision (a split or majority decision less). Walk-forward: accuracy is unchanged
+within noise (0.558 from 2016, 0.575 from 2020) because only about 2% of fights are rematches; the log
+loss improves slightly and consistently (0.6797 to 0.6783 from 2016, 0.6758 to 0.6743 from 2020).
+Example: Yan and Dvalishvili have met twice (one win each, Yan won the latest), and Yan is now the slight
+favourite (58%) where it was a coin flip before. The model still does not see HOW dominant a win was
+beyond finish or decision.

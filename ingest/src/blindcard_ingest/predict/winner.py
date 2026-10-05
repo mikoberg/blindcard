@@ -17,6 +17,7 @@ from itertools import groupby
 
 from blindcard_ingest.fit.stats import logistic_fit
 from blindcard_ingest.predict.types import FightOutcome
+from blindcard_ingest.scoring.features import MethodKind, classify_method
 
 START = 1500.0
 #: Experience-dependent step size: newcomers move fast, veterans slowly.
@@ -26,6 +27,20 @@ K_HALF_LIFE = 3.0
 L2 = 5.0
 
 
+#: How much a result moves the ratings, by how it was decided. A finish says more than a decision,
+#: and a split or majority decision says less than a unanimous one.
+_DOMINANCE = {
+    MethodKind.KO_TKO: 1.4,
+    MethodKind.SUBMISSION: 1.4,
+    MethodKind.DECISION_SPLIT: 0.7,
+    MethodKind.DECISION_MAJORITY: 0.7,
+}
+
+
+def dominance_of(method: str) -> float:
+    return _DOMINANCE.get(classify_method(method), 1.0)
+
+
 @dataclass
 class EloTracker:
     ratings: dict[str, float] = field(default_factory=dict)
@@ -33,6 +48,9 @@ class EloTracker:
     wins: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     form: dict[str, list[int]] = field(default_factory=lambda: defaultdict(list))
     last_date: dict[str, dt.date] = field(default_factory=dict)
+    #: (winner, loser) -> how often the first beat the second, and who won their latest meeting
+    beat: dict[tuple[str, str], int] = field(default_factory=lambda: defaultdict(int))
+    latest: dict[frozenset[str], str] = field(default_factory=dict)
 
     def rating(self, fighter: str | None) -> float:
         return self.ratings.get(fighter, START) if fighter else START
@@ -58,17 +76,27 @@ class EloTracker:
             return 0.0
         return min((today - last).days, 730) / 365.0
 
+    def _head_to_head(self, a: str | None, b: str | None) -> tuple[float, float]:
+        """(net wins of a over b, capped at two either way; +1 / -1 / 0 for who won the latest
+        meeting). Antisymmetric: swapping the two fighters flips both."""
+        if not a or not b:
+            return 0.0, 0.0
+        net = self.beat.get((a, b), 0) - self.beat.get((b, a), 0)
+        last = self.latest.get(frozenset((a, b)))
+        return float(max(-2, min(2, net))), (0.0 if last is None else (1.0 if last == a else -1.0))
+
     def features(
         self, a: str | None, b: str | None, today: dt.date | None = None
     ) -> tuple[float, ...]:
-        """a minus b: Elo difference (400-point units), log experience, win share, recent form
-        and time since the last fight."""
+        """a minus b: Elo difference (400-point units), log experience, win share, recent form,
+        time since the last fight, net wins in earlier meetings and who won the latest one."""
         return (
             (self.rating(a) - self.rating(b)) / 400.0,
             math.log1p(self.experience(a)) - math.log1p(self.experience(b)),
             self._win_rate(a) - self._win_rate(b),
             self._form(a) - self._form(b),
             self._layoff(a, today) - self._layoff(b, today),
+            *self._head_to_head(a, b),
         )
 
     def _step(self, fighter: str) -> float:
@@ -78,7 +106,7 @@ class EloTracker:
         a, b = outcome.a_id, outcome.b_id
         expected_a = 1 / (1 + 10 ** ((self.rating(b) - self.rating(a)) / 400))
         score_a = 1.0 if outcome.a_won else 0.0
-        ka, kb = self._step(a), self._step(b)
+        ka, kb = self._step(a) * outcome.dominance, self._step(b) * outcome.dominance
         self.ratings[a] = self.rating(a) + ka * (score_a - expected_a)
         self.ratings[b] = self.rating(b) + kb * ((1 - score_a) - (1 - expected_a))
         self.fights[a] += 1
@@ -88,6 +116,9 @@ class EloTracker:
         self.form[a].append(int(outcome.a_won))
         self.form[b].append(int(not outcome.a_won))
         self.last_date[a] = self.last_date[b] = outcome.event_date
+        winner, loser = (a, b) if outcome.a_won else (b, a)
+        self.beat[(winner, loser)] += 1
+        self.latest[frozenset((a, b))] = winner
 
 
 @dataclass(frozen=True)

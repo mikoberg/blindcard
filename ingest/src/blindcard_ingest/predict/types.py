@@ -49,6 +49,8 @@ class FightOutcome:
     a_id: str
     b_id: str
     a_won: bool
+    #: How convincing the result was: a finish counts more, a split decision less. 1.0 = neutral.
+    dominance: float = 1.0
 
 
 @dataclass(frozen=True)

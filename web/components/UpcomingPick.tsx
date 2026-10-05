@@ -85,7 +85,7 @@ function Panel({ pick, nameA, nameB }: { pick: Pick; nameA: string; nameB: strin
       </p>
       <p className="text-sm text-[var(--muted)]">
         {pick.basis === "both"
-          ? "Based on the earlier results of both fighters."
+          ? "Based on the earlier results of both fighters, including how any earlier meeting between them went."
           : "Only one of the two fighters has earlier results here, so this leans on that fighter."}
       </p>
       <p className="text-xs text-[var(--muted)]">

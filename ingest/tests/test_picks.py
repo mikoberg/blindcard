@@ -28,7 +28,7 @@ D1, D2, D3 = dt.date(2020, 1, 1), dt.date(2020, 6, 1), dt.date(2021, 1, 1)
 def test_a_fight_never_sees_itself_or_another_fight_of_the_same_night() -> None:
     rows = [outcome("f1", D1, "A", "B", True), outcome("f2", D1, "A", "C", True)]
     examples, tracker = build_pairs(rows)
-    assert examples[0].x == examples[1].x == (0.0, 0.0, 0.0, 0.0, 0.0)
+    assert examples[0].x == examples[1].x == (0.0,) * 7
     assert tracker.rating("A") > 1500 > tracker.rating("B")
 
 
@@ -79,7 +79,7 @@ def test_the_model_cannot_learn_the_a_b_order() -> None:
     examples, _ = build_pairs(synthetic())
     model = fit_winner_model(examples)
     assert abs(model.intercept) < 1e-6
-    assert model.p_first((0.0, 0.0, 0.0, 0.0, 0.0)) == pytest.approx(0.5)
+    assert model.p_first((0.0,) * 7) == pytest.approx(0.5)
 
 
 def test_picks_name_the_favoured_side_and_say_how_much_history_they_rest_on() -> None:
@@ -139,3 +139,32 @@ def test_logs_carry_counts_and_accuracy_never_a_name(caplog: pytest.LogCaptureFi
         run_predict_picks(FakeRepository(outcome_rows=rows, bout_inputs=bouts))
     text = " ".join(r.getMessage() for r in caplog.records)
     assert "predict-picks" in text and rows[0].a_id not in text
+
+
+def test_an_earlier_meeting_counts_for_the_fighter_who_won_it_whichever_side_they_are_on() -> None:
+    tracker = EloTracker()
+    tracker.add(outcome("m1", D1, "yan", "merab", False))  # merab wins the first meeting
+    tracker.add(outcome("m2", D2, "merab", "yan", False))  # yan wins the rematch (sides swapped)
+    net, last = tracker._head_to_head("yan", "merab")
+    assert (net, last) == (0.0, 1.0)  # one win each, and yan won the latest meeting
+    assert tracker._head_to_head("merab", "yan") == (0.0, -1.0)  # flips with the order
+    assert tracker._head_to_head("yan", "stranger") == (0.0, 0.0)
+    assert tracker._head_to_head(None, "yan") == (0.0, 0.0)
+    tracker.add(outcome("m3", D3, "yan", "merab", True))
+    assert tracker._head_to_head("yan", "merab") == (1.0, 1.0)
+
+
+def test_a_finish_moves_the_ratings_more_than_a_decision_and_a_split_less() -> None:
+    from blindcard_ingest.predict.winner import dominance_of
+
+    assert (
+        dominance_of("KO/TKO")
+        > dominance_of("Decision - Unanimous")
+        > dominance_of("Decision - Split")
+    )
+    moved = []
+    for d in (1.4, 1.0, 0.7):
+        t = EloTracker()
+        t.add(FightOutcome("f", D1, "a", "b", True, d))
+        moved.append(t.rating("a") - 1500)
+    assert moved[0] > moved[1] > moved[2] > 0

@@ -28,6 +28,7 @@ from blindcard_ingest.predict.types import (
     UpcomingPick,
     UpcomingPrediction,
 )
+from blindcard_ingest.predict.winner import dominance_of
 from blindcard_ingest.scoring.career import HistoryBout, career_contexts, career_json
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import (
@@ -749,7 +750,8 @@ class PostgresRepository:
     def winner_outcomes(self) -> list[FightOutcome]:
         query = """
             select f.id::text as id, e.event_date, f.fighter_a_id::text as a_id,
-                   f.fighter_b_id::text as b_id, (r.winner_fighter_id = f.fighter_a_id) as a_won
+                   f.fighter_b_id::text as b_id, (r.winner_fighter_id = f.fighter_a_id) as a_won,
+                   r.method
             from public.fights f
             join public.events e on e.id = f.event_id
             join public.fight_results r on r.fight_id = f.id
@@ -764,6 +766,7 @@ class PostgresRepository:
                     a_id=row["a_id"],
                     b_id=row["b_id"],
                     a_won=bool(row["a_won"]),
+                    dominance=dominance_of(row["method"]),
                 )
                 for row in cur.fetchall()
             ]
