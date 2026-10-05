@@ -320,6 +320,9 @@ class FakeRepository:
     def set_upcoming_picks(self, picks) -> None:  # type: ignore[no-untyped-def]
         self.picks = list(picks)
 
+    def set_fighter_elo(self, rows) -> None:  # type: ignore[no-untyped-def]
+        self.elo_rows = list(rows)
+
     def fighter_current_records(self, fighter_ids):  # type: ignore[no-untyped-def]
         return {i: r for i, r in self.current_records.items() if i in set(fighter_ids)}
 

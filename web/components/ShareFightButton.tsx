@@ -47,7 +47,7 @@ export function ShareFightButton({
         onClick={share}
         aria-label={`Share ${fighterA} versus ${fighterB}`}
         title="Share this fight"
-        className="inline-flex h-11 w-11 items-center justify-center border-2 border-[var(--border)] text-[var(--muted)] transition-colors hover:border-[var(--text)] hover:bg-[var(--text)] hover:text-[var(--bg)]"
+        className="inline-flex h-11 w-11 items-center justify-center text-[var(--muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 15V3" />

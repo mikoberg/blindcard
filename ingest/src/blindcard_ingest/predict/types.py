@@ -67,3 +67,18 @@ class UpcomingPick:
     #: How often the favoured side won in a walk-forward test on past fights.
     accuracy: float
     version: int = PICK_VERSION
+
+
+#: Bumped when the way the Elo rating on the spoiler board is built changes.
+ELO_VERSION = 1
+
+
+@dataclass(frozen=True)
+class EloRow:
+    """One fighter on the Elo board. RESULT-DERIVED: stored privately, served only after a click."""
+
+    fighter_id: str
+    rating: float
+    fights: int
+    last_fight: dt.date
+    version: int = ELO_VERSION

@@ -32,7 +32,7 @@ live("the running app serves no result data", () => {
       .slice(0, 4);
     expect(fighterPaths.length).toBeGreaterThan(0);
 
-    for (const path of ["/", "/best", "/events/year/2024", "/fighters", "/classics", "/judges/sal-damato", ...fighterPaths, ...eventPaths, ...upcomingPaths]) {
+    for (const path of ["/", "/best", "/events/year/2024", "/fighters", "/fighters/elo", "/classics", "/judges/sal-damato", ...fighterPaths, ...eventPaths, ...upcomingPaths]) {
       const html = await get(path);
       expect(html.status, path).toBe(200);
       expect(findLeaks(html.text, HTML_LEAK_PATTERNS), `HTML ${path}`).toEqual([]);

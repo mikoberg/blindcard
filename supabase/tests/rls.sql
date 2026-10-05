@@ -523,6 +523,43 @@ begin
   raise notice 'PASS fighter_ratings carries search_name';
 end $$;
 
+-- The Elo leaderboard is result-derived: private table, one narrow function, active fighters only.
+delete from public.fighter_elo;  -- rolled back with the rest: a populated database has real rows
+insert into public.fighter_elo (fighter_id, rating, fights, last_fight, version) values
+  ('00000000-0000-0000-0000-0000000000a1', 1620.0, 9, current_date - 30, 1),
+  ('00000000-0000-0000-0000-0000000000b1', 1700.0, 12, current_date - 900, 1);
+
+set local role anon;
+do $$
+declare
+  n integer;
+  r record;
+begin
+  begin
+    perform count(*) from public.fighter_elo;
+    raise exception 'FAIL: anon could read fighter_elo';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot read fighter_elo';
+  end;
+  begin
+    insert into public.fighter_elo (fighter_id, rating, fights, last_fight, version)
+    values ('00000000-0000-0000-0000-0000000000a1', 1, 1, current_date, 1);
+    raise exception 'FAIL: anon could write fighter_elo';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot write fighter_elo';
+  end;
+  select count(*) into n from public.elo_leaderboard();
+  if n <> 1 then raise exception 'FAIL: elo_leaderboard should list only the active fighter, got %', n; end if;
+  select * into r from public.elo_leaderboard(1000);
+  if r.rank <> 1 or r.name <> 'Fighter A' or r.fights <> 9 then
+    raise exception 'FAIL: elo_leaderboard returned the wrong row';
+  end if;
+  select count(*) into n from public.elo_leaderboard(0);
+  if n <> 1 then raise exception 'FAIL: elo_leaderboard(0) should still answer with one row at most, got %', n; end if;
+  raise notice 'PASS elo_leaderboard lists active fighters only, ranked, capped';
+end $$;
+reset role;
+
 rollback;
 
 \echo 'rls.sql: all assertions passed'

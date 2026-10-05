@@ -14,7 +14,14 @@ export function EventHeader({ event }: { event: EventSummary }) {
           <h1 className="display break-words text-2xl leading-tight sm:text-3xl">{event.name}</h1>
           <p className="mt-2 text-[var(--muted)]">
             <span className="font-semibold text-[var(--text)]">{formatEventDate(event.eventDate)}</span>
-            {event.location && <span className="block sm:inline"> {"·"} {event.location}</span>}
+            {event.location && (
+              <span className="block sm:inline">
+                <span aria-hidden="true" className="hidden sm:inline">
+                  {" · "}
+                </span>
+                {event.location}
+              </span>
+            )}
           </p>
         </div>
         {cardRating !== null && (

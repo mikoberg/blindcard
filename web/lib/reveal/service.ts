@@ -1,6 +1,7 @@
 import "server-only"; // a client component that imports this fails the build
 import { getSupabase } from "@/lib/supabase/server";
 import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
+import { ELO_ROWS_SHOWN, rowsToEntries, type EloEntry, type EloRow } from "@/lib/elo/board";
 import { rowToPick, type PickRow, type UpcomingPick } from "@/lib/upcoming/pick";
 import { RevealUnavailableError } from "./errors";
 import { buildScoreBreakdown } from "./breakdown";
@@ -54,4 +55,16 @@ export async function revealUpcomingPick(boutId: string): Promise<UpcomingPick |
   if (data.length === 0) return null;
   if (data.length > 1) throw new RevealUnavailableError("multiple_rows");
   return rowToPick(data[0] as PickRow);
+}
+
+/**
+ * The Elo leaderboard: who is strongest now, built from who beat whom. That is result data, so like
+ * `reveal_fight` it is only called from a POST route after an explicit click on the spoiler page,
+ * and the database function (not this code) enforces the row limit and the active-fighter rule.
+ */
+export async function revealEloBoard(): Promise<EloEntry[]> {
+  const { data, error } = await getSupabase().rpc("elo_leaderboard", { p_limit: ELO_ROWS_SHOWN });
+  if (error) throw new RevealUnavailableError(error.code ?? "unknown");
+  if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
+  return rowsToEntries(data as EloRow[]);
 }

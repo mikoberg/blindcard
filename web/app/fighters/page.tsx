@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { pageMetadata } from "@/lib/seo";
 import { FighterLeaderboard } from "@/components/FighterLeaderboard";
 import { FighterSearch } from "@/components/FighterSearch";
@@ -32,6 +33,13 @@ export default async function FightersPage() {
         <p className="mt-4 max-w-xl text-lg text-[var(--muted)]">
           Fighters ranked by the average rating of their fights. A fighter needs at least {MIN_FIGHTS}{" "}
           rated fights to be listed, so one great fight is not enough.
+        </p>
+        <p className="mt-3 max-w-xl text-[var(--muted)]">
+          Looking for the strongest instead? There is an{" "}
+          <Link href="/fighters/elo" className="font-semibold text-[var(--text)] underline underline-offset-4">
+            Elo leaderboard
+          </Link>
+          , behind a spoiler warning.
         </p>
       </section>
       <FighterSearch>

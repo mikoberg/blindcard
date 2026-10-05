@@ -38,6 +38,7 @@ From `ingest/` with the virtualenv (see the root README for the install):
 .\.venv\Scripts\blindcard-ingest ingest-segments --from 2001
 .\.venv\Scripts\blindcard-ingest ingest-bonuses --from 2001
 .\.venv\Scripts\blindcard-ingest ingest-judges
+.\.venv\Scripts\blindcard-ingest compute-elo                  # the private Elo board (spoiler page)
 .\.venv\Scripts\blindcard-ingest ingest-upcoming
 .\.venv\Scripts\blindcard-ingest predict-upcoming
 .\.venv\Scripts\blindcard-ingest predict-picks

@@ -24,6 +24,7 @@ from blindcard_ingest.judges import JudgeReport
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
 from blindcard_ingest.predict.dataset import FightRow
 from blindcard_ingest.predict.types import (
+    EloRow,
     FightOutcome,
     UpcomingBoutInput,
     UpcomingPick,
@@ -242,6 +243,10 @@ class Repository(Protocol):
 
     def set_upcoming_picks(self, picks: Sequence[UpcomingPick]) -> None:
         """Store who is favoured (private); a bout without one in `picks` loses any old one."""
+        ...
+
+    def set_fighter_elo(self, rows: Sequence[EloRow]) -> None:
+        """Replace the private Elo board (RESULT-DERIVED: served only after a click)."""
         ...
 
     def fighter_current_records(self, fighter_ids: Collection[str]) -> dict[str, dict[str, int]]:
@@ -899,6 +904,17 @@ class PostgresRepository:
                 cur.execute(
                     "update public.upcoming_bouts set has_pick = true where id = %s::uuid",
                     (p.bout_id,),
+                )
+
+    def set_fighter_elo(self, rows: Sequence[EloRow]) -> None:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("delete from public.fighter_elo")
+            for r in rows:
+                cur.execute(
+                    "insert into public.fighter_elo"
+                    " (fighter_id, rating, fights, last_fight, version)"
+                    " values (%s::uuid, %s, %s, %s, %s)",
+                    (r.fighter_id, r.rating, r.fights, r.last_fight, r.version),
                 )
 
     def fighter_current_records(self, fighter_ids: Collection[str]) -> dict[str, dict[str, int]]:

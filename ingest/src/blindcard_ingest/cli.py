@@ -135,6 +135,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     commands.add_parser(
+        "compute-elo",
+        parents=[common],
+        help="store each fighter's Elo rating (private, shown only after a click on its page)",
+    )
+
+    commands.add_parser(
         "predict-picks",
         parents=[common],
         help="store who is favoured in each announced bout (private, shown only after a click)",
@@ -367,6 +373,13 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
 
         with _open_repository(settings) as repo:
             run_predict_upcoming(repo, dry_run=args.dry_run)
+        return EXIT_OK
+
+    if args.command == "compute-elo":
+        from blindcard_ingest.predict.elo_board import run_compute_elo
+
+        with _open_repository(settings) as repo:
+            run_compute_elo(repo, dry_run=args.dry_run)
         return EXIT_OK
 
     if args.command == "predict-picks":
