@@ -30,6 +30,7 @@ from blindcard_ingest.scoring.features import (
     is_injury_stoppage,
 )
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
+from blindcard_ingest.upcoming import UpcomingEvent
 
 logger = logging.getLogger(__name__)
 
@@ -179,6 +180,18 @@ class Repository(Protocol):
 
     def rated_fights(self, min_stars: float) -> list[RatedFight]:
         """Fights rated `min_stars` or more by the active score version."""
+        ...
+
+    def fighter_names(self) -> list[tuple[str, str]]:
+        """(fighter id, name) of every stored fighter."""
+        ...
+
+    def replace_upcoming(
+        self, events: Sequence[UpcomingEvent], fighter_ids: Mapping[str, str], *, today: date
+    ) -> None:
+        """Rebuild the upcoming tables: upsert `events` with their bouts, drop events that are no
+        longer announced and events dated before `today`. `fighter_ids` maps a name to the id of
+        the one stored fighter with that name (names not in it stay unlinked)."""
         ...
 
     def set_fight_videos(self, videos_by_fight: Mapping[str, str], *, channel: str) -> int:
@@ -629,6 +642,53 @@ class PostgresRepository:
             (row["fight_id"], row["year"], [str(card) for card in row["scorecards"]])
             for row in rows
         ]
+
+    def fighter_names(self) -> list[tuple[str, str]]:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("select id::text as id, name from public.fighters")
+            return [(row["id"], row["name"]) for row in cur.fetchall()]
+
+    def replace_upcoming(
+        self, events: Sequence[UpcomingEvent], fighter_ids: Mapping[str, str], *, today: date
+    ) -> None:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("delete from public.upcoming_events where event_date < %s", (today,))
+            cur.execute(
+                "delete from public.upcoming_events"
+                " where event_date > %s and wiki_title <> all(%s)",
+                (today, [e.wiki_title for e in events]),
+            )
+            for event in events:
+                cur.execute(
+                    "insert into public.upcoming_events"
+                    " (wiki_title, name, slug, event_date, location)"
+                    " values (%s, %s, %s, %s, %s)"
+                    " on conflict (wiki_title) do update set name = excluded.name,"
+                    " slug = excluded.slug, event_date = excluded.event_date,"
+                    " location = excluded.location, updated_at = now()"
+                    " returning id",
+                    (event.wiki_title, event.name, event.slug, event.event_date, event.location),
+                )
+                event_id = cur.fetchone()["id"]  # type: ignore[index]
+                cur.execute("delete from public.upcoming_bouts where event_id = %s", (event_id,))
+                for bout in event.bouts:
+                    cur.execute(
+                        "insert into public.upcoming_bouts (event_id, card_position, segment,"
+                        " weight_class, is_title_fight, fighter_a_name, fighter_b_name,"
+                        " fighter_a_id, fighter_b_id)"
+                        " values (%s, %s, %s, %s, %s, %s, %s, %s::uuid, %s::uuid)",
+                        (
+                            event_id,
+                            bout.position,
+                            bout.segment,
+                            bout.weight_class,
+                            bout.is_title_fight,
+                            bout.a,
+                            bout.b,
+                            fighter_ids.get(bout.a),
+                            fighter_ids.get(bout.b),
+                        ),
+                    )
 
     def replace_judge_stats(self, report: JudgeReport) -> int:
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:

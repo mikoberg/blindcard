@@ -122,6 +122,10 @@ class FakeRepository:
     video_channel: str | None = None
     scorecards: list[tuple[str, int, list[str]]] = field(default_factory=list)
     judge_report: JudgeReport | None = None
+    fighters: list[tuple[str, str]] = field(default_factory=list)
+    upcoming: list = field(default_factory=list)
+    upcoming_fighter_ids: dict = field(default_factory=dict)
+    upcoming_today: object = None
     upserts: int = 0
 
     def complete_event_source_ids(self, source: str) -> set[str]:
@@ -271,6 +275,14 @@ class FakeRepository:
     def replace_judge_stats(self, report: JudgeReport) -> int:
         self.judge_report = report
         return len(report.judges)
+
+    def fighter_names(self) -> list[tuple[str, str]]:
+        return list(self.fighters)
+
+    def replace_upcoming(self, events, fighter_ids, *, today) -> None:  # type: ignore[no-untyped-def]
+        self.upcoming = list(events)
+        self.upcoming_fighter_ids = dict(fighter_ids)
+        self.upcoming_today = today
 
     def rated_fights(self, min_stars: float) -> list[RatedFight]:
         return [fight for fight in self.rated if fight.stars >= min_stars]

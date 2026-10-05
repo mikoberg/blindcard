@@ -103,6 +103,10 @@ values ('test-judge', 'Test Judge', '{test-judge}', 40, 3, 1, 80, 170, 2015, 202
 insert into public.judge_baseline (id, cards, dissent, abs_sum, abs_sumsq, judges_with_enough)
 values (1, 100, 7, 205, 450, 2)
 on conflict (id) do nothing;
+insert into public.upcoming_events (id, wiki_title, name, slug, event_date)
+values ('00000000-0000-0000-0000-0000000000d1', 'Test upcoming', 'Test Upcoming Event', 'test-upcoming', '2999-01-01');
+insert into public.upcoming_bouts (event_id, card_position, fighter_a_name, fighter_b_name)
+values ('00000000-0000-0000-0000-0000000000d1', 1, 'Test A', 'Test B');
 insert into public.judge_disputes (judge_slug, fight_id, judge_card, margin, lone, severity)
 values ('test-judge', '00000000-0000-0000-0000-0000000000f1', 'Test Judge 29 - 28', -1, true, 3);
 
@@ -323,6 +327,34 @@ begin
   select count(*) into n from public.judge_disputed_cards('nobody');
   if n <> 0 then raise exception 'FAIL: judge_disputed_cards leaked rows for an unknown judge'; end if;
   raise notice 'PASS judge_disputed_cards is the only way to read disputed scorecards';
+end $$;
+
+-- Upcoming events are public pre-fight facts: readable, never writable, no result columns.
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from public.upcoming_events where slug = 'test-upcoming';
+  if n <> 1 then raise exception 'FAIL: anon should read the seeded upcoming event, saw %', n; end if;
+  select count(*) into n from public.upcoming_bouts where fighter_a_name = 'Test A';
+  if n <> 1 then raise exception 'FAIL: anon should read the seeded upcoming bout, saw %', n; end if;
+  begin
+    insert into public.upcoming_events (wiki_title, name, slug, event_date)
+      values ('x', 'x', 'x', '2999-01-02');
+    raise exception 'FAIL: anon could write an upcoming event';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    update public.upcoming_bouts set weight_class = 'x';
+    raise exception 'FAIL: anon could change an upcoming bout';
+  exception when insufficient_privilege then null;
+  end;
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name in ('upcoming_events', 'upcoming_bouts')
+    and column_name ~ '(winner|method|round|result|score|record|streak|time)';
+  if n <> 0 then raise exception 'FAIL: upcoming tables have a result-like column'; end if;
+  raise notice 'PASS upcoming events are public pre-fight facts';
 end $$;
 
 -- Card segments are a public, pre-fight fact: readable, but only the three known values.

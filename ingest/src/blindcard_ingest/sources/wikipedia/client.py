@@ -72,7 +72,11 @@ class WikipediaClient:
         return [str(hit["title"]) for hit in hits if isinstance(hit, dict) and "title" in hit]
 
     def page_wikitexts(
-        self, titles: Sequence[str], *, batch_size: int = BATCH_SIZE
+        self,
+        titles: Sequence[str],
+        *,
+        batch_size: int = BATCH_SIZE,
+        max_age_seconds: float | None = None,
     ) -> dict[str, str]:
         """Wikitext per REQUESTED title; titles whose page does not exist are absent.
 
@@ -92,7 +96,9 @@ class WikipediaClient:
                     "redirects": "1",
                     "titles": "|".join(batch),
                 },
-                max_age_seconds=PAGES_MAX_AGE_SECONDS,
+                max_age_seconds=(
+                    PAGES_MAX_AGE_SECONDS if max_age_seconds is None else max_age_seconds
+                ),
             )
             query = data.get("query", {})
             content: dict[str, str] = {}

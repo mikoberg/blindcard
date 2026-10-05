@@ -94,6 +94,12 @@ def build_parser() -> argparse.ArgumentParser:
     segments.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
 
     commands.add_parser(
+        "ingest-upcoming",
+        parents=[common],
+        help="store the announced cards of the coming events (pre-fight facts, from Wikipedia)",
+    )
+
+    commands.add_parser(
         "ingest-judges",
         parents=[common],
         help="store how often each judge scores against the final result (public aggregates only)",
@@ -302,6 +308,13 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 use_wikipedia=not args.sherdog_only,
                 dry_run=args.dry_run,
             )
+        return EXIT_OK
+
+    if args.command == "ingest-upcoming":
+        from blindcard_ingest.upcoming_pipeline import run_ingest_upcoming
+
+        with _open_repository(settings) as repo, _open_wikipedia(settings) as wiki:
+            run_ingest_upcoming(wiki, repo, today=_today(), dry_run=args.dry_run)
         return EXIT_OK
 
     if args.command == "ingest-judges":
