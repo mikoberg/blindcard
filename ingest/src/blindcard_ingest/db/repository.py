@@ -24,7 +24,9 @@ from blindcard_ingest.judges import JudgeReport
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
 from blindcard_ingest.predict.dataset import FightRow
 from blindcard_ingest.predict.types import (
+    EloFight,
     EloRow,
+    EloStep,
     FightOutcome,
     UpcomingBoutInput,
     UpcomingPick,
@@ -78,6 +80,20 @@ def sanitized_db_errors() -> Iterator[None]:
         yield
     except psycopg.Error as exc:
         raise RepositoryError(describe_db_error(exc)) from None
+
+
+def _decision_label(method: str | None) -> str:
+    """How a win was decided, in the few words the Elo history shows (never the source's string)."""
+    kind = classify_method(method or "")
+    if kind in (MethodKind.KO_TKO, MethodKind.SUBMISSION):
+        return "finish"
+    if kind is MethodKind.DECISION_SPLIT:
+        return "split decision"
+    if kind is MethodKind.DECISION_MAJORITY:
+        return "majority decision"
+    if kind is MethodKind.DISQUALIFICATION:
+        return "disqualification"
+    return "unanimous decision" if kind is MethodKind.DECISION_UNANIMOUS else "other"
 
 
 @dataclass(frozen=True)
@@ -245,8 +261,14 @@ class Repository(Protocol):
         """Store who is favoured (private); a bout without one in `picks` loses any old one."""
         ...
 
-    def set_fighter_elo(self, rows: Sequence[EloRow]) -> None:
-        """Replace the private Elo board (RESULT-DERIVED: served only after a click)."""
+    def elo_fights(self) -> list[EloFight]:
+        """Every completed fight that Elo can use: wins and draws (RESULT DATA: it stays in the
+        ingest process)."""
+        ...
+
+    def set_fighter_elo(self, rows: Sequence[EloRow], steps: Sequence[EloStep]) -> None:
+        """Replace the private Elo board and the history behind it (RESULT-DERIVED: served only
+        after a click)."""
         ...
 
     def fighter_current_records(self, fighter_ids: Collection[str]) -> dict[str, dict[str, int]]:
@@ -906,8 +928,34 @@ class PostgresRepository:
                     (p.bout_id,),
                 )
 
-    def set_fighter_elo(self, rows: Sequence[EloRow]) -> None:
+    def elo_fights(self) -> list[EloFight]:
+        query = """
+            select f.id::text as id, e.event_date, f.fighter_a_id::text as a_id,
+                   f.fighter_b_id::text as b_id, r.outcome,
+                   coalesce(r.winner_fighter_id = f.fighter_a_id, false) as a_won, r.method
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fight_results r on r.fight_id = f.id
+            where r.outcome = 'draw' or (r.outcome = 'win' and r.winner_fighter_id is not null)
+        """
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query)
+            return [
+                EloFight(
+                    fight_id=row["id"],
+                    event_date=row["event_date"],
+                    a_id=row["a_id"],
+                    b_id=row["b_id"],
+                    outcome=row["outcome"],
+                    a_won=bool(row["a_won"]),
+                    how=_decision_label(row["method"]),
+                )
+                for row in cur.fetchall()
+            ]
+
+    def set_fighter_elo(self, rows: Sequence[EloRow], steps: Sequence[EloStep]) -> None:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("delete from public.fighter_elo_steps")
             cur.execute("delete from public.fighter_elo")
             for r in rows:
                 cur.execute(
@@ -915,6 +963,28 @@ class PostgresRepository:
                     " (fighter_id, rating, fights, last_fight, version)"
                     " values (%s::uuid, %s, %s, %s, %s)",
                     (r.fighter_id, r.rating, r.fights, r.last_fight, r.version),
+                )
+            for s in steps:
+                cur.execute(
+                    "insert into public.fighter_elo_steps (fighter_id, seq, fight_id, fight_date,"
+                    " opponent_id, score, how, rating_before, opponent_rating, expected, k,"
+                    " change, rating_after) values (%s::uuid, %s, %s::uuid, %s, %s::uuid, %s, %s,"
+                    " %s, %s, %s, %s, %s, %s)",
+                    (
+                        s.fighter_id,
+                        s.seq,
+                        s.fight_id,
+                        s.fight_date,
+                        s.opponent_id,
+                        s.score,
+                        s.how,
+                        s.rating_before,
+                        s.opponent_rating,
+                        s.expected,
+                        s.k,
+                        s.change,
+                        s.rating_after,
+                    ),
                 )
 
     def fighter_current_records(self, fighter_ids: Collection[str]) -> dict[str, dict[str, int]]:

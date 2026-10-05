@@ -35,14 +35,20 @@ export default function EloPage() {
           How it works
         </h2>
         <p>
-          Everyone starts at 1500. After each fight the fighter who won takes points from the other: more when they were
-          the underdog, more for a finish than for a decision, and less for a split decision. Fighters with few
-          fights move faster than veterans.
+          This is standard Elo, the system chess uses. Everyone starts at 1500. Before a fight the two ratings give
+          an expected score, the chance that the rating difference predicts. After the fight a rating moves by K ×
+          (score − expected). A win scores 1 and a loss 0, a draw 0.5 for both; as Fight Matrix does, a split decision
+          counts 0.667 and a majority decision 0.833 for the fighter who won.
         </p>
         <p>
-          Only fighters with at least eight decisive fights who fought in the last two years are listed. Draws and
-          no contests do not count. Weight classes are not taken into account, and only the fights in our data are
-          seen, so a fighter&apos;s earlier career elsewhere is not in the number.
+          K is large for fighters with few fights and shrinks with experience, like the higher K that FIDE gives new
+          players: 90 for a debut, about 35 after thirty fights. Open a fighter in the list to see every fight of the
+          calculation.
+        </p>
+        <p>
+          Only fighters with at least eight fights who fought in the last two years are listed. No contests do not
+          count. Weight classes are not taken into account, and only the fights in our data are seen, so a
+          fighter&apos;s earlier career elsewhere is not in the number.
         </p>
         <p>
           A rating is a summary of results, not a prediction. On past fights, the fighter with the higher rating won

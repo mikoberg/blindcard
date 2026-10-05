@@ -2,6 +2,7 @@ import "server-only"; // a client component that imports this fails the build
 import { getSupabase } from "@/lib/supabase/server";
 import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
 import { ELO_ROWS_SHOWN, rowsToEntries, type EloEntry, type EloRow } from "@/lib/elo/board";
+import { rowsToSteps, type EloStepRow, type EloStepView } from "@/lib/elo/history";
 import { rowToPick, type PickRow, type UpcomingPick } from "@/lib/upcoming/pick";
 import { RevealUnavailableError } from "./errors";
 import { buildScoreBreakdown } from "./breakdown";
@@ -67,4 +68,16 @@ export async function revealEloBoard(): Promise<EloEntry[]> {
   if (error) throw new RevealUnavailableError(error.code ?? "unknown");
   if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
   return rowsToEntries(data as EloRow[]);
+}
+
+/**
+ * The calculation behind one fighter's Elo rating, newest fight first. Like the board it names
+ * fights and how they were decided, so it is only called from a POST route after a click on that
+ * fighter; the database function enforces the row limit and answers for fighters on the board only.
+ */
+export async function revealEloHistory(slug: string): Promise<EloStepView[]> {
+  const { data, error } = await getSupabase().rpc("elo_fighter_history", { p_slug: slug });
+  if (error) throw new RevealUnavailableError(error.code ?? "unknown");
+  if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
+  return rowsToSteps(data as EloStepRow[]);
 }

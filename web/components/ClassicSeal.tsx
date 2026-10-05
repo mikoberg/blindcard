@@ -1,6 +1,7 @@
 import { ClassicIcon } from "./ClassicBadge";
 
 const SIZE = {
+  sm: { box: "h-[3.25rem] w-[3.25rem]", number: "text-[1.05rem]", stars: false },
   md: { box: "h-[4.25rem] w-[4.25rem]", number: "text-[1.45rem]", stars: false },
   lg: { box: "h-32 w-32 sm:h-36 sm:w-36", number: "text-[2.6rem] sm:text-5xl", stars: true },
 } as const;

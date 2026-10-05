@@ -70,7 +70,27 @@ class UpcomingPick:
 
 
 #: Bumped when the way the Elo rating on the spoiler board is built changes.
-ELO_VERSION = 1
+#: 1 = K multiplier for finishes and split decisions; 2 = standard Elo with partial credit for split
+#: and majority decisions (as Fight Matrix does), draws counted, no K multiplier.
+ELO_VERSION = 2
+
+
+@dataclass(frozen=True)
+class EloFight:
+    """A completed fight with a result Elo can use (a win, or a draw). RESULT DATA: it stays in the
+    ingest process, like `FightOutcome`."""
+
+    fight_id: str
+    event_date: dt.date
+    a_id: str
+    b_id: str
+    #: "win" or "draw"
+    outcome: str
+    #: Whether the fighter listed first won (meaningless for a draw).
+    a_won: bool
+    #: How a win was decided: "finish", "unanimous decision", "split decision",
+    #: "majority decision" or "disqualification".
+    how: str
 
 
 @dataclass(frozen=True)
@@ -82,3 +102,25 @@ class EloRow:
     fights: int
     last_fight: dt.date
     version: int = ELO_VERSION
+
+
+@dataclass(frozen=True)
+class EloStep:
+    """One fight in a fighter's Elo history, with every number of the calculation. RESULT-DERIVED:
+    stored privately and served only after a click on that fighter."""
+
+    fighter_id: str
+    seq: int
+    fight_id: str
+    fight_date: dt.date
+    opponent_id: str
+    #: What the fight counted as for this fighter: 1, 0, 0.5 (draw) or a partial credit.
+    score: float
+    #: "win" / "loss" / "draw" with how it was decided, e.g. "won by split decision".
+    how: str
+    rating_before: float
+    opponent_rating: float
+    expected: float
+    k: float
+    change: float
+    rating_after: float

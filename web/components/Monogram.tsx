@@ -1,7 +1,7 @@
 import { flagCode } from "@/lib/card/country";
 import { initials } from "@/lib/card/initials";
 
-const SIZE = { md: "h-9 w-9 text-sm", lg: "h-11 w-11 text-base" } as const;
+const SIZE = { sm: "h-7 w-7 text-[0.62rem]", md: "h-9 w-9 text-sm", lg: "h-11 w-11 text-base" } as const;
 
 /**
  * A fighter's initials on their country's flag (plain ink when the country is not known).

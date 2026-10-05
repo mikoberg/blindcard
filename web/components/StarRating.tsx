@@ -21,16 +21,17 @@ export function StarDefs() {
 }
 
 /** One of the five stars: gold when earned, an empty contour when not, half gold for a half. */
-function Star({ fill, onDark }: { fill: StarFill; onDark: boolean }) {
+function Star({ fill, onDark, small }: { fill: StarFill; onDark: boolean; small: boolean }) {
+  const box = small ? "h-4 w-4" : "h-6 w-6";
   return (
-    <span className="relative inline-block h-6 w-6">
-      <svg viewBox="0 0 24 24" className="absolute inset-0 h-6 w-6" fill="none">
+    <span className={`relative inline-block ${box}`}>
+      <svg viewBox="0 0 24 24" className={`absolute inset-0 ${box}`} fill="none">
         <path d={STAR_PATH} stroke={onDark ? "var(--bg)" : "var(--text)"} strokeOpacity={onDark ? "0.55" : "0.3"} strokeWidth="1.4" strokeLinejoin="round" />
       </svg>
       {fill !== "empty" && (
         <svg
           viewBox="0 0 24 24"
-          className="absolute inset-0 h-6 w-6"
+          className={`absolute inset-0 ${box}`}
           style={fill === "half" ? { clipPath: "inset(0 50% 0 0)" } : undefined}
         >
           <path
@@ -50,7 +51,10 @@ export function StarRating({
   stars,
   showNumber = true,
   onDark = false,
+  small = false,
 }: {
+  /** Smaller stars, for dense places such as the fight card. */
+  small?: boolean;
   stars: number | null;
   /** Empty stars are drawn light, for use on an ink or red background. */
   onDark?: boolean;
@@ -66,9 +70,9 @@ export function StarRating({
   }
   return (
     <span className="inline-flex items-center gap-2.5" role="img" aria-label={starsLabel(stars)}>
-      <span className="flex gap-0.5" aria-hidden="true">
+      <span className={`flex ${small ? "gap-px" : "gap-0.5"}`} aria-hidden="true">
         {starFills(stars).map((fill, index) => (
-          <Star key={index} fill={fill} onDark={onDark} />
+          <Star key={index} fill={fill} onDark={onDark} small={small} />
         ))}
       </span>
       {showNumber && (

@@ -132,3 +132,41 @@ less the fights under 120 s). Per year 4 to 6 classics since 2013 instead of up 
 tiles that showed four classics only Rahiki vs McMillen dropped out. The audit now measures itself against
 the 0.81% long-run share and flags nothing. For about 1.0% of fights in practice, use 98.8.
 Production: apply with `blindcard-ingest rescore --version 22 --activate` (the config file is committed).
+
+## Elo leaderboard (spoiler page): is it real Elo?
+
+The page `/fighters/elo` ranks fighters by an Elo rating and shows, per fighter, every step of the
+calculation. The question was whether our Elo is "the real thing". Sources checked: Wikipedia's
+article on the Elo rating system (formula, FIDE K values), Wikipedia's World Football Elo Ratings
+(goal-difference multiplier) and the Fight Matrix FAQ (the best-known MMA Elo: decision credit, K).
+
+- The core is the real thing: expected score 1 / (1 + 10^((Rb - Ra) / 400)) and a change of K * (S - E).
+  Different K per player is standard (FIDE: 40 for new players, 20, 10).
+- Our earlier variant multiplied K by 1.4 for a finish and 0.7 for a split or majority decision and left
+  draws out. A K multiplier for the margin exists elsewhere (World Football Elo), but it is not standard
+  Elo, and Fight Matrix does it differently: it gives the winner of a split decision a score of 0.667 and
+  of a majority decision 0.833 (and a draw 0.5 each), a plain Elo score.
+
+Walk-forward on 2016-2026 (5136 fights with a rating on both sides or one earlier fight), each fight
+predicted before it is added, log loss of the Elo probability itself (coin 0.693; lower is better):
+
+| variant | accuracy | log loss |
+|---|---|---|
+| plain win/loss, K by experience (20 + 40 / (1 + n/3)), draws 0.5 | 0.558 | 0.6814 |
+| earlier variant: K multiplier 1.4 / 0.7, no draws | 0.564 | 0.6790 |
+| decision credit as Fight Matrix, same K | 0.566 | 0.6796 |
+| decision credit, K x 1.5 (30 + 60 / (1 + n/3)) | 0.568 | 0.6772 |
+| decision credit, K x 2 | 0.572 | 0.6765 |
+| FIDE steps (40 under 30 fights, then 20) | 0.558 | 0.6833 |
+| fixed K 16 / 32 / 48 / 64 | 0.557-0.559 | 0.6818-0.6876 |
+
+Chosen for the page (Elo version 2): standard Elo, K = 30 + 60 / (1 + fights / 3), decision credit as
+Fight Matrix, draws counted, no K multiplier. It is the closest to textbook Elo and it predicts better than
+the variant it replaces. K x 2 is a hair better still (0.0007, noise) and was not taken. The favourite of
+an upcoming bout (`predict/winner.py`) keeps its own Elo tracker as one feature of a larger model; its
+validation above is unchanged and it is not the number shown on the Elo page.
+
+Honest reading: Elo alone predicts about 56-57% of fights, so the list is a summary of results, not a
+forecast, and neighbouring ranks are within noise. Not modelled: weight class, inactivity (a fighter
+away for years keeps the rating; the page only lists fighters who fought in the last two years), and
+fights outside our data.

@@ -560,6 +560,38 @@ begin
 end $$;
 reset role;
 
+-- The calculation behind a rating: private table, one narrow function, newest fight first.
+insert into public.fighter_elo_steps (fighter_id, seq, fight_id, fight_date, opponent_id, score, how,
+  rating_before, opponent_rating, expected, k, change, rating_after) values
+  ('00000000-0000-0000-0000-0000000000a1', 1, '00000000-0000-0000-0000-0000000000f1', current_date - 90,
+   '00000000-0000-0000-0000-0000000000b1', 1, 'won by finish', 1500, 1500, 0.5, 90, 45, 1545),
+  ('00000000-0000-0000-0000-0000000000a1', 2, '00000000-0000-0000-0000-0000000000f1', current_date - 30,
+   '00000000-0000-0000-0000-0000000000b1', 0, 'lost by finish', 1545, 1455, 0.62, 60, -37.2, 1507.8);
+
+set local role anon;
+do $$
+declare
+  n integer;
+  r record;
+begin
+  begin
+    perform count(*) from public.fighter_elo_steps;
+    raise exception 'FAIL: anon could read fighter_elo_steps';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot read fighter_elo_steps';
+  end;
+  select count(*) into n from public.elo_fighter_history('fighter-a');
+  if n <> 2 then raise exception 'FAIL: elo_fighter_history should return both steps, got %', n; end if;
+  select * into r from public.elo_fighter_history('fighter-a');
+  if r.seq <> 2 or r.opponent_name <> 'Fighter B' or r.rating_after <> 1507.8 then
+    raise exception 'FAIL: elo_fighter_history should list the newest fight first';
+  end if;
+  select count(*) into n from public.elo_fighter_history('nobody');
+  if n <> 0 then raise exception 'FAIL: elo_fighter_history answered for an unknown slug'; end if;
+  raise notice 'PASS elo_fighter_history serves one fighter, newest first';
+end $$;
+reset role;
+
 rollback;
 
 \echo 'rls.sql: all assertions passed'
