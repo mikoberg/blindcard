@@ -35,7 +35,7 @@ export function FighterRow({ rank, slug, name, country, fights, average, note }:
         </span>
       </span>
       <span
-        className={`scorebox h-10 w-14 shrink-0 text-2xl ${isHighRating(average) ? "scorebox-hot" : ""}`}
+        className={`scorebox h-11 w-14 shrink-0 text-2xl ${isHighRating(average) ? "scorebox-hot" : ""}`}
         role="img"
         aria-label={`Average rating ${formatRating(average)} out of 5`}
       >

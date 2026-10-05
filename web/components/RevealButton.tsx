@@ -45,14 +45,14 @@ export function RevealButton({ fightId, fighterA, fighterB }: Props) {
           : "Reveal result";
 
   return (
-    <div className="mt-5">
+    <div className="mt-5 border-t-2 border-[var(--text)]">
       <button
         type="button"
         onClick={shown ? () => dispatch({ type: "hide" }) : reveal}
         disabled={state.status === "loading"}
         aria-expanded={shown}
         aria-controls={panelId}
-        className={`flex min-h-11 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors disabled:opacity-70 sm:px-5 ${
+        className={`flex min-h-12 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors disabled:opacity-70 sm:px-5 ${
           shown
             ? "bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--border)]"
             : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
@@ -72,7 +72,7 @@ export function RevealButton({ fightId, fighterA, fighterB }: Props) {
           <p className="px-4 py-3 text-sm text-[var(--muted)] sm:px-5">Couldn&apos;t load the result. Try again.</p>
         )}
         {state.status === "shown" && (
-          <div className="space-y-1 bg-[var(--bg)]/60 p-4 sm:p-5">
+          <div className="space-y-1 bg-[var(--bg)] p-4 sm:p-5">
             <p className="display break-words text-xl">{state.view.headline}</p>
             <p className="break-words text-sm">{state.view.method}</p>
             <p className="text-sm text-[var(--muted)]">{state.view.when}</p>

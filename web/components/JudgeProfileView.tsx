@@ -22,11 +22,11 @@ function Section({
   return (
     <section
       aria-labelledby={id}
-      className="border-t border-[var(--border)] pt-6"
+      className="border-t-2 border-[var(--text)] pt-6"
     >
       <h2
         id={id}
-        className="section-title"
+        className="display text-xl sm:text-2xl"
       >
         {title}
       </h2>
@@ -50,9 +50,9 @@ function Bar({
   return (
     <div className="flex items-center gap-3">
       <span className="w-28 shrink-0 text-sm text-[var(--muted)]">{label}</span>
-      <span className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
+      <span className="h-4 flex-1 overflow-hidden bg-[var(--surface-2)]">
         <span
-          className={`block h-full rounded-full ${accent ? "bg-[var(--accent)]" : "bg-[var(--muted)]"}`}
+          className={`block h-full ${accent ? "bg-[var(--accent)]" : "bg-[var(--text)]"}`}
           style={{ width: `${Math.min(100, (value / max) * 100)}%` }}
         />
       </span>
@@ -187,7 +187,7 @@ export function JudgeProfileView({
         </Section>
       )}
 
-      <p className="max-w-xl border-t border-[var(--border)] pt-6 text-sm text-[var(--muted)]">
+      <p className="max-w-xl border-t-2 border-[var(--text)] pt-6 text-sm text-[var(--muted)]">
         Based on the {judge.cards} scorecards we have of this judge (fights that
         went to the judges with a clear result; draws are left out). The
         numbers above are totals: no fight is named until you open the list

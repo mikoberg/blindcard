@@ -16,15 +16,16 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "center",
           padding: 80,
-          background: "#080c15",
-          color: "#eef1f6",
+          background: "#e8eae3",
+          color: "#101a2c",
+          borderTop: "24px solid #101a2c",
         }}
       >
         <div style={{ display: "flex", fontSize: 150, fontWeight: 900, letterSpacing: -4 }}>
           <span>Blind</span>
-          <span style={{ background: "#eef1f6", color: "#0b0f18", padding: "0 24px", marginLeft: 4 }}>card</span>
+          <span style={{ background: "#101a2c", color: "#e8eae3", padding: "0 24px", marginLeft: 4 }}>card</span>
         </div>
-        <div style={{ fontSize: 48, fontWeight: 700, color: "#ff5a36", marginTop: 28 }}>
+        <div style={{ fontSize: 48, fontWeight: 700, color: "#c23314", marginTop: 28 }}>
           Worth watching. No spoilers.
         </div>
       </div>

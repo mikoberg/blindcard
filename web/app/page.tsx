@@ -44,7 +44,7 @@ export default async function HomePage() {
       </section>
 
       <section aria-labelledby="latest">
-        <h2 id="latest" className="section-title">
+        <h2 id="latest" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
           Latest events
         </h2>
         <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,7 +57,7 @@ export default async function HomePage() {
       </section>
 
       <div>
-        <h2 className="section-title">All events</h2>
+        <h2 className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">All events</h2>
         <div className="mt-4 mb-2">
           <SortToggle active="newest" />
         </div>
@@ -74,7 +74,7 @@ export default async function HomePage() {
               className="display flex items-center gap-4 text-5xl leading-none sm:text-6xl"
             >
               {group.year}
-              <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
+              <span aria-hidden="true" className="h-[3px] flex-1 bg-[var(--text)]" />
             </h2>
             <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {group.events.map((event) => (

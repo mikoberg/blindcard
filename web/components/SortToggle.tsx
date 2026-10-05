@@ -8,7 +8,7 @@ const OPTIONS = [
 /** Switch between the chronological overview and the ranking by card rating. Plain links. */
 export function SortToggle({ active }: { active: (typeof OPTIONS)[number]["key"] }) {
   return (
-    <nav aria-label="Sort events" className="inline-flex rounded-full bg-[var(--surface)] p-1">
+    <nav aria-label="Sort events" className="inline-flex border-2 border-[var(--text)]">
       {OPTIONS.map((option) => {
         const current = option.key === active;
         return (
@@ -16,8 +16,8 @@ export function SortToggle({ active }: { active: (typeof OPTIONS)[number]["key"]
             key={option.key}
             href={option.href}
             aria-current={current ? "page" : undefined}
-            className={`inline-flex min-h-10 items-center rounded-full px-4 text-sm font-bold ${
-              current ? "redact" : "text-[var(--muted)] hover:text-[var(--text)]"
+            className={`inline-flex min-h-11 items-center px-4 text-sm font-bold ${
+              current ? "bg-[var(--text)] text-[var(--bg)]" : "text-[var(--text)] hover:bg-[var(--surface-2)]"
             }`}
           >
             {option.label}

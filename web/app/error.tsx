@@ -8,7 +8,7 @@ export default function ErrorPage({ reset }: { error: Error; reset: () => void }
       <button
         type="button"
         onClick={reset}
-        className="redact min-h-11 rounded-full px-5 text-sm font-bold hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+        className="redact min-h-11 px-4 text-sm font-bold hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
       >
         Try again
       </button>

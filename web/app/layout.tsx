@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={archivo.variable}>
-      <body className="min-h-screen">
+      <body className="min-h-screen border-t-[6px] border-[var(--text)]">
         <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 sm:px-6">
           <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-3">
             <Wordmark />
