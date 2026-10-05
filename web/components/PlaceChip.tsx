@@ -9,11 +9,11 @@ function Pin() {
 }
 
 /**
- * Where the event is and how far its clock is from Amsterdam. Outside the Americas the chip is
- * marked, because such a card starts at a very different time from a US one.
+ * Where the event is. Outside the Americas the chip is marked, because such a card starts at a
+ * very different time from a US one.
  */
-export function PlaceChip({ location, isoDate }: { location: string | null; isoDate: string }) {
-  const info = placeInfo(location, isoDate);
+export function PlaceChip({ location }: { location: string | null }) {
+  const info = placeInfo(location);
   if (!info) return null;
   return (
     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -27,11 +27,6 @@ export function PlaceChip({ location, isoDate }: { location: string | null; isoD
         <Pin />
         {info.city}
       </span>
-      {info.offset && (
-        <span className={info.away ? "font-semibold text-[var(--accent)]" : "text-[var(--muted)]"}>
-          {info.offset}
-        </span>
-      )}
     </p>
   );
 }

@@ -1,7 +1,6 @@
 /**
- * Where an event is and how far its clock is from ours. The site shows times in Europe/Amsterdam
- * by default, so the offset is given against Amsterdam on the day of the event (daylight saving
- * included): an event in Abu Dhabi starts in the European afternoon, one in Las Vegas at night.
+ * Where an event is. Outside the Americas the place is marked: such a card starts at a very
+ * different time from a US one (the real start times are shown next to it).
  */
 
 export interface Place {
@@ -114,35 +113,6 @@ function cityOrRegion(city: string, region: string): string {
   return region === "Nevada" ? "Las Vegas" : city;
 }
 
-/** Minutes the zone's clock is ahead of UTC at noon UTC on `isoDate`. */
-function offsetMinutes(zone: string, isoDate: string): number {
-  const at = new Date(`${isoDate}T12:00:00Z`);
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: zone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-  }).formatToParts(at);
-  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
-  const local = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
-  return Math.round((local - at.getTime()) / 60000);
-}
-
-/** Hours the place's clock is ahead of Amsterdam on that day (negative: behind). */
-export function hoursFromHome(isoDate: string, zone: string): number {
-  return (offsetMinutes(zone, isoDate) - offsetMinutes(HOME_ZONE, isoDate)) / 60;
-}
-
-/** "2 h ahead of Amsterdam", "9 h behind Amsterdam", "same time as Amsterdam". */
-export function offsetLabel(hours: number): string {
-  if (hours === 0) return "same time as Amsterdam";
-  const amount = Number.isInteger(hours) ? `${Math.abs(hours)}` : `${Math.abs(hours).toFixed(1)}`;
-  return `${amount} h ${hours > 0 ? "ahead of" : "behind"} Amsterdam`;
-}
-
 /** Events outside the Americas: they start at a very different time from a US card. */
 export function isAwayFromAmericas(zone: string | null): boolean {
   return zone !== null && !zone.startsWith("America/");
@@ -151,22 +121,12 @@ export function isAwayFromAmericas(zone: string | null): boolean {
 export interface PlaceInfo {
   city: string;
   country: string;
-  /** null when the zone is unknown. */
-  offset: string | null;
-  hours: number | null;
   /** Outside the Americas: worth pointing out. */
   away: boolean;
 }
 
-export function placeInfo(location: string | null, isoDate: string): PlaceInfo | null {
+export function placeInfo(location: string | null): PlaceInfo | null {
   const place = parsePlace(location);
   if (!place) return null;
-  const hours = place.zone ? hoursFromHome(isoDate, place.zone) : null;
-  return {
-    city: place.city,
-    country: place.country,
-    offset: hours === null ? null : offsetLabel(hours),
-    hours,
-    away: isAwayFromAmericas(place.zone),
-  };
+  return { city: place.city, country: place.country, away: isAwayFromAmericas(place.zone) };
 }

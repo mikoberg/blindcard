@@ -185,7 +185,7 @@ export function UpcomingView({ event, today }: { event: UpcomingEvent; today: Da
           {event.location && (
             <div className="field">
               <p className="display-tight text-lg">{event.location}</p>
-              <PlaceChip location={event.location} isoDate={event.eventDate} />
+              <PlaceChip location={event.location} />
               <span className="field-label">Venue</span>
             </div>
           )}

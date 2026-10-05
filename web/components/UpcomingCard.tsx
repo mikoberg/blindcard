@@ -57,7 +57,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
           {event.name}, {formatEventDate(event.eventDate)}
         </p>
         {event.location && <p className="mt-1 text-sm text-[var(--muted)]">{event.location}</p>}
-        <PlaceChip location={event.location} isoDate={event.eventDate} />
+        <PlaceChip location={event.location} />
         <StartTimes times={startTimes(event)} variant="tile" />
         <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span className="font-bold text-[var(--accent)]">{countdownLabel(days)}</span>
