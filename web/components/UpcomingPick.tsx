@@ -1,0 +1,97 @@
+"use client";
+
+import { useId, useState } from "react";
+import { fetchPick, isTossUp, percent, type UpcomingPick as Pick } from "@/lib/upcoming/pick";
+
+type State =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "shown"; pick: Pick };
+
+/**
+ * Who is favoured in this bout. It is learned from past results, so nothing is loaded until the
+ * button is clicked, and only for this bout. It is a lean, not a certainty, and says so.
+ */
+export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: string; nameB: string }) {
+  const [state, setState] = useState<State>({ status: "idle" });
+  const panelId = useId();
+
+  async function load() {
+    if (state.status === "loading") return;
+    setState({ status: "loading" });
+    try {
+      setState({ status: "shown", pick: await fetchPick(boutId) });
+    } catch {
+      setState({ status: "error" });
+    }
+  }
+
+  const shown = state.status === "shown";
+  return (
+    <div className="mt-4 border-t-2 border-[var(--border)] pt-3">
+      <button
+        type="button"
+        onClick={shown ? () => setState({ status: "idle" }) : load}
+        disabled={state.status === "loading"}
+        aria-expanded={shown}
+        aria-controls={panelId}
+        className={`flex min-h-11 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors disabled:opacity-70 ${
+          shown
+            ? "border-2 border-[var(--text)] hover:bg-[var(--surface-2)]"
+            : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+        }`}
+      >
+        <span>
+          {state.status === "loading"
+            ? "Loading…"
+            : shown
+              ? "Hide the favourite"
+              : state.status === "error"
+                ? "Try again"
+                : "Show who's favoured"}
+        </span>
+        {!shown && (
+          <span aria-hidden="true" className="flex items-center gap-1.5">
+            <span className="h-2 w-8 bg-current opacity-40" />
+            <span className="h-2 w-12 bg-current opacity-40" />
+          </span>
+        )}
+      </button>
+      {!shown && state.status !== "error" && (
+        <p className="mt-2 text-xs text-[var(--muted)]">
+          A guess from the fighters&apos; past results. It can colour how you watch, so it stays closed until you
+          open it.
+        </p>
+      )}
+      <div id={panelId} aria-live="polite" className="mt-3">
+        {state.status === "error" && (
+          <p className="text-sm text-[var(--muted)]">Couldn&apos;t load this. Try again.</p>
+        )}
+        {state.status === "shown" && <Panel pick={state.pick} nameA={nameA} nameB={nameB} />}
+      </div>
+    </div>
+  );
+}
+
+function Panel({ pick, nameA, nameB }: { pick: Pick; nameA: string; nameB: string }) {
+  const name = pick.favoured === "a" ? nameA : nameB;
+  const toss = isTossUp(pick);
+  return (
+    <div className="space-y-1 bg-[var(--bg)] p-4">
+      <p className="display break-words text-xl">
+        {toss ? `Too close to call, slight lean to ${name}` : `${name} is favoured`}{" "}
+        <span className="text-[var(--accent)]">{percent(pick.probability)}</span>
+      </p>
+      <p className="text-sm text-[var(--muted)]">
+        {pick.basis === "both"
+          ? "Based on the earlier results of both fighters."
+          : "Only one of the two fighters has earlier results here, so this leans on that fighter."}
+      </p>
+      <p className="text-xs text-[var(--muted)]">
+        Picks like this were right about {percent(pick.accuracy)} of the time on past fights (a coin flip is
+        50%). A small lean, never a certainty.
+      </p>
+    </div>
+  );
+}

@@ -19,6 +19,7 @@ const bout = (patch: Partial<UpcomingBout> = {}): UpcomingBout => ({
   a: { name: "Alexander Volkanovski", slug: "alexander-volkanovski", country: "au" },
   b: { name: "Movsar Evloev", slug: null, country: null },
   prediction: null,
+  hasPick: false,
   ...patch,
 });
 

@@ -36,6 +36,8 @@ export interface UpcomingBout {
   b: UpcomingFighter;
   /** null until the model has run for this bout. */
   prediction: BoutPrediction | null;
+  /** A favourite exists for this bout. Who it is stays private until the visitor clicks. */
+  hasPick: boolean;
 }
 
 export interface UpcomingEvent {

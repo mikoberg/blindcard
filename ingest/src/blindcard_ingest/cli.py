@@ -105,6 +105,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="store an expected rating for every announced bout (public data only)",
     )
 
+    commands.add_parser(
+        "predict-picks",
+        parents=[common],
+        help="store who is favoured in each announced bout (private, shown only after a click)",
+    )
+
     evaluate = commands.add_parser(
         "evaluate-predictions",
         parents=[common],
@@ -285,6 +291,13 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
 
         with _open_repository(settings) as repo:
             run_predict_upcoming(repo, dry_run=args.dry_run)
+        return EXIT_OK
+
+    if args.command == "predict-picks":
+        from blindcard_ingest.predict.picks import run_predict_picks
+
+        with _open_repository(settings) as repo:
+            run_predict_picks(repo, dry_run=args.dry_run)
         return EXIT_OK
 
     if args.command == "evaluate-predictions":

@@ -36,6 +36,7 @@ interface BoutRow {
   predicted_stars: number | string | null;
   prediction_basis: string | null;
   prediction_why: unknown;
+  has_pick: boolean | null;
   fighter_a: FighterJoin | null;
   fighter_b: FighterJoin | null;
 }
@@ -76,6 +77,7 @@ function bout(row: BoutRow): UpcomingBout {
     a: fighter(row.fighter_a_name, row.fighter_a),
     b: fighter(row.fighter_b_name, row.fighter_b),
     prediction: mapPrediction(row),
+    hasPick: row.has_pick === true,
   };
 }
 

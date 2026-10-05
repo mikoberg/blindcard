@@ -9,6 +9,7 @@ import type { UpcomingBout, UpcomingEvent, UpcomingSegment } from "@/lib/upcomin
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 import { ExpectedPlate } from "./ExpectedPlate";
 import { headliners } from "./UpcomingCard";
+import { UpcomingPick } from "./UpcomingPick";
 import { Monogram } from "./Monogram";
 import { Notice } from "./Notice";
 
@@ -121,6 +122,7 @@ function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
         </div>
       </div>
       <Why bout={bout} />
+      {bout.hasPick && <UpcomingPick boutId={bout.id} nameA={bout.a.name} nameB={bout.b.name} />}
     </li>
   );
 }

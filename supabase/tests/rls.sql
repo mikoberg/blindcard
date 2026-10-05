@@ -105,8 +105,10 @@ values (1, 100, 7, 205, 450, 2)
 on conflict (id) do nothing;
 insert into public.upcoming_events (id, wiki_title, name, slug, event_date)
 values ('00000000-0000-0000-0000-0000000000d1', 'Test upcoming', 'Test Upcoming Event', 'test-upcoming', '2999-01-01');
-insert into public.upcoming_bouts (event_id, card_position, fighter_a_name, fighter_b_name)
-values ('00000000-0000-0000-0000-0000000000d1', 1, 'Test A', 'Test B');
+insert into public.upcoming_bouts (id, event_id, card_position, fighter_a_name, fighter_b_name, has_pick)
+values ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000d1', 1, 'Test A', 'Test B', true);
+insert into public.upcoming_picks (bout_id, favoured, probability, basis, accuracy, version)
+values ('00000000-0000-0000-0000-0000000000d2', 'a', 0.6, 'both', 0.57, 1);
 insert into public.judge_disputes (judge_slug, fight_id, judge_card, margin, lone, severity)
 values ('test-judge', '00000000-0000-0000-0000-0000000000f1', 'Test Judge 29 - 28', -1, true, 3);
 
@@ -355,6 +357,37 @@ begin
     and column_name ~ '(winner|method|round|result|score|record|streak|time)';
   if n <> 0 then raise exception 'FAIL: upcoming tables have a result-like column'; end if;
   raise notice 'PASS upcoming events are public pre-fight facts';
+end $$;
+
+-- Who is favoured is learned from results, so it is private: no direct read, one bout per call.
+do $$
+declare
+  n integer;
+begin
+  begin
+    perform count(*) from public.upcoming_picks;
+    raise exception 'FAIL: anon could read upcoming_picks';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot read upcoming_picks';
+  end;
+  begin
+    insert into public.upcoming_picks (bout_id, favoured, probability, basis, accuracy, version)
+      values ('00000000-0000-0000-0000-0000000000d2', 'b', 0.6, 'one', 0.5, 1);
+    raise exception 'FAIL: anon could write upcoming_picks';
+  exception when insufficient_privilege then null;
+  end;
+  select count(*) into n from public.upcoming_pick('00000000-0000-0000-0000-0000000000d2');
+  if n <> 1 then raise exception 'FAIL: upcoming_pick should return exactly 1 row, got %', n; end if;
+  select count(*) into n from public.upcoming_pick('00000000-0000-0000-0000-00000000dead');
+  if n <> 0 then raise exception 'FAIL: upcoming_pick leaked a row for an unknown bout'; end if;
+  select count(*) into n from public.upcoming_bouts where has_pick;
+  if n < 1 then raise exception 'FAIL: has_pick should be public'; end if;
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'upcoming_bouts'
+    and column_name ~ '(favour|probab|pick_|winner)';
+  if n <> 0 then raise exception 'FAIL: upcoming_bouts names who is favoured'; end if;
+  raise notice 'PASS upcoming_pick is the only way to read a pick';
 end $$;
 
 -- Card segments are a public, pre-fight fact: readable, but only the three known values.

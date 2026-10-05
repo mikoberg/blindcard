@@ -22,7 +22,12 @@ from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.judges import JudgeReport
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
 from blindcard_ingest.predict.dataset import FightRow
-from blindcard_ingest.predict.types import UpcomingBoutInput, UpcomingPrediction
+from blindcard_ingest.predict.types import (
+    FightOutcome,
+    UpcomingBoutInput,
+    UpcomingPick,
+    UpcomingPrediction,
+)
 from blindcard_ingest.scoring.career import HistoryBout, career_contexts, career_json
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import (
@@ -198,6 +203,14 @@ class Repository(Protocol):
 
     def set_upcoming_predictions(self, predictions: Sequence[UpcomingPrediction]) -> None:
         """Store the expected ratings; a bout without one in `predictions` loses any old one."""
+        ...
+
+    def winner_outcomes(self) -> list[FightOutcome]:
+        """Every decisive completed fight (RESULT DATA: it stays in the ingest process)."""
+        ...
+
+    def set_upcoming_picks(self, picks: Sequence[UpcomingPick]) -> None:
+        """Store who is favoured (private); a bout without one in `picks` loses any old one."""
         ...
 
     def replace_upcoming(
@@ -731,6 +744,43 @@ class PostgresRepository:
                         p.version,
                         p.bout_id,
                     ),
+                )
+
+    def winner_outcomes(self) -> list[FightOutcome]:
+        query = """
+            select f.id::text as id, e.event_date, f.fighter_a_id::text as a_id,
+                   f.fighter_b_id::text as b_id, (r.winner_fighter_id = f.fighter_a_id) as a_won
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fight_results r on r.fight_id = f.id
+            where r.outcome = 'win' and r.winner_fighter_id is not null
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query)
+            return [
+                FightOutcome(
+                    fight_id=row["id"],
+                    event_date=row["event_date"],
+                    a_id=row["a_id"],
+                    b_id=row["b_id"],
+                    a_won=bool(row["a_won"]),
+                )
+                for row in cur.fetchall()
+            ]
+
+    def set_upcoming_picks(self, picks: Sequence[UpcomingPick]) -> None:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("delete from public.upcoming_picks")
+            cur.execute("update public.upcoming_bouts set has_pick = false")
+            for p in picks:
+                cur.execute(
+                    "insert into public.upcoming_picks (bout_id, favoured, probability, basis,"
+                    " accuracy, version) values (%s::uuid, %s, %s, %s, %s, %s)",
+                    (p.bout_id, p.favoured, p.probability, p.basis, p.accuracy, p.version),
+                )
+                cur.execute(
+                    "update public.upcoming_bouts set has_pick = true where id = %s::uuid",
+                    (p.bout_id,),
                 )
 
     def replace_upcoming(

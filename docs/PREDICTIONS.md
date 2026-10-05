@@ -63,3 +63,22 @@ most instead ("Look out for", expected 3.5 or more, at most two), which is the p
 Ideas to get sharper over time: fighter style features (pace, finish rate) would help, but they are
 private result-derived data, and a prediction that moves after a finish would leak it; betting odds or
 fan anticipation would be a separate, external signal.
+
+## Who is favoured (picks)
+
+Learned from past RESULTS, so it is private data: table `upcoming_picks` (migration 0014, RLS on, no
+policies), served only by `upcoming_pick(bout_id)` through a POST route after a click on that bout.
+`upcoming_bouts.has_pick` is public so the button only shows where there is something behind it.
+
+Model (`predict/winner.py`): Elo ratings from every decisive result (newcomers move fast, veterans
+slowly) plus experience, win share, recent form and time since the last fight, in a logistic model fitted
+on both orientations of every fight (it cannot learn the a/b order). Strictly pre-fight, like the expected
+rating. Refused (nothing stored) unless a walk-forward test clearly beats a coin
+(accuracy minus two standard errors above 50%).
+
+Walk-forward on dev data, 2016 to 2026, 5306 fights: accuracy 0.561, log loss 0.680 (coin: 0.693), higher
+Elo alone 0.541. From 2020: 0.576. When the model is at least 65% sure it is right about 70% of the time,
+but that happens on only about 6% of fights. Honest reading: a small lean, not a prediction to bet on.
+The page says so and shows the walk-forward accuracy next to every pick.
+
+Never shown next to a result: picks go when their bout goes. Logs carry counts and accuracy only.

@@ -12,6 +12,8 @@ const CLIENT_SIDE = [
   "components/FightCard.tsx",
   "components/JudgeDisputes.tsx",
   "lib/judges/disputes.ts",
+  "components/UpcomingPick.tsx",
+  "lib/upcoming/pick.ts",
   "lib/reveal/client.ts",
   "lib/reveal/format.ts",
   "lib/reveal/response.ts",

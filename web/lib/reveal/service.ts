@@ -1,5 +1,6 @@
 import { getSupabase } from "@/lib/supabase/server";
 import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
+import { rowToPick, type PickRow, type UpcomingPick } from "@/lib/upcoming/pick";
 import { RevealUnavailableError } from "./errors";
 import { buildScoreBreakdown } from "./breakdown";
 import { rowToResponse } from "./response";
@@ -39,4 +40,17 @@ export async function revealJudgeDisputes(judgeSlug: string): Promise<DisputedCa
   if (error) throw new RevealUnavailableError(error.code ?? "unknown");
   if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
   return rowsToCards(data as DisputeRow[]);
+}
+
+/**
+ * Who is favoured in one upcoming bout, learned from past results. Same rule as `reveal_fight`:
+ * one bout per call, from a POST route, after an explicit click. null when the bout has no pick.
+ */
+export async function revealUpcomingPick(boutId: string): Promise<UpcomingPick | null> {
+  const { data, error } = await getSupabase().rpc("upcoming_pick", { p_bout_id: boutId });
+  if (error) throw new RevealUnavailableError(error.code ?? "unknown");
+  if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
+  if (data.length === 0) return null;
+  if (data.length > 1) throw new RevealUnavailableError("multiple_rows");
+  return rowToPick(data[0] as PickRow);
 }

@@ -127,6 +127,8 @@ class FakeRepository:
     fight_rows: list = field(default_factory=list)
     bout_inputs: list = field(default_factory=list)
     predictions: list | None = None
+    outcome_rows: list = field(default_factory=list)
+    picks: list | None = None
     upcoming_fighter_ids: dict = field(default_factory=dict)
     upcoming_today: object = None
     upserts: int = 0
@@ -290,6 +292,12 @@ class FakeRepository:
 
     def set_upcoming_predictions(self, predictions) -> None:  # type: ignore[no-untyped-def]
         self.predictions = list(predictions)
+
+    def winner_outcomes(self):  # type: ignore[no-untyped-def]
+        return list(self.outcome_rows)
+
+    def set_upcoming_picks(self, picks) -> None:  # type: ignore[no-untyped-def]
+        self.picks = list(picks)
 
     def replace_upcoming(self, events, fighter_ids, *, today) -> None:  # type: ignore[no-untyped-def]
         self.upcoming = list(events)
