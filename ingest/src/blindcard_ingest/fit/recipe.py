@@ -32,8 +32,8 @@ from blindcard_ingest.scoring.config import StarThreshold
 from blindcard_ingest.scoring.features import CAPPED_FEATURES
 from blindcard_ingest.scoring.scorer import apply_era, era_scales, quantile
 
-#: Percentile -> stars of the fitted scores. Five stars are for the classics only: the top 1.5% of
-#: fights (about 130 of 8,700), not the top 3% of v1 to v19.
+#: Percentile -> stars of the fitted scores. Five stars are for the classics only: the top 1.0% of
+#: fights (about 85 of 8,700; v20 and v21 used the top 1.5%, v1 to v19 the top 3%).
 STAR_CURVE: tuple[tuple[float, float], ...] = (
     (0, 1.0),
     (8, 1.5),
@@ -43,7 +43,7 @@ STAR_CURVE: tuple[tuple[float, float], ...] = (
     (55, 3.5),
     (70, 4.0),
     (85, 4.5),
-    (98.5, 5.0),
+    (99.0, 5.0),
 )
 
 #: A fight shorter than this cannot be a five-star classic (a 13-second knockout is a moment).

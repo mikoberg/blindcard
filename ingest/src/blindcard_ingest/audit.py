@@ -1,6 +1,6 @@
 """audit-scores: does the latest data still look like the scores say it should?
 
-A five-star classic is the top ~1.5% of fights, so a card of twelve fights should rarely have more
+A five-star classic is the top ~1% of fights, so a card of twelve fights should rarely have more
 than one. This check compares the recent past with the long-run rate and says when a stretch is
 too unlikely to be luck, so a drifting score is noticed by the pipeline and not by a visitor.
 

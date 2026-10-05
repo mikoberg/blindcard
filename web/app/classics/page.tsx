@@ -27,7 +27,7 @@ export default async function ClassicsPage() {
             The classics
           </h1>
           <p className="mt-4 max-w-xl text-lg text-[var(--muted)]">
-            Every fight rated 5.0: the top 1.5% of all fights, {classics.length} so far, newest first.
+            Every fight rated 5.0: the top 1% of all fights, {classics.length} so far, newest first.
             Results stay hidden until you reveal them on the card.
           </p>
         </div>

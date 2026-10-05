@@ -121,3 +121,14 @@ the dev data: 65 of 148 fighters on the announced cards (87 have a linked page; 
 style nor a rank). It is NOT used by the expected rating or the favourite: style was tested for the
 expected rating and did not help (see above). The earlier test used a cruder parse that let stance and
 hometown lines through as "styles"; it showed no gain either way and was not rerun on the clean labels.
+
+## Score v22: five stars for the top 1.0% (was 1.5%)
+
+After the audit flagged a run of classics, 5.0 was tightened: percentile 99.0 instead of 98.5 (still with
+the 120 s minimum). v22 is v21 with only that threshold changed (identical weights, regenerated with
+`fit-scoring --version 22`, then `rescore --version 22 --activate`). 40 of 8655 fights moved from 5.0 to
+4.5 and nothing else changed: 110 classics became 70 (0.81% of fights: the 1% cut of the reference pool,
+less the fights under 120 s). Per year 4 to 6 classics since 2013 instead of up to 12; of the six home page
+tiles that showed four classics only Rahiki vs McMillen dropped out. The audit now measures itself against
+the 0.81% long-run share and flags nothing. For about 1.0% of fights in practice, use 98.8.
+Production: apply with `blindcard-ingest rescore --version 22 --activate` (the config file is committed).

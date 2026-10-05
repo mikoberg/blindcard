@@ -110,7 +110,7 @@ def test_writes_the_config_unless_dry_run(tmp_path: Path, monkeypatch: pytest.Mo
     assert [(t.min_percentile, t.stars) for t in written.star_thresholds] == [
         (float(p), s) for p, s in STAR_CURVE
     ]
-    assert written.star_thresholds[-1].min_percentile == 98.5  # five stars: the classics only
+    assert written.star_thresholds[-1].min_percentile == 99.0  # five stars: the classics only
 
 
 def test_cli_accepts_fit_scoring_options() -> None:
