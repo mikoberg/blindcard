@@ -75,3 +75,24 @@ def test_search_matches_names_with_apostrophes_and_dots() -> None:
     assert parse_search(html, "Lone'er Kavanagh") == ["/fighter/Loneer-Kavanagh-213249"]
     assert parse_search(html, "Casey O’Neill") == ["/fighter/Casey-ONeill-175007"]
     assert parse_search(html, "T.J. Dillashaw") == ["/fighter/TJ-Dillashaw-52814"]
+
+
+def test_search_matches_a_fuller_name_and_names_written_with_other_spacing() -> None:
+    html = (
+        '<a href="/fighter/Ilimbek-Akylbek-Uulu-388255">x</a>'
+        '<a href="/fighter/Joo-Sang-Yoo-387629">x</a>'
+        '<a href="/fighter/Michael-Aswell-286497">x</a>'
+        '<a href="/fighter/Luis-Fernando-Silva-1">x</a>'
+    )
+    assert parse_search(html, "Ilimbek Akylbek") == ["/fighter/Ilimbek-Akylbek-Uulu-388255"]
+    assert parse_search(html, "JooSang Yoo") == ["/fighter/Joo-Sang-Yoo-387629"]
+    assert parse_search(html, "Michael Aswell Jr.") == ["/fighter/Michael-Aswell-286497"]
+    assert parse_search(html, "Silva") == []  # a single word is never matched loosely
+
+
+def test_queries_try_the_name_without_suffix_and_with_split_words() -> None:
+    from blindcard_ingest.sources.sherdog import _queries
+
+    assert _queries("Michael Aswell Jr.") == ["Michael Aswell Jr.", "Michael Aswell"]
+    assert _queries("JooSang Yoo") == ["JooSang Yoo", "Joo Sang Yoo"]
+    assert _queries("Ann Lee") == ["Ann Lee"]
