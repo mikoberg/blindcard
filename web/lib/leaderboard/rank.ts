@@ -11,8 +11,8 @@ export const PRIOR_FIGHTS = 5;
 
 /**
  * Fighters ranked by how worth watching their fights are. The order uses a damped average
- * ((sum of ratings + prior) / (fights + prior)); the entry carries the plain average and the
- * number of fights, which is what the page shows. Only public, active-version ratings.
+ * ((sum of ratings + prior) / (fights + prior)), which the entry carries as `score`, next to
+ * the plain average and the number of fights. Only public, active-version ratings.
  */
 export function rankFighters(rows: readonly FighterRatingRow[]): LeaderboardEntry[] {
   const valid = rows
@@ -41,5 +41,6 @@ export function rankFighters(rows: readonly FighterRatingRow[]): LeaderboardEntr
       country: r.row.country,
       fights: r.fights,
       average: r.average,
+      score: damped(r),
     }));
 }

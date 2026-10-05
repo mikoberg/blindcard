@@ -27,6 +27,13 @@ describe("rankFighters", () => {
     expect(ranked[0]).toMatchObject({ rank: 1, fights: 20, average: 4.5 });
   });
 
+  it("sorts by the shown score, which never rises above the plain average of a fighter above the mean", () => {
+    const ranked = rankFighters([row("a", 6, 4.8), row("b", 30, 4.3), row("c", 10, 3)]);
+    const scores = ranked.map((e) => e.score);
+    expect(scores).toEqual([...scores].sort((x, y) => y - x));
+    expect(ranked[0]!.score).toBeLessThan(ranked[0]!.average);
+  });
+
   it("reads the average when the database sends it as text", () => {
     expect(rankFighters([row("a", 8, "4.25")])[0]?.average).toBe(4.25);
   });

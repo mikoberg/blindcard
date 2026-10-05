@@ -27,8 +27,8 @@ export default async function FightersPage() {
         </h1>
         <p className="mt-4 max-w-xl text-lg text-[var(--muted)]">
           Fighters ranked by how highly their fights are rated. A fighter needs at least {MIN_FIGHTS}{" "}
-          rated fights, and more fights at the same average rank a little higher, so one great fight is
-          not enough.
+          rated fights, and the rating leans towards the middle until a fighter has many fights, so one
+          great fight is not enough.
         </p>
       </section>
       <FighterLeaderboard entries={ranked.slice(0, SHOWN)} />

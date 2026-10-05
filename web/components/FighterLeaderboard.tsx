@@ -15,14 +15,16 @@ export function FighterLeaderboard({ entries }: { entries: readonly LeaderboardE
             <span className="block break-words font-[family-name:var(--font-display)] text-xl font-bold leading-tight">
               {entry.name}
             </span>
-            <span className="block text-sm text-[var(--muted)]">{entry.fights} rated fights</span>
+            <span className="block text-sm text-[var(--muted)]">
+              {entry.fights} rated fights, average {entry.average.toFixed(1)}
+            </span>
           </span>
           <span
-            className={`shrink-0 font-[family-name:var(--font-display)] text-3xl font-bold tabular-nums ${entry.average >= 4 ? "text-[var(--accent)]" : ""}`}
+            className={`shrink-0 font-[family-name:var(--font-display)] text-3xl font-bold tabular-nums ${entry.score >= 4 ? "text-[var(--accent)]" : ""}`}
             role="img"
-            aria-label={`Average rating ${entry.average.toFixed(1)} out of 5`}
+            aria-label={`Fighter rating ${entry.score.toFixed(1)} out of 5`}
           >
-            <span aria-hidden="true">{entry.average.toFixed(1)}</span>
+            <span aria-hidden="true">{entry.score.toFixed(1)}</span>
           </span>
         </li>
       ))}
