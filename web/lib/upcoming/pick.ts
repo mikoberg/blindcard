@@ -70,11 +70,11 @@ export async function fetchPick(boutId: string, fetchImpl: typeof fetch = fetch)
 }
 
 /** Under this, the sides are too close to name a favourite with a straight face. */
-export const TOSS_UP_BELOW = 0.55;
+export const TOSS_UP_BELOW_PERCENT = 55;
 
 export function isTossUp(pick: UpcomingPick): boolean {
   // Judged on the percentage the visitor sees, so 55% on screen is never called a toss-up.
-  return Math.round(pick.probability * 100) < TOSS_UP_BELOW * 100;
+  return Math.round(pick.probability * 100) < TOSS_UP_BELOW_PERCENT;
 }
 
 export function percent(value: number): string {
