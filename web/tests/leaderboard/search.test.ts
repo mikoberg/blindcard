@@ -15,10 +15,12 @@ describe("cleanSearchTerm", () => {
   });
 });
 
-describe("containsPattern", () => {
-  it("escapes the pattern characters of what was typed", () => {
-    expect(containsPattern("cub")).toBe("%cub%");
-    expect(containsPattern("100%_x\\")).toBe("%100\%\_x\\%");
+describe("pattern characters", () => {
+  it("never widen the search: they are removed, so a search for them is no search", () => {
+    expect(cleanSearchTerm("%_")).toBeNull();
+    expect(cleanSearchTerm("*")).toBeNull();
+    expect(cleanSearchTerm("cu%b")).toBe("cu b");
+    expect(containsPattern(cleanSearchTerm("c_ub\\")!)).toBe("%c ub%");
   });
 });
 
