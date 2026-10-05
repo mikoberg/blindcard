@@ -1,14 +1,35 @@
 import { formatStars, starFills, starsLabel, type StarFill } from "@/lib/card/stars";
 
-/** One box of the five a scorecard row has: empty, half (left half inked) or full. */
-function Box({ fill }: { fill: StarFill }) {
+const STAR_PATH = "M12 2.2l2.95 6.2 6.75.85-4.95 4.7 1.25 6.7L12 17.3l-6 3.35 1.25-6.7L2.3 9.25l6.75-.85z";
+
+/** One of the five stars: gold when earned, an empty contour when not, half gold for a half. */
+function Star({ fill }: { fill: StarFill }) {
   return (
-    <span className="relative inline-block h-[1.1rem] w-[1.1rem] overflow-hidden border-2 border-[var(--text)] bg-[var(--surface)]">
+    <span className="relative inline-block h-6 w-6">
+      <svg viewBox="0 0 24 24" className="absolute inset-0 h-6 w-6" fill="none">
+        <path d={STAR_PATH} stroke="var(--text)" strokeOpacity="0.3" strokeWidth="1.4" strokeLinejoin="round" />
+      </svg>
       {fill !== "empty" && (
-        <span
-          className="absolute inset-y-0 left-0 bg-[var(--text)]"
-          style={{ width: fill === "half" ? "50%" : "100%" }}
-        />
+        <svg
+          viewBox="0 0 24 24"
+          className="absolute inset-0 h-6 w-6"
+          style={fill === "half" ? { clipPath: "inset(0 50% 0 0)" } : undefined}
+        >
+          <defs>
+            <linearGradient id="star-gold" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="var(--gold-hi)" />
+              <stop offset="50%" stopColor="var(--gold-mid)" />
+              <stop offset="100%" stopColor="var(--gold-lo)" />
+            </linearGradient>
+          </defs>
+          <path
+            d={STAR_PATH}
+            fill="url(#star-gold)"
+            stroke="var(--gold-lo)"
+            strokeWidth="1.2"
+            strokeLinejoin="round"
+          />
+        </svg>
       )}
     </span>
   );
@@ -31,9 +52,9 @@ export function StarRating({
   }
   return (
     <span className="inline-flex items-center gap-2.5" role="img" aria-label={starsLabel(stars)}>
-      <span className="flex gap-1" aria-hidden="true">
+      <span className="flex gap-0.5" aria-hidden="true">
         {starFills(stars).map((fill, index) => (
-          <Box key={index} fill={fill} />
+          <Star key={index} fill={fill} />
         ))}
       </span>
       {showNumber && (

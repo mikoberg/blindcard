@@ -1,9 +1,13 @@
+import type { FighterRecord } from "@/lib/card/types";
+
 /** A fighter on an upcoming card. Linked to a stored fighter only when exactly one matched. */
 export interface UpcomingFighter {
   name: string;
   /** Slug of the fighter's page, when the name matched exactly one stored fighter. */
   slug: string | null;
   country: string | null;
+  /** The record going into this bout (as it stands today); null when not known. */
+  record: FighterRecord | null;
 }
 
 /** A reason behind an expected rating: what moved it, in stars, against an average fight. */

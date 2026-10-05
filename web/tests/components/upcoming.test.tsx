@@ -16,8 +16,8 @@ const bout = (patch: Partial<UpcomingBout> = {}): UpcomingBout => ({
   segment: "main",
   weightClass: "Featherweight",
   isTitleFight: true,
-  a: { name: "Alexander Volkanovski", slug: "alexander-volkanovski", country: "au" },
-  b: { name: "Movsar Evloev", slug: null, country: null },
+  a: { name: "Alexander Volkanovski", slug: "alexander-volkanovski", country: "au", record: null },
+  b: { name: "Movsar Evloev", slug: null, country: null, record: null },
   prediction: null,
   hasPick: false,
   ...patch,
@@ -82,7 +82,7 @@ describe("UpcomingSection", () => {
 });
 
 describe("UpcomingView", () => {
-  it("shows names and weight class, links only matched fighters, and no record or rating", () => {
+  it("shows names and weight class, links only matched fighters, and no rating or reveal", () => {
     const html = renderToStaticMarkup(<UpcomingView event={event()} today={TODAY} />);
     expect(html).toContain("Alexander Volkanovski");
     expect(html).toContain('href="/fighters/alexander-volkanovski"');
@@ -92,8 +92,8 @@ describe("UpcomingView", () => {
     expect(html).toContain("Main card");
     expect(html).toContain("Prelims");
     expect(html).toContain("Bouts can still change");
-    // pre-fight facts only: nothing like a record, a streak or a rating
-    expect(html).not.toMatch(/\d+-\d+-\d+|unbeaten|Won \d|rated|Reveal/i);
+    // pre-fight facts only: no streak note, no rating of the fight, nothing to reveal
+    expect(html).not.toMatch(/unbeaten|Won \d|rated|Reveal/i);
   });
 
   it("shows a flat list when a bout has no segment, and a notice when no card is announced", () => {
@@ -111,7 +111,7 @@ describe("UpcomingView", () => {
   it("escapes hostile names", () => {
     const html = renderToStaticMarkup(
       <UpcomingView
-        event={event({ bouts: [bout({ a: { name: "<img src=x onerror=alert(1)>", slug: null, country: null } })] })}
+        event={event({ bouts: [bout({ a: { name: "<img src=x onerror=alert(1)>", slug: null, country: null, record: null } })] })}
         today={TODAY}
       />,
     );
@@ -157,7 +157,7 @@ describe("expected ratings", () => {
   it("points out the most promising bouts on the tile, best first, and only strong ones", () => {
     const bouts = [
       predicted(3.4, { id: "weak", position: 1 }),
-      predicted(4.1, { id: "best", position: 2, a: { name: "Petr Yan", slug: null, country: null }, b: { name: "Merab Dvalishvili", slug: null, country: null } }),
+      predicted(4.1, { id: "best", position: 2, a: { name: "Petr Yan", slug: null, country: null, record: null }, b: { name: "Merab Dvalishvili", slug: null, country: null, record: null } }),
       predicted(3.8, { id: "good", position: 3 }),
       predicted(3.6, { id: "third", position: 4 }),
     ];
@@ -201,5 +201,39 @@ describe("mapPrediction", () => {
     expect(mapPrediction({ ...complete, predicted_stars: 5.5 })).toBeNull();
     expect(mapPrediction({ ...complete, prediction_basis: "guess" })).toBeNull();
     expect(mapPrediction({ ...complete, prediction_why: "oops" })?.why).toEqual([]);
+  });
+});
+
+
+describe("records on an upcoming card", () => {
+  const withRecords = (a: UpcomingBout["a"]["record"], b: UpcomingBout["b"]["record"]) =>
+    event({
+      bouts: [
+        bout({
+          a: { name: "Alexander Volkanovski", slug: null, country: "au", record: a },
+          b: { name: "Movsar Evloev", slug: null, country: null, record: b },
+        }),
+      ],
+    });
+
+  it("shows the record going into the fight, with a caption for no contests", () => {
+    const html = renderToStaticMarkup(
+      <UpcomingView
+        event={withRecords({ w: 27, l: 4, d: 0, nc: 0 }, { w: 19, l: 0, d: 1, nc: 1 })}
+        today={TODAY}
+      />,
+    );
+    expect(html).toContain("27-4");
+    expect(html).toContain("19-0-1");
+    expect(html).toContain("(1 NC)");
+    expect(html).toContain('aria-label="Record going into the fight: 27-4"');
+  });
+
+  it("shows no record for a fighter whose record is not known, and invents none", () => {
+    const html = renderToStaticMarkup(
+      <UpcomingView event={withRecords({ w: 27, l: 4, d: 0, nc: 0 }, null)} today={TODAY} />,
+    );
+    expect(html).toContain("27-4");
+    expect(html.match(/Record going into the fight/g)).toHaveLength(1);
   });
 });

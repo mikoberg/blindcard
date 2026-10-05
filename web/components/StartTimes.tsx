@@ -53,8 +53,7 @@ export function StartTimes({ times, variant }: { times: readonly StartTime[]; va
         <li key={t.label} className="flex items-baseline justify-between gap-4">
           <span className="text-[var(--muted)]">{t.label}</span>
           <span className="display-tight text-lg tabular-nums">
-            {t.at.weekday !== main.at.weekday ? `${t.at.weekday} ` : ""}
-            {t.at.time} <span className="text-sm font-semibold text-[var(--muted)]">{t.at.zone}</span>
+            {t.at.weekday} {t.at.time} <span className="text-sm font-semibold text-[var(--muted)]">{t.at.zone}</span>
           </span>
         </li>
       ))}

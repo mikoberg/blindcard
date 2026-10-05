@@ -50,6 +50,7 @@ describe("StartTimes", () => {
 
   it("lists every time on the page and says so when none is announced", () => {
     const page = renderToStaticMarkup(<StartTimes times={startTimes(EVENT)} variant="page" />);
+    expect(page.match(/Sat/g)).toHaveLength(3); // the weekday on every line, so a late card is not misread
     expect(page).toContain("20:00");
     expect(page).toContain("18:00");
     expect(page).toContain("16:00");

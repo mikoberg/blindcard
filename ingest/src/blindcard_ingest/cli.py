@@ -112,6 +112,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="store who is favoured in each announced bout (private, shown only after a click)",
     )
 
+    audit = commands.add_parser(
+        "audit-scores",
+        parents=[common],
+        help="check that the latest scores look like they should (writes nothing)",
+    )
+    audit.add_argument(
+        "--strict",
+        action="store_true",
+        help="exit non-zero when a stretch is too unlikely to be luck",
+    )
+
     evaluate = commands.add_parser(
         "evaluate-predictions",
         parents=[common],
@@ -316,6 +327,19 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
         with _open_repository(settings) as repo:
             run_predict_picks(repo, dry_run=args.dry_run)
         return EXIT_OK
+
+    if args.command == "audit-scores":
+        from blindcard_ingest.audit import audit
+
+        with _open_repository(settings) as repo:
+            audit_report = audit(repo.scored_events())
+        for line in audit_report.lines():
+            print(line)
+        if audit_report.alerts:
+            logger.error(
+                "score audit: %d stretch(es) too unlikely to be luck", len(audit_report.alerts)
+            )
+        return EXIT_RUN_ERRORS if (args.strict and audit_report.alerts) else EXIT_OK
 
     if args.command == "evaluate-predictions":
         from blindcard_ingest.predict.dataset import build_examples

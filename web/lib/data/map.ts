@@ -96,7 +96,7 @@ function toCareer(value: unknown): FightCareer | null {
   return { meetings: o.meetings, a, b };
 }
 
-function toRecord(value: unknown): FighterRecord | null {
+export function toRecord(value: unknown): FighterRecord | null {
   const o = (value ?? {}) as Record<string, unknown>;
   const counts = [o.w, o.l, o.d, o.nc];
   if (!counts.every((n) => typeof n === "number" && Number.isInteger(n) && n >= 0)) return null;

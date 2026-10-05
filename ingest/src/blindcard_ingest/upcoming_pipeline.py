@@ -62,6 +62,7 @@ class UpcomingReport:
     times_found: int = 0
     fighters_matched: int = 0
     fighters_unmatched: int = 0
+    records_found: int = 0
     events: list[UpcomingEvent] = field(default_factory=list)
 
 
@@ -159,6 +160,7 @@ def run_ingest_upcoming(
         report.fighters_matched,
         len(names),
     )
+    records = repo.fighter_current_records(set(matched.values()))
     if not dry_run:
-        repo.replace_upcoming(events, matched, today=today)
+        repo.replace_upcoming(events, matched, today=today, records=records)
     return report

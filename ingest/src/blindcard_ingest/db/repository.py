@@ -18,6 +18,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from blindcard_ingest.audit import ScoredEvent
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.judges import JudgeReport
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
@@ -39,6 +40,7 @@ from blindcard_ingest.scoring.features import (
 )
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
 from blindcard_ingest.upcoming import UpcomingEvent
+from blindcard_ingest.upcoming_records import current_record
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +208,10 @@ class Repository(Protocol):
         """Store the expected ratings; a bout without one in `predictions` loses any old one."""
         ...
 
+    def scored_events(self) -> list[ScoredEvent]:
+        """Every event with the public stars of its fights, by the active score version."""
+        ...
+
     def winner_outcomes(self) -> list[FightOutcome]:
         """Every decisive completed fight (RESULT DATA: it stays in the ingest process)."""
         ...
@@ -214,8 +220,18 @@ class Repository(Protocol):
         """Store who is favoured (private); a bout without one in `picks` loses any old one."""
         ...
 
+    def fighter_current_records(self, fighter_ids: Collection[str]) -> dict[str, dict[str, int]]:
+        """The record each fighter brings into their next bout: the record going into their latest
+        completed fight plus its result. Fighters without a reliable one are left out."""
+        ...
+
     def replace_upcoming(
-        self, events: Sequence[UpcomingEvent], fighter_ids: Mapping[str, str], *, today: date
+        self,
+        events: Sequence[UpcomingEvent],
+        fighter_ids: Mapping[str, str],
+        *,
+        today: date,
+        records: Mapping[str, Mapping[str, int]] | None = None,
     ) -> None:
         """Rebuild the upcoming tables: upsert `events` with their bouts, drop events that are no
         longer announced and events dated before `today`. `fighter_ids` maps a name to the id of
@@ -249,6 +265,10 @@ class Repository(Protocol):
         ...
 
     def close(self) -> None: ...
+
+
+def _json_or_none(value: Mapping[str, int] | None) -> Jsonb | None:
+    return Jsonb(dict(value)) if value is not None else None
 
 
 class PostgresRepository:
@@ -747,6 +767,24 @@ class PostgresRepository:
                     ),
                 )
 
+    def scored_events(self) -> list[ScoredEvent]:
+        query = """
+            select e.event_date, e.name, array_agg(s.stars::float order by f.card_position) as stars
+            from public.events e
+            join public.fights f on f.event_id = e.id
+            join public.excitement_scores s
+              on s.fight_id = f.id
+             and s.version = (select v.version from public.scoring_versions v where v.is_active)
+            group by e.id
+            order by e.event_date
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query)
+            return [
+                ScoredEvent(row["event_date"], row["name"], tuple(row["stars"]))
+                for row in cur.fetchall()
+            ]
+
     def winner_outcomes(self) -> list[FightOutcome]:
         query = """
             select f.id::text as id, e.event_date, f.fighter_a_id::text as a_id,
@@ -786,9 +824,42 @@ class PostgresRepository:
                     (p.bout_id,),
                 )
 
+    def fighter_current_records(self, fighter_ids: Collection[str]) -> dict[str, dict[str, int]]:
+        if not fighter_ids:
+            return {}
+        query = """
+            select distinct on (x.fid) x.fid::text as fid,
+                   case when f.fighter_a_id = x.fid then f.records -> 'a' else f.records -> 'b' end
+                     as going_in,
+                   r.outcome, (r.winner_fighter_id = x.fid) as won,
+                   r.winner_fighter_id is null as open
+            from (select unnest(%s::uuid[]) as fid) x
+            join public.fights f on f.fighter_a_id = x.fid or f.fighter_b_id = x.fid
+            join public.events e on e.id = f.event_id
+            join public.fight_results r on r.fight_id = f.id
+            order by x.fid, e.event_date desc, f.card_position desc
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (list(fighter_ids),))
+            rows = cur.fetchall()
+        records: dict[str, dict[str, int]] = {}
+        for row in rows:
+            record = current_record(
+                row["going_in"], row["outcome"], None if row["open"] else row["won"]
+            )
+            if record is not None:
+                records[row["fid"]] = record
+        return records
+
     def replace_upcoming(
-        self, events: Sequence[UpcomingEvent], fighter_ids: Mapping[str, str], *, today: date
+        self,
+        events: Sequence[UpcomingEvent],
+        fighter_ids: Mapping[str, str],
+        *,
+        today: date,
+        records: Mapping[str, Mapping[str, int]] | None = None,
     ) -> None:
+        records = records or {}
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute("delete from public.upcoming_events where event_date < %s", (today,))
             cur.execute(
@@ -829,8 +900,8 @@ class PostgresRepository:
                     cur.execute(
                         "insert into public.upcoming_bouts (event_id, card_position, segment,"
                         " weight_class, is_title_fight, fighter_a_name, fighter_b_name,"
-                        " fighter_a_id, fighter_b_id)"
-                        " values (%s, %s, %s, %s, %s, %s, %s, %s::uuid, %s::uuid)",
+                        " fighter_a_id, fighter_b_id, fighter_a_record, fighter_b_record)"
+                        " values (%s, %s, %s, %s, %s, %s, %s, %s::uuid, %s::uuid, %s, %s)",
                         (
                             event_id,
                             bout.position,
@@ -841,6 +912,8 @@ class PostgresRepository:
                             bout.b,
                             fighter_ids.get(bout.a),
                             fighter_ids.get(bout.b),
+                            _json_or_none(records.get(fighter_ids.get(bout.a, ""))),
+                            _json_or_none(records.get(fighter_ids.get(bout.b, ""))),
                         ),
                     )
 

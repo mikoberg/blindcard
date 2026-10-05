@@ -124,11 +124,14 @@ class FakeRepository:
     judge_report: JudgeReport | None = None
     fighters: list[tuple[str, str]] = field(default_factory=list)
     upcoming: list = field(default_factory=list)
+    current_records: dict = field(default_factory=dict)
+    upcoming_records: dict = field(default_factory=dict)
     fight_rows: list = field(default_factory=list)
     bout_inputs: list = field(default_factory=list)
     predictions: list | None = None
     outcome_rows: list = field(default_factory=list)
     picks: list | None = None
+    event_stars: list = field(default_factory=list)
     upcoming_fighter_ids: dict = field(default_factory=dict)
     upcoming_today: object = None
     upserts: int = 0
@@ -296,10 +299,17 @@ class FakeRepository:
     def winner_outcomes(self):  # type: ignore[no-untyped-def]
         return list(self.outcome_rows)
 
+    def scored_events(self):  # type: ignore[no-untyped-def]
+        return list(self.event_stars)
+
     def set_upcoming_picks(self, picks) -> None:  # type: ignore[no-untyped-def]
         self.picks = list(picks)
 
-    def replace_upcoming(self, events, fighter_ids, *, today) -> None:  # type: ignore[no-untyped-def]
+    def fighter_current_records(self, fighter_ids):  # type: ignore[no-untyped-def]
+        return {i: r for i, r in self.current_records.items() if i in set(fighter_ids)}
+
+    def replace_upcoming(self, events, fighter_ids, *, today, records=None) -> None:  # type: ignore[no-untyped-def]
+        self.upcoming_records = dict(records or {})
         self.upcoming = list(events)
         self.upcoming_fighter_ids = dict(fighter_ids)
         self.upcoming_today = today

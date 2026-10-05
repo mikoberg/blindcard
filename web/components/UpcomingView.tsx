@@ -10,6 +10,7 @@ import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 import { ExpectedPlate } from "./ExpectedPlate";
 import { headliners } from "./UpcomingCard";
 import { UpcomingPick } from "./UpcomingPick";
+import { recordParts } from "@/lib/card/record";
 import { Monogram } from "./Monogram";
 import { Notice } from "./Notice";
 import { startTimes } from "@/lib/upcoming/time";
@@ -38,6 +39,7 @@ function groups(bouts: readonly UpcomingBout[]): { label: string | null; bouts: 
 
 function FighterName({ fighter }: { fighter: UpcomingBout["a"] }) {
   const name = <span className="block break-words text-xl font-bold leading-tight sm:text-2xl">{fighter.name}</span>;
+  const parts = fighter.record ? recordParts(fighter.record) : null;
   return (
     <span className="flex items-center gap-3">
       <Monogram name={fighter.name} country={fighter.country} size="lg" />
@@ -49,7 +51,28 @@ function FighterName({ fighter }: { fighter: UpcomingBout["a"] }) {
         ) : (
           name
         )}
+        {parts && (
+          <span aria-hidden="true" className="mt-0.5 block text-sm font-extrabold tabular-nums sm:hidden">
+            {parts.main}
+            {parts.extra ? ` ${parts.extra}` : ""}
+          </span>
+        )}
       </span>
+      {parts && (
+        <span
+          className="hidden shrink-0 text-right leading-none sm:block"
+          aria-label={`Record going into the fight: ${parts.main}${parts.extra ? ` ${parts.extra}` : ""}`}
+        >
+          <span aria-hidden="true" className="block text-2xl font-extrabold tabular-nums">
+            {parts.main}
+          </span>
+          {parts.extra && (
+            <span aria-hidden="true" className="mt-1 block text-xs font-normal text-[var(--muted)]">
+              {parts.extra}
+            </span>
+          )}
+        </span>
+      )}
     </span>
   );
 }

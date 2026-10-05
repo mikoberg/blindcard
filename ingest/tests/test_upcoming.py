@@ -189,3 +189,37 @@ def test_a_dry_run_writes_nothing() -> None:
     report = run_ingest_upcoming(wiki, repo, today=TODAY, dry_run=True)
     assert report.events_stored == 2
     assert repo.upcoming == []
+
+
+def test_a_current_record_is_the_going_in_record_of_the_last_fight_plus_its_result() -> None:
+    from blindcard_ingest.upcoming_records import current_record
+
+    going_in = {"w": 10, "l": 2, "d": 0, "nc": 0}
+    assert current_record(going_in, "win", True) == {"w": 11, "l": 2, "d": 0, "nc": 0}
+    assert current_record(going_in, "win", False) == {"w": 10, "l": 3, "d": 0, "nc": 0}
+    assert current_record(going_in, "draw", None) == {"w": 10, "l": 2, "d": 1, "nc": 0}
+    assert current_record(going_in, "no_contest", None) == {"w": 10, "l": 2, "d": 0, "nc": 1}
+    assert going_in == {"w": 10, "l": 2, "d": 0, "nc": 0}  # the stored record is not touched
+
+
+def test_no_record_is_made_up_when_a_part_is_missing() -> None:
+    from blindcard_ingest.upcoming_records import current_record
+
+    assert current_record(None, "win", True) is None  # no going-in record stored
+    assert current_record({"w": 1, "l": 0}, "win", True) is None  # an incomplete one
+    assert current_record({"w": 1, "l": 0, "d": 0, "nc": 0}, "win", None) is None  # winner unknown
+    assert current_record({"w": 1, "l": 0, "d": 0, "nc": 0}, "mystery", True) is None
+
+
+def test_the_pipeline_hands_the_records_of_matched_fighters_to_the_repository() -> None:
+    wiki = FakeWiki({"UFC Fight Night: Allen vs. Duncan": CARD, "UFC 333": "==Background=="})
+    repo = FakeRepository(
+        fighters=[("id-allen", "Brendan Allen"), ("id-prado", "Francisco Prado")],
+        current_records={
+            "id-allen": {"w": 25, "l": 6, "d": 0, "nc": 0},
+            "id-stranger": {"w": 1, "l": 1, "d": 0, "nc": 0},
+        },
+    )
+    run_ingest_upcoming(wiki, repo, today=TODAY)
+    # only the records of fighters on the card are stored; a debut or unmatched fighter has none
+    assert repo.upcoming_records == {"id-allen": {"w": 25, "l": 6, "d": 0, "nc": 0}}

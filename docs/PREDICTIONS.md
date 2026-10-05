@@ -99,3 +99,13 @@ Idea: two strikers should make a better fight. Each fighter's style was read fro
 as striker / grappler / striker-vs-striker features. Walk-forward result: no gain (Spearman 0.383 without,
 0.382 with; same typical miss). A fighter's earlier ratings already carry what the style would add. Not
 shipped. Private pace and finish data would probably help but are result-derived (see above).
+
+## Score sanity check (audit-scores)
+
+`blindcard-ingest audit-scores [--strict]` compares the rate of classics (5.0) and of 4.5 and up in the
+latest 6 and 12 events and in the last 3 years with the long-run rate, as a binomial tail ("how often by
+luck alone"). Under 5% is a note, under 1% an alert (`--strict` then exits non-zero; the workflow runs it
+last). Prompted by a user spotting 4 classics in 6 events. On the dev data: the long-run share of 5.0 is
+1.27% (below the 1.5% target), and the only flag is a note for 2025 (12 of 520, 2.3%, chance 3.7%);
+four of the six tiles on the home page is a stretch that has happened in about 1.3% of all 6-event
+windows in the history.

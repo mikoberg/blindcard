@@ -354,7 +354,9 @@ begin
   select count(*) into n
   from information_schema.columns
   where table_schema = 'public' and table_name in ('upcoming_events', 'upcoming_bouts')
-    and column_name ~ '(winner|method|round|result|score|record|streak|time)';
+    and column_name ~ '(winner|method|round|result|score|streak|time)'
+    -- the going-in records (fighter_a_record) are pre-fight facts and allowed; start times are too
+    and column_name !~ '(_at$|_record$)';
   if n <> 0 then raise exception 'FAIL: upcoming tables have a result-like column'; end if;
   raise notice 'PASS upcoming events are public pre-fight facts';
 end $$;

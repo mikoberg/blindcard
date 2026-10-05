@@ -10,6 +10,7 @@ import type {
 } from "@/lib/upcoming/types";
 import { UPCOMING_BOUT_COLUMNS, UPCOMING_EVENT_COLUMNS } from "./columns";
 import { ensure } from "./ensure";
+import { toRecord } from "./map";
 
 interface EventRow {
   id: string;
@@ -40,15 +41,17 @@ interface BoutRow {
   prediction_basis: string | null;
   prediction_why: unknown;
   has_pick: boolean | null;
+  fighter_a_record: unknown;
+  fighter_b_record: unknown;
   fighter_a: FighterJoin | null;
   fighter_b: FighterJoin | null;
 }
 
 const SEGMENTS: readonly string[] = ["main", "prelim", "early_prelim"];
 
-function fighter(name: string, joined: FighterJoin | null): UpcomingFighter {
+function fighter(name: string, joined: FighterJoin | null, record: unknown): UpcomingFighter {
   const slug = joined?.slug && isValidSlug(joined.slug) ? joined.slug : null;
-  return { name, slug, country: joined?.country ?? null };
+  return { name, slug, country: joined?.country ?? null, record: record === null ? null : toRecord(record) };
 }
 
 function reasons(value: unknown): PredictionReason[] {
@@ -77,8 +80,8 @@ function bout(row: BoutRow): UpcomingBout {
     segment: row.segment !== null && SEGMENTS.includes(row.segment) ? (row.segment as UpcomingSegment) : null,
     weightClass: row.weight_class,
     isTitleFight: row.is_title_fight,
-    a: fighter(row.fighter_a_name, row.fighter_a),
-    b: fighter(row.fighter_b_name, row.fighter_b),
+    a: fighter(row.fighter_a_name, row.fighter_a, row.fighter_a_record),
+    b: fighter(row.fighter_b_name, row.fighter_b, row.fighter_b_record),
     prediction: mapPrediction(row),
     hasPick: row.has_pick === true,
   };
