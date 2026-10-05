@@ -100,6 +100,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     commands.add_parser(
+        "predict-upcoming",
+        parents=[common],
+        help="store an expected rating for every announced bout (public data only)",
+    )
+
+    evaluate = commands.add_parser(
+        "evaluate-predictions",
+        parents=[common],
+        help="walk-forward check of the prediction against two baselines (writes nothing)",
+    )
+    evaluate.add_argument("--test-from", dest="test_from_year", type=int, default=2018)
+
+    commands.add_parser(
         "ingest-judges",
         parents=[common],
         help="store how often each judge scores against the final result (public aggregates only)",
@@ -265,6 +278,23 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 dry_run=args.dry_run,
                 overwrite=args.force,
             )
+        return EXIT_OK
+
+    if args.command == "predict-upcoming":
+        from blindcard_ingest.predict.pipeline import run_predict_upcoming
+
+        with _open_repository(settings) as repo:
+            run_predict_upcoming(repo, dry_run=args.dry_run)
+        return EXIT_OK
+
+    if args.command == "evaluate-predictions":
+        from blindcard_ingest.predict.dataset import build_examples
+        from blindcard_ingest.predict.evaluate import report as evaluation_report
+        from blindcard_ingest.predict.evaluate import walk_forward
+
+        with _open_repository(settings) as repo:
+            examples, _ = build_examples(repo.prediction_fights())
+        print(evaluation_report(walk_forward(examples, test_from_year=args.test_from_year)))
         return EXIT_OK
 
     # Fail on missing configuration before anything is fetched.

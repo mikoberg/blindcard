@@ -124,6 +124,9 @@ class FakeRepository:
     judge_report: JudgeReport | None = None
     fighters: list[tuple[str, str]] = field(default_factory=list)
     upcoming: list = field(default_factory=list)
+    fight_rows: list = field(default_factory=list)
+    bout_inputs: list = field(default_factory=list)
+    predictions: list | None = None
     upcoming_fighter_ids: dict = field(default_factory=dict)
     upcoming_today: object = None
     upserts: int = 0
@@ -278,6 +281,15 @@ class FakeRepository:
 
     def fighter_names(self) -> list[tuple[str, str]]:
         return list(self.fighters)
+
+    def prediction_fights(self):  # type: ignore[no-untyped-def]
+        return list(self.fight_rows)
+
+    def upcoming_bouts_for_prediction(self):  # type: ignore[no-untyped-def]
+        return list(self.bout_inputs)
+
+    def set_upcoming_predictions(self, predictions) -> None:  # type: ignore[no-untyped-def]
+        self.predictions = list(predictions)
 
     def replace_upcoming(self, events, fighter_ids, *, today) -> None:  # type: ignore[no-untyped-def]
         self.upcoming = list(events)

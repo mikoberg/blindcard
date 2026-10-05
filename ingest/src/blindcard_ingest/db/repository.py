@@ -21,6 +21,8 @@ from psycopg.types.json import Jsonb
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.judges import JudgeReport
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
+from blindcard_ingest.predict.dataset import FightRow
+from blindcard_ingest.predict.types import UpcomingBoutInput, UpcomingPrediction
 from blindcard_ingest.scoring.career import HistoryBout, career_contexts, career_json
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import (
@@ -184,6 +186,18 @@ class Repository(Protocol):
 
     def fighter_names(self) -> list[tuple[str, str]]:
         """(fighter id, name) of every stored fighter."""
+        ...
+
+    def prediction_fights(self) -> list[FightRow]:
+        """Every fight rated by the active score version, with its public facts."""
+        ...
+
+    def upcoming_bouts_for_prediction(self) -> list[UpcomingBoutInput]:
+        """Every announced bout that has not been fought, with the size of its card."""
+        ...
+
+    def set_upcoming_predictions(self, predictions: Sequence[UpcomingPrediction]) -> None:
+        """Store the expected ratings; a bout without one in `predictions` loses any old one."""
         ...
 
     def replace_upcoming(
@@ -647,6 +661,77 @@ class PostgresRepository:
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute("select id::text as id, name from public.fighters")
             return [(row["id"], row["name"]) for row in cur.fetchall()]
+
+    def prediction_fights(self) -> list[FightRow]:
+        query = """
+            select f.id::text as id, e.event_date, f.card_position, f.weight_class,
+                   f.is_title_fight, f.fighter_a_id::text as a_id, f.fighter_b_id::text as b_id,
+                   s.stars::float as stars
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.excitement_scores s
+              on s.fight_id = f.id
+             and s.version = (select v.version from public.scoring_versions v where v.is_active)
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query)
+            return [
+                FightRow(
+                    fight_id=row["id"],
+                    event_date=row["event_date"],
+                    position=row["card_position"],
+                    weight_class=row["weight_class"],
+                    is_title_fight=row["is_title_fight"],
+                    a_id=row["a_id"],
+                    b_id=row["b_id"],
+                    stars=float(row["stars"]),
+                )
+                for row in cur.fetchall()
+            ]
+
+    def upcoming_bouts_for_prediction(self) -> list[UpcomingBoutInput]:
+        query = """
+            select b.id::text as id, b.card_position, b.weight_class, b.is_title_fight,
+                   b.fighter_a_id::text as a_id, b.fighter_b_id::text as b_id,
+                   count(*) over (partition by b.event_id) as card_size
+            from public.upcoming_bouts b
+            order by b.event_id, b.card_position
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query)
+            return [
+                UpcomingBoutInput(
+                    bout_id=row["id"],
+                    position=row["card_position"],
+                    card_size=int(row["card_size"]),
+                    weight_class=row["weight_class"],
+                    is_title_fight=row["is_title_fight"],
+                    a_id=row["a_id"],
+                    b_id=row["b_id"],
+                )
+                for row in cur.fetchall()
+            ]
+
+    def set_upcoming_predictions(self, predictions: Sequence[UpcomingPrediction]) -> None:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(
+                "update public.upcoming_bouts set predicted_stars = null, prediction_basis = null,"
+                " prediction_why = null, prediction_version = null"
+            )
+            for p in predictions:
+                cur.execute(
+                    "update public.upcoming_bouts set predicted_stars = %s, prediction_basis = %s,"
+                    " prediction_why = %s, prediction_version = %s where id = %s::uuid",
+                    (
+                        p.stars,
+                        p.basis,
+                        Jsonb(
+                            [{"label": r.label, "amount": round(r.amount, 3)} for r in p.reasons]
+                        ),
+                        p.version,
+                        p.bout_id,
+                    ),
+                )
 
     def replace_upcoming(
         self, events: Sequence[UpcomingEvent], fighter_ids: Mapping[str, str], *, today: date
