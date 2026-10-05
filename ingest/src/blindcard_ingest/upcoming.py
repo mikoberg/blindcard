@@ -140,7 +140,7 @@ def _infobox_value(wikitext: str, key: str) -> str | None:
     match = re.search(rf"\|\s*{key}\s*=\s*([^\n]*)", wikitext, re.I)
     if match is None:
         return None
-    value = clean_wikitext(match.group(1).split("|")[0])
+    value = clean_wikitext(match.group(1))
     return value or None
 
 

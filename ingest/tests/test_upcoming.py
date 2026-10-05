@@ -13,8 +13,8 @@ from blindcard_ingest.upcoming_pipeline import run_ingest_upcoming
 CARD = """
 {{Infobox MMA event
 |name = UFC Fight Night: Allen vs. Duncan
-|venue = [[Meta Apex]]
-|city = [[Las Vegas]], [[Nevada]]
+|venue = [[UFC Apex|Meta Apex]]
+|city = [[Enterprise, Nevada]], United States
 }}
 ==Fight card==
 {{MMAevent}}
@@ -106,7 +106,7 @@ def test_a_single_fight_card_has_no_segments() -> None:
 
 def test_no_bouts_is_none_and_the_location_comes_from_the_infobox() -> None:
     assert parse_upcoming_card("==Background==\nNothing announced.") is None
-    assert parse_location(CARD) == "Meta Apex, Las Vegas, Nevada"
+    assert parse_location(CARD) == "Meta Apex, Enterprise, Nevada, United States"
     assert parse_location("no infobox") is None
 
 

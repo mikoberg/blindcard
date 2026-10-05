@@ -20,3 +20,6 @@ export const JUDGE_COLUMNS =
   "slug, name, slugs, cards, dissent, lone_dissent, abs_sum, abs_sumsq, first_year, last_year";
 export const JUDGE_BASELINE_COLUMNS = "cards, dissent, abs_sum, abs_sumsq, judges_with_enough";
 
+export const UPCOMING_EVENT_COLUMNS = "id, name, slug, event_date, location";
+export const UPCOMING_BOUT_COLUMNS =
+  "id, event_id, card_position, segment, weight_class, is_title_fight, fighter_a_name, fighter_b_name, fighter_a:fighters!fighter_a_id(slug, country), fighter_b:fighters!fighter_b_id(slug, country)";

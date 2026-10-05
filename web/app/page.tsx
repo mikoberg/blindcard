@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { EventCard } from "@/components/EventCard";
 import { Notice } from "@/components/Notice";
 import { SortToggle } from "@/components/SortToggle";
+import { UpcomingSection } from "@/components/UpcomingSection";
 import { YearNav } from "@/components/YearNav";
 import { listEventSummaries } from "@/lib/data/overview";
+import { listUpcomingEvents } from "@/lib/data/upcoming";
 import { summariesByYear } from "@/lib/overview/summary";
 
 export const revalidate = 300;
@@ -18,7 +20,8 @@ export const metadata: Metadata = {
 const LATEST = 6;
 
 export default async function HomePage() {
-  const events = await listEventSummaries();
+  const now = new Date();
+  const [events, upcoming] = await Promise.all([listEventSummaries(), listUpcomingEvents(now)]);
   if (events.length === 0) return <Notice>No events yet. Check back soon.</Notice>;
   const years = summariesByYear(events);
   const [newest, ...rest] = events;
@@ -42,6 +45,8 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+
+      <UpcomingSection events={upcoming} today={now} />
 
       <section aria-labelledby="latest">
         <h2 id="latest" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
