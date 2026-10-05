@@ -23,11 +23,11 @@ export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
         >
           <h2
             id={`heading-${group.year}`}
-            className="display text-5xl leading-none sm:sticky sm:top-20 sm:self-start sm:text-5xl lg:text-6xl"
+            className="display gold-foil bg-clip-text text-5xl leading-none text-transparent sm:sticky sm:top-20 sm:self-start lg:text-6xl"
           >
             {group.year}
           </h2>
-          <ul className="mt-4 border-t-[3px] border-[var(--text)] sm:mt-0">
+          <ul className="mt-4 border-t border-[var(--border)] sm:mt-0">
             {group.fights.map((fight) => {
               const open = isValidSlug(fight.eventSlug)
                 ? `/events/${fight.eventSlug}#fight-${fight.id}`
@@ -46,7 +46,7 @@ export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
               return (
                 <li
                   key={fight.id}
-                  className="group relative flex items-start gap-4 border-b-2 border-[var(--text)] py-5 pr-1 transition-colors hover:bg-[var(--surface)]"
+                  className="group relative flex items-start gap-4 border-b border-[var(--border)] py-5 pr-1 transition-colors hover:bg-[var(--surface)]"
                 >
                   <div className="min-w-0 flex-1 md:grid md:grid-cols-[minmax(0,1fr)_17rem] md:items-center md:gap-8">
                     {open ? (
@@ -65,7 +65,7 @@ export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
                       <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-[var(--muted)]">
                         {fight.weightClass && <span>{fight.weightClass}</span>}
                         {fight.isTitleFight && (
-                          <span className="bg-[var(--text)] px-1.5 text-xs font-bold leading-5 text-[var(--bg)]">
+                          <span className="redact rounded-sm px-1.5 text-xs font-bold leading-5">
                             Title fight
                           </span>
                         )}

@@ -1,5 +1,5 @@
 import { eventLabel, labelFontSize, matchupFontSize, posterNames } from "@/lib/overview/matchup";
-import { barHeight } from "@/lib/overview/poster";
+import { barHeight, posterArt } from "@/lib/overview/poster";
 import { stripLabel } from "@/lib/overview/summary";
 import type { EventSummary } from "@/lib/overview/types";
 
@@ -57,12 +57,26 @@ export function EventPoster({
   header?: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const art = posterArt(event.name);
   const main = event.mainEvent;
   const names = main ? posterNames(event.name, main.a, main.b) : [event.name];
   const fontSize = matchupFontSize(names, TYPE_CQW[size], CAPITAL_EM);
   const label = eventLabel(event.name);
   return (
-    <div className={`poster-box relative isolate flex flex-col overflow-hidden ${HEIGHT[size]}${size === "lg" ? " [&_.bar]:max-w-none" : ""}`}>
+    <div
+      className={`poster-box relative isolate flex flex-col overflow-hidden ${HEIGHT[size]}${size === "lg" ? " [&_.bar]:max-w-none" : ""}`}
+      style={{ backgroundColor: art.ground }}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10"
+        style={{ backgroundColor: art.slab, clipPath: art.cut }}
+      />
+      <div aria-hidden="true" className="poster-stripes absolute inset-0 -z-10" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-black/55 to-transparent"
+      />
       <div className={`relative flex flex-1 flex-col justify-end gap-2 px-4 pt-4 sm:px-5 sm:pt-5 ${STRIP_SPACE[size]}`}>
         {main && (
           <p
@@ -88,7 +102,7 @@ export function EventPoster({
         {footer}
       </div>
       {main?.title && (
-        <span className="absolute right-0 top-4 bg-[var(--text)] px-2.5 py-1 text-xs font-bold text-[var(--bg)] sm:top-5">
+        <span className="redact absolute right-0 top-4 px-2.5 py-1 text-xs font-extrabold sm:top-5">
           Title fight
         </span>
       )}
@@ -96,10 +110,10 @@ export function EventPoster({
         role={decorative ? undefined : "img"}
         aria-label={decorative ? undefined : stripLabel(event)}
         aria-hidden={decorative ? true : undefined}
-        className={`absolute inset-x-0 bottom-0 flex items-end gap-[3px] border-b-2 border-[var(--text)] px-4 sm:px-5 ${STRIP_HEIGHT[size]}`}
+        className={`absolute inset-x-0 bottom-0 flex items-end gap-[3px] px-4 sm:px-5 ${STRIP_HEIGHT[size]}`}
       >
         {event.ratings.length === 0 ? (
-          <span aria-hidden="true" className="h-[3px] w-full bg-[var(--text)]/25" />
+          <span aria-hidden="true" className="h-[3px] w-full bg-white/25" />
         ) : (
           event.ratings.map((slot, index) => (
             <span

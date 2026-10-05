@@ -16,9 +16,9 @@ function FactorList({ title, factors, tone }: { title: string; factors: FactorVi
               </span>
               <span className="shrink-0 tabular-nums">{factor.amount}</span>
             </div>
-            <div className="mt-1 h-2 bg-[var(--border)]" aria-hidden="true">
+            <div className="mt-1 h-1.5 rounded-full bg-[var(--surface-2)]" aria-hidden="true">
               <div
-                className={`h-full ${bar}`}
+                className={`h-full rounded-full ${bar}`}
                 style={{ width: `${Math.max(4, Math.round(factor.share * 100))}%` }}
               />
             </div>
@@ -47,7 +47,7 @@ function Axis({ axis }: { axis: AxisView }) {
  */
 export function ScoreBreakdown({ score }: { score: ScoreView }) {
   return (
-    <section className="mt-4 border-t-2 border-[var(--text)] pt-4" aria-label="Why this rating">
+    <section className="mt-4 border-t border-[var(--border)] pt-4" aria-label="Why this rating">
       <h3 className="display text-base font-bold">Why this rating</h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
         The stars on the card rate how worth watching the fight is. Each line shows what it
@@ -55,7 +55,7 @@ export function ScoreBreakdown({ score }: { score: ScoreView }) {
       </p>
       <Axis axis={score.fight} />
       {score.performance && (
-        <div className="mt-4 border-t-2 border-[var(--border)] pt-4">
+        <div className="mt-4 border-t border-[var(--border)] pt-4">
           <h3 className="display text-base font-bold">Performance</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
             How dominant the performance was. This one is only shown after a reveal, because it

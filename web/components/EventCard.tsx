@@ -11,10 +11,10 @@ export function EventCard({ event, featured = false }: { event: EventSummary; fe
   return (
     <Link
       href={`/events/${event.slug}`}
-      className="slip group flex h-full flex-col overflow-hidden border-2 border-[var(--text)] bg-[var(--surface)]"
+      className="slip group flex h-full flex-col overflow-hidden rounded-lg bg-[var(--surface)]"
     >
       <EventPoster event={event} size={featured ? "md" : "sm"} animate={featured} decorative />
-      <div className="flex flex-1 items-start justify-between gap-3 border-t-2 border-[var(--text)] p-4">
+      <div className="flex flex-1 items-start justify-between gap-3 p-4">
         <div className="min-w-0">
           {event.mainEvent && (
             <p className="sr-only">
@@ -34,7 +34,7 @@ export function EventCard({ event, featured = false }: { event: EventSummary; fe
             <p className="mt-3 flex flex-wrap items-center gap-2">
               {classics > 0 && <ClassicBadge label={classics === 1 ? "1 classic" : `${classics} classics`} />}
               {hiddenGems > 0 && (
-                <span className="border-2 border-[var(--accent)] px-2 py-0.5 text-xs font-bold text-[var(--accent)]">
+                <span className="rounded-sm bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-bold text-[var(--accent)]">
                   {hiddenGems === 1 ? "1 hidden gem" : `${hiddenGems} hidden gems`}
                 </span>
               )}
@@ -49,7 +49,7 @@ export function EventCard({ event, featured = false }: { event: EventSummary; fe
           >
             <p
               aria-hidden="true"
-              className={`scorebox ${cardRating >= 3.5 ? "scorebox-hot" : ""} ${featured ? "h-14 w-[4.25rem] text-3xl" : "h-12 w-14 text-2xl"}`}
+              className={`scorebox ${cardRating >= 3.5 ? "scorebox-hot" : ""} ${featured ? "h-14 w-[4.25rem] text-3xl" : "h-11 w-14 text-2xl"}`}
             >
               {cardRating.toFixed(1)}
             </p>

@@ -52,7 +52,7 @@ export function WatchButton({
         target="_blank"
         rel="noopener noreferrer"
         aria-label={label}
-        className="group inline-flex min-h-11 items-center gap-2.5 border-2 border-[var(--text)] py-1 pl-1 pr-4 text-sm font-bold hover:bg-[var(--surface-2)]"
+        className="group inline-flex min-h-11 items-center gap-2.5 rounded-full border border-[var(--border)] py-1 pl-1 pr-4 text-sm font-bold hover:bg-[var(--surface-2)]"
       >
         <span className={`${circle} h-8 w-8`}>
           <PlayIcon />

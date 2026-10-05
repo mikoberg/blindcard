@@ -17,7 +17,7 @@ export default async function ClassicsPage() {
   const classics = toClassics(rows, videos);
   if (classics.length === 0) return <Notice>No five-star fights yet. Check back soon.</Notice>;
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       <section aria-labelledby="classics" className="flex items-start justify-between gap-6">
         <div>
           <h1

@@ -13,7 +13,7 @@ import { RevealButton } from "./RevealButton";
 import { WatchButton } from "./WatchButton";
 import { StarRating } from "./StarRating";
 
-const TAG = "inline-flex items-center border-2 px-2 py-0.5 text-xs font-bold";
+const TAG = "inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-bold";
 
 /** The big number in its box: red from 4, gold foil from 5, plain ink below. */
 function RatingPlate({ stars }: { stars: number | null }) {
@@ -89,26 +89,26 @@ export function FightCard({
     <li
       id={`fight-${fight.id}`}
       data-fight-id={fight.id}
-      className="scroll-mt-20 overflow-hidden border-2 border-[var(--text)] bg-[var(--surface)]"
+      className={`scroll-mt-20 overflow-hidden rounded-lg bg-[var(--surface)] ${classic ? "shadow-[0_0_0_1px_rgb(242_181_42/0.55),0_0_48px_rgb(242_181_42/0.12)]" : ""}`}
     >
-      {classic && <div aria-hidden="true" className="h-2 border-b-2 border-[var(--text)]" style={{ backgroundImage: GOLD_FOIL }} />}
+      {classic && <div aria-hidden="true" className="h-1" style={{ backgroundImage: GOLD_FOIL }} />}
       <div className="flex gap-4 p-4 sm:p-5">
         <RatingPlate stars={fight.rating?.stars ?? null} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {showSegment && fight.cardSegment && (
-              <span className={`${TAG} border-[var(--border)] text-[var(--muted)]`}>
+              <span className={`${TAG} bg-[var(--surface-2)] text-[var(--muted)]`}>
                 {SEGMENT_LABELS[fight.cardSegment]}
               </span>
             )}
             {classic && <ClassicBadge />}
             {fight.isTitleFight && (
-              <span className={`${TAG} border-[var(--text)] bg-[var(--text)] text-[var(--bg)]`}>Title fight</span>
+              <span className={`${TAG} redact`}>Title fight</span>
             )}
             {isHiddenGem(fight) && (
-              <span className={`${TAG} border-[var(--accent)] text-[var(--accent)]`}>Hidden gem</span>
+              <span className={`${TAG} bg-[var(--accent)]/15 text-[var(--accent)]`}>Hidden gem</span>
             )}
-            {pairing && <span className={`${TAG} border-[var(--text)]/35`}>{pairing}</span>}
+            {pairing && <span className={`${TAG} bg-[var(--surface-2)]`}>{pairing}</span>}
           </div>
           <h3 className="mt-3">
             <FighterLine
@@ -116,8 +116,17 @@ export function FightCard({
               record={fight.records?.a ?? null}
               career={fight.career?.a}
             />
-            <span className="my-2 flex items-center gap-3 text-sm font-bold text-[var(--accent)]">
-              <span className="w-11 text-center">vs</span>
+            <span className="my-3 flex items-center gap-3">
+              <span className="h-px flex-1 bg-[var(--border)]" />
+              <span className="text-sm font-bold text-[var(--accent)]">vs</span>
+              {fight.weightClass && (
+                <span
+                  aria-hidden="true"
+                  className="display-tight rounded-sm bg-[var(--surface-2)] px-2.5 py-1 text-base leading-none sm:text-lg"
+                >
+                  {fight.weightClass}
+                </span>
+              )}
               <span className="h-px flex-1 bg-[var(--border)]" />
             </span>
             <FighterLine

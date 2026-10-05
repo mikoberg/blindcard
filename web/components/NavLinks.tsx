@@ -21,7 +21,7 @@ export function NavLinks() {
             key={link.href}
             href={link.href}
             aria-current={current ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center px-2 text-[0.95rem] font-semibold underline-offset-[10px] decoration-[3px] hover:text-[var(--accent)] sm:px-3 ${
+            className={`inline-flex min-h-11 items-center px-2 text-[0.95rem] font-semibold underline-offset-[10px] decoration-[var(--accent)] decoration-[3px] hover:text-[var(--accent)] sm:px-3 ${
               current ? "text-[var(--text)] underline" : "text-[var(--muted)]"
             }`}
           >

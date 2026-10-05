@@ -7,15 +7,15 @@ import { StarRating } from "./StarRating";
 export function WatchThese({ fights }: { fights: readonly CardFight[] }) {
   return (
     <section aria-labelledby="watch-these">
-      <h2 id="watch-these" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
+      <h2 id="watch-these" className="section-title">
         Watch these
       </h2>
       {fights.length === 0 ? (
         <p className="mt-3 text-[var(--muted)]">No standout fights on this card</p>
       ) : (
-        <ol className="mt-4 border-2 border-[var(--text)] bg-[var(--surface)]">
+        <ol className="mt-4 divide-y divide-[var(--border)] overflow-hidden rounded-lg bg-[var(--surface)]">
           {fights.map((fight) => (
-            <li key={fight.id} className="border-b-2 border-[var(--text)] last:border-b-0">
+            <li key={fight.id}>
               <a
                 href={`#fight-${fight.id}`}
                 className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 hover:bg-[var(--surface-2)]"
@@ -27,7 +27,7 @@ export function WatchThese({ fights }: { fights: readonly CardFight[] }) {
                   </span>
                   {isClassic(fight.rating?.stars) && <ClassicBadge />}
                   {isHiddenGem(fight) && (
-                    <span className="whitespace-nowrap border-2 border-[var(--accent)] px-2 py-0.5 text-xs font-bold text-[var(--accent)]">
+                    <span className="whitespace-nowrap rounded-sm bg-[var(--accent)]/15 px-2 py-0.5 text-xs font-bold text-[var(--accent)]">
                       Hidden gem
                     </span>
                   )}

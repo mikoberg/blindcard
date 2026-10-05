@@ -49,7 +49,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         )}
       </p>
 
-      <ul className="divide-y-2 divide-[var(--text)] border-2 border-[var(--text)] bg-[var(--surface)]">
+      <ul className="divide-y divide-[var(--border)] overflow-hidden rounded-lg bg-[var(--surface)]">
         {fights.map((fight) => (
           <li key={`${fight.eventSlug}-${fight.opponent}`}>
             <Link

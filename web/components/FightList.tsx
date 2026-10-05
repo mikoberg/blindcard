@@ -21,18 +21,18 @@ export function FightList({ fights }: { fights: readonly CardFight[] }) {
   const groups = groupBySegment(fights);
   return (
     <section aria-labelledby="full-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-[var(--text)] pt-3">
-        <h2 id="full-card" className="display text-2xl sm:text-3xl">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="full-card" className="section-title">
           Full card
         </h2>
-        <div role="group" aria-label="Sort fights" className="flex border-2 border-[var(--text)]">
+        <div role="group" aria-label="Sort fights" className="flex rounded-full bg-[var(--surface)] p-1">
           {MODES.map((option) => (
             <button
               key={option.mode}
               type="button"
               aria-pressed={mode === option.mode}
               onClick={() => setMode(option.mode)}
-              className="min-h-11 px-3 text-sm font-bold hover:bg-[var(--surface-2)] aria-pressed:bg-[var(--text)] aria-pressed:text-[var(--bg)]"
+              className="min-h-10 rounded-full px-3 text-sm font-bold text-[var(--muted)] hover:text-[var(--text)] aria-pressed:bg-[var(--text)] aria-pressed:text-[var(--ink)]"
             >
               {option.label}
             </button>
@@ -43,8 +43,8 @@ export function FightList({ fights }: { fights: readonly CardFight[] }) {
         groups.map((group) => (
           <div key={group.segment} className="mt-8 first:mt-5">
             <h3 className="display-tight mb-3 flex items-center gap-3 text-lg">
-              <span className="redact px-2 py-0.5">{SEGMENT_LABELS[group.segment]}</span>
-              <span aria-hidden="true" className="h-0.5 flex-1 bg-[var(--text)]" />
+              <span className="redact rounded-sm px-2 py-0.5">{SEGMENT_LABELS[group.segment]}</span>
+              <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
             </h3>
             <ol className="space-y-4">
               {group.fights.map((fight) => (
