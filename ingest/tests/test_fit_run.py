@@ -8,6 +8,7 @@ from test_fit_recipe import synthetic_rows
 
 from blindcard_ingest import cli
 from blindcard_ingest.fit import run as fit_run
+from blindcard_ingest.fit.recipe import STAR_CURVE
 from blindcard_ingest.scoring.config import load_scoring_config
 from blindcard_ingest.scoring.features import compute_raw_features
 from blindcard_ingest.scoring.scorer import ScoringError, build_reference
@@ -106,10 +107,10 @@ def test_writes_the_config_unless_dry_run(tmp_path: Path, monkeypatch: pytest.Mo
     written = load_scoring_config(tmp_path, 2)
     assert written.weights == result.weights
     assert written.performance_weights == {}
-    assert (
-        written.star_thresholds
-        == load_scoring_config(DEFAULT_SCORING_CONFIG_DIR, 1).star_thresholds
-    )
+    assert [(t.min_percentile, t.stars) for t in written.star_thresholds] == [
+        (float(p), s) for p, s in STAR_CURVE
+    ]
+    assert written.star_thresholds[-1].min_percentile == 98.5  # five stars: the classics only
 
 
 def test_cli_accepts_fit_scoring_options() -> None:

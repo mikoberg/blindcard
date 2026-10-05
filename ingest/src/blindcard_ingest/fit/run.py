@@ -7,7 +7,14 @@ from pathlib import Path
 
 from blindcard_ingest.db.repository import Repository
 from blindcard_ingest.fit.dataset import build_rows
-from blindcard_ingest.fit.recipe import FitResult, fit_scoring, format_report, render_config_toml
+from blindcard_ingest.fit.recipe import (
+    STAR_CURVE,
+    FitResult,
+    fit_scoring,
+    format_report,
+    render_config_toml,
+)
+from blindcard_ingest.scoring.config import StarThreshold
 from blindcard_ingest.scoring.features import compute_raw_features, scoring_problems
 from blindcard_ingest.scoring.scorer import ScoringError, score
 
@@ -28,8 +35,9 @@ def run_fit_scoring(
 ) -> FitResult:
     """Fit against the stored bonus labels and (unless `dry_run`) write `scoring_v{version}.toml`.
 
-    The active version is the baseline of the comparison and donates the star curve, caps
-    quantile and minimum pool size. Its own config is never overwritten.
+    The active version is the baseline of the comparison and donates the caps quantile and
+    minimum pool size; the star curve is the recipe's own (`STAR_CURVE`). Its own config is
+    never overwritten.
     """
     active = repo.get_active_scoring_version()
     if active is None:
@@ -81,7 +89,7 @@ def run_fit_scoring(
         version=version,
         cap_quantile=active.config.cap_quantile,
         min_pool_size=active.config.min_pool_size,
-        star_thresholds=active.config.star_thresholds,
+        star_thresholds=[StarThreshold(percentile, stars) for percentile, stars in STAR_CURVE],
     )
     if dry_run:
         logger.info("dry run: not writing %s", target.name)

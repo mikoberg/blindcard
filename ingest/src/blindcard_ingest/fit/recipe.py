@@ -32,6 +32,20 @@ from blindcard_ingest.scoring.config import StarThreshold
 from blindcard_ingest.scoring.features import CAPPED_FEATURES
 from blindcard_ingest.scoring.scorer import apply_era, era_scales, quantile
 
+#: Percentile -> stars of the fitted scores. Five stars are for the classics only: the top 1.5% of
+#: fights (about 130 of 8,700), not the top 3% of v1 to v19.
+STAR_CURVE: tuple[tuple[float, float], ...] = (
+    (0, 1.0),
+    (8, 1.5),
+    (16, 2.0),
+    (28, 2.5),
+    (40, 3.0),
+    (55, 3.5),
+    (70, 4.0),
+    (85, 4.5),
+    (98.5, 5.0),
+)
+
 #: Candidates. time_fraction and finish lateness are left out: early_finish says the same.
 #: close_decision is left out too: how the judges split says how the fight ended, and a close,
 #: competitive fight is not worth less (or more) for it.
