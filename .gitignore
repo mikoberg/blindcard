@@ -23,6 +23,9 @@ out/
 supabase/.temp/
 supabase/.branches/
 
+# Local assistant workspace
+.superpowers/
+
 # OS / editor
 .DS_Store
 Thumbs.db

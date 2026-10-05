@@ -34,6 +34,8 @@ class HtmlCache:
 
         `max_age_seconds=None` accepts any age; `0` never accepts the cache.
         """
+        if max_age_seconds is not None and max_age_seconds <= 0:
+            return None  # decided before the file's mtime is looked at (clock skew made it flaky)
         path = self._path(url)
         try:
             stat = path.stat()
