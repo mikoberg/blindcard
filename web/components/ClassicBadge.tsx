@@ -10,7 +10,8 @@ export function ClassicIcon({ className = "h-3.5 w-3.5" }: { className?: string 
 /** The mark of a five-star fight: only the classics get it. */
 export function ClassicBadge({ label = "Classic" }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-xs font-bold text-[var(--accent-ink)] shadow-[0_0_0_1px_var(--accent),0_0_12px_rgb(255_176_32/0.45)]">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-bold text-[var(--accent-ink)] shadow-[0_0_0_1px_#ffe9a6,0_0_14px_rgb(255_176_32/0.5)]"
+      style={{ backgroundImage: "linear-gradient(145deg, #fff0b8 0%, #ffc233 45%, #d98a00 100%)" }}>
       <ClassicIcon />
       {label}
     </span>

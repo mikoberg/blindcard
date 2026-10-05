@@ -6,13 +6,26 @@ import { SEGMENT_LABELS } from "@/lib/card/segments";
 import { formatStars } from "@/lib/card/stars";
 import { fighterNote, pairingLabel } from "@/lib/card/story";
 import type { CardFight, CardFighter, FighterCareer, FighterRecord } from "@/lib/card/types";
-import { ClassicBadge } from "./ClassicBadge";
+import { ClassicBadge, ClassicIcon } from "./ClassicBadge";
 import { Monogram } from "./Monogram";
 import { RevealButton } from "./RevealButton";
 import { StarRating } from "./StarRating";
 
 /** The big number: filled amber from 4.5, outlined amber from 4, quiet below. */
 function RatingPlate({ stars }: { stars: number | null }) {
+  if (isClassic(stars)) {
+    // A gold-foil seal: the starburst sits behind the number like an embossed medal.
+    return (
+      <div
+        aria-hidden="true"
+        className="relative flex h-[4.5rem] w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg font-[family-name:var(--font-display)] text-4xl font-bold tabular-nums text-[var(--accent-ink)] shadow-[0_0_0_1px_#ffe9a6,0_6px_22px_rgb(255_176_32/0.45)]"
+        style={{ backgroundImage: "linear-gradient(145deg, #fff0b8 0%, #ffc233 42%, #d98a00 100%)" }}
+      >
+        <ClassicIcon className="absolute h-14 w-14 text-white/35" />
+        <span className="relative">{formatStars(stars as number)}</span>
+      </div>
+    );
+  }
   const tone =
     stars === null
       ? "border-[var(--border)] text-[var(--muted)]"
@@ -85,7 +98,22 @@ export function FightCard({
     <li
       id={`fight-${fight.id}`}
       data-fight-id={fight.id}
-      className={`rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 ${fight.isTitleFight ? "border-l-4 border-l-[var(--accent)]" : ""}`}
+      className={`rounded-lg p-4 sm:p-5 ${
+        isClassic(fight.rating?.stars)
+          ? "border-2 border-transparent shadow-[0_0_34px_rgb(255_176_32/0.16)]"
+          : `border border-[var(--border)] bg-[var(--surface)] ${fight.isTitleFight ? "border-l-4 border-l-[var(--accent)]" : ""}`
+      }`}
+      style={
+        isClassic(fight.rating?.stars)
+          ? {
+              // Gold gradient border over a surface with a faint golden wash in the corner.
+              backgroundImage:
+                "radial-gradient(120% 90% at 0% 0%, rgb(255 176 32 / 0.14), transparent 60%), linear-gradient(var(--surface), var(--surface)), linear-gradient(135deg, #ffe9a6, #ffb020 45%, #a86400)",
+              backgroundOrigin: "border-box",
+              backgroundClip: "padding-box, padding-box, border-box",
+            }
+          : undefined
+      }
     >
       <div className="flex gap-4">
         <RatingPlate stars={fight.rating?.stars ?? null} />

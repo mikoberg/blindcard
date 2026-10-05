@@ -224,6 +224,25 @@ begin
   raise notice 'PASS fighter_fights is public, active version only';
 end $$;
 
+-- The rated fights (the classics page): public, active version only, no result columns.
+do $$
+declare
+  n integer;
+  r record;
+begin
+  select count(*) into n from public.fight_ratings;
+  if n <> 1 then raise exception 'FAIL: anon should see the one seeded rated fight in fight_ratings, saw %', n; end if;
+  select * into r from public.fight_ratings;
+  if r.stars <> 4.5 then raise exception 'FAIL: fight_ratings should hold the active version only, got %', r.stars; end if;
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'fight_ratings'
+    and column_name not in ('fight_id', 'event_slug', 'event_name', 'event_date', 'fighter_a_name',
+                            'fighter_b_name', 'weight_class', 'is_title_fight', 'stars');
+  if n <> 0 then raise exception 'FAIL: fight_ratings has unexpected columns'; end if;
+  raise notice 'PASS fight_ratings is public, active version only';
+end $$;
+
 -- Card segments are a public, pre-fight fact: readable, but only the three known values.
 do $$
 declare

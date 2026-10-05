@@ -49,6 +49,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Fighters
               </Link>
+              <Link
+                href="/classics"
+                className="inline-flex min-h-11 items-center rounded-md px-3 text-[var(--muted)] hover:text-[var(--text)]"
+              >
+                Classics
+              </Link>
             </nav>
           </header>
           <main className="flex-1 pb-12">{children}</main>
