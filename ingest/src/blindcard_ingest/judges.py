@@ -166,5 +166,12 @@ def compute_judge_stats(decisions: Iterable[tuple[int, Sequence[str]]]) -> Judge
         base.abs_sum += j.abs_sum
         base.abs_sumsq += j.abs_sumsq
         base.judges_with_enough += j.cards >= MIN_CARDS
+    # A small count says too much about one bout: judges below the minimum are stored by name
+    # only (all numbers zero), so the site can link them but shows nothing about them. The totals
+    # of all judges above were taken before this.
+    for j in stats.values():
+        if j.cards < MIN_CARDS:
+            j.cards = j.dissent = j.lone_dissent = j.abs_sum = j.abs_sumsq = 0
+            j.first_year = j.last_year = 0
     report.judges = sorted(stats.values(), key=lambda j: (-j.cards, j.slug))
     return report

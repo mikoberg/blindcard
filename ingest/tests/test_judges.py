@@ -59,14 +59,31 @@ def test_dissent_lone_dissent_and_width_are_counted_per_judge() -> None:
     )
     by = {j.name: j for j in report.judges}
     assert report.decisions == 2
-    ann = by["Ann One"]
-    assert (ann.cards, ann.dissent, ann.lone_dissent) == (2, 1, 1)
-    assert (ann.abs_sum, ann.abs_sumsq) == (2, 2)
-    assert (ann.first_year, ann.last_year) == (2020, 2022)
-    cid = by["Cid Three"]
-    assert (cid.cards, cid.dissent, cid.lone_dissent, cid.abs_sum) == (2, 0, 0, 3)
     base = report.baseline
-    assert (base.cards, base.dissent) == (6, 1)
+    assert (base.cards, base.dissent) == (6, 1)  # the totals count everyone
+    # ... but a judge with a handful of cards is stored by name only: a small count says too much.
+    ann = by["Ann One"]
+    assert (ann.cards, ann.dissent, ann.lone_dissent, ann.abs_sum, ann.first_year) == (
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
+
+
+def test_a_judge_with_enough_cards_keeps_every_number() -> None:
+    texts = [
+        _decision("Ann One 29 - 28", "Bea Two 28 - 29", "Cid Three 28 - 30", year=2020 + i % 3)
+        for i in range(MIN_CARDS)
+    ]
+    report = compute_judge_stats(texts)
+    by = {j.name: j for j in report.judges}
+    ann = by["Ann One"]
+    assert (ann.cards, ann.dissent, ann.lone_dissent) == (MIN_CARDS, MIN_CARDS, MIN_CARDS)
+    assert (ann.abs_sum, ann.abs_sumsq) == (MIN_CARDS, MIN_CARDS)
+    assert (ann.first_year, ann.last_year) == (2020, 2022)
+    assert by["Cid Three"].abs_sum == 2 * MIN_CARDS
 
 
 def test_two_dissenters_are_not_a_lone_dissent() -> None:
@@ -91,7 +108,7 @@ def test_reversed_names_merge_and_incomplete_decisions_are_skipped() -> None:
     )
     names = {j.name: j for j in report.judges}
     merged = names["William Mattingly"]
-    assert merged.cards == 2 and merged.slugs == ["mattingly-william", "william-mattingly"]
+    assert merged.slugs == ["mattingly-william", "william-mattingly"]  # both spellings link here
     assert report.decisions == 2 and report.skipped == 2
 
 
@@ -117,5 +134,6 @@ def test_a_note_stuck_to_a_known_name_is_merged_into_that_judge() -> None:
     glued = _decision("Eye PokeEric Colon 28 - 29", "Bea Two 28 - 29", "Cid Three 28 - 29")
     report = compute_judge_stats([*plain, glued])
     names = {j.name: j.cards for j in report.judges}
-    assert names["Eric Colon"] == 11
+    assert names["Eric Colon"] == 0  # 11 cards, below the minimum: stored by name only
     assert "Eye PokeEric Colon" not in names
+    assert report.baseline.cards == 33  # but all of them are in the totals

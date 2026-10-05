@@ -16,3 +16,7 @@ export const FIGHTER_FIGHT_COLUMNS = "event_slug, event_name, event_date, oppone
 export const FIGHT_RATING_COLUMNS =
   "fight_id, event_slug, event_name, event_date, fighter_a_name, fighter_b_name, weight_class, is_title_fight, stars";
 export const FIGHT_VIDEO_COLUMNS = "fight_id, youtube_id";
+export const JUDGE_COLUMNS =
+  "slug, name, slugs, cards, dissent, lone_dissent, abs_sum, abs_sumsq, first_year, last_year";
+export const JUDGE_BASELINE_COLUMNS = "cards, dissent, abs_sum, abs_sumsq, judges_with_enough";
+

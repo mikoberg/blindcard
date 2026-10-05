@@ -1,5 +1,6 @@
 "use client";
 
+import { ScorecardLine } from "./ScorecardLine";
 import { useId, useReducer } from "react";
 import type { CardFighter } from "@/lib/card/types";
 import { fetchReveal } from "@/lib/reveal/client";
@@ -65,7 +66,9 @@ export function RevealButton({ fightId, fighterA, fighterB }: Props) {
             {state.view.scorecards.length > 0 && (
               <ul className="mt-2 space-y-0.5 text-sm text-[var(--muted)]">
                 {state.view.scorecards.map((card, index) => (
-                  <li key={index}>{card}</li>
+                  <li key={index}>
+                    <ScorecardLine text={card} />
+                  </li>
                 ))}
               </ul>
             )}
