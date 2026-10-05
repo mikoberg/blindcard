@@ -25,7 +25,7 @@ function RatingPlate({ stars }: { stars: number | null }) {
         ? "scorebox-hot"
         : "";
   return (
-    <div aria-hidden="true" className={`scorebox h-16 w-16 shrink-0 text-3xl ${tone}`}>
+    <div aria-hidden="true" className={`scorebox h-[4.25rem] w-[4.25rem] shrink-0 text-3xl ${tone}`}>
       {stars === null ? "–" : formatStars(stars)}
     </div>
   );
@@ -95,7 +95,7 @@ export function FightCard({
       <div className="flex gap-4 p-4 sm:p-5">
         <RatingPlate stars={fight.rating?.stars ?? null} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-h-7 flex-wrap items-center gap-2">
             {showSegment && fight.cardSegment && (
               <span className={`${TAG} border-[var(--border)] text-[var(--muted)]`}>
                 {SEGMENT_LABELS[fight.cardSegment]}
@@ -116,17 +116,12 @@ export function FightCard({
               record={fight.records?.a ?? null}
               career={fight.career?.a}
             />
-            <span className="my-3 flex items-center gap-3">
+            <span className="-ml-[5.25rem] my-3 flex items-center gap-3">
               <span className="h-px flex-1 bg-[var(--border)]" />
-              <span className="text-sm font-bold text-[var(--accent)]">vs</span>
-              {fight.weightClass && (
-                <span
-                  aria-hidden="true"
-                  className="display-tight bg-[var(--surface-2)] px-2.5 py-1 text-base leading-none sm:text-lg"
-                >
-                  {fight.weightClass}
-                </span>
-              )}
+              <span className="display-tight flex items-baseline gap-2 bg-[var(--surface-2)] px-3 py-1 text-base leading-none sm:text-lg">
+                <span className="text-sm font-bold text-[var(--accent)]">vs</span>
+                {fight.weightClass && <span aria-hidden="true">{fight.weightClass}</span>}
+              </span>
               <span className="h-px flex-1 bg-[var(--border)]" />
             </span>
             <FighterLine
