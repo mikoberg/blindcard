@@ -68,6 +68,8 @@ _SUFFIXES = {"jr", "sr", "ii", "iii", "iv"}
 def _key(name: str) -> str:
     """Name for comparing: accents, case, punctuation and generational suffixes ignored."""
     plain = unicodedata.normalize("NFD", unquote(name)).encode("ascii", "ignore").decode()
+    # Sherdog's slugs drop apostrophes and dots ("Casey-ONeill", "TJ-Dillashaw"): so do we.
+    plain = re.sub(r"[.'`’]", "", plain)
     words = [w for w in re.findall(r"[a-z0-9]+", plain.lower()) if w not in _SUFFIXES]
     return " ".join(words)
 

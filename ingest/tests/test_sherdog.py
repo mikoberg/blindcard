@@ -63,3 +63,15 @@ def test_it_needs_the_right_opponent_and_exactly_one_matching_bout() -> None:
 def test_a_page_without_a_history_has_no_bouts_and_unknown_country() -> None:
     page = parse_fighter_page("<html>nothing here</html>")
     assert page.bouts == () and page.country is None
+
+
+def test_search_matches_names_with_apostrophes_and_dots() -> None:
+    html = (
+        '<a href="/fighter/Loneer-Kavanagh-213249">x</a>'
+        '<a href="/fighter/Casey-ONeill-175007">x</a>'
+        '<a href="/fighter/TJ-Dillashaw-52814">x</a>'
+        '<a href="/fighter/Joshua-Van-365973">x</a>'
+    )
+    assert parse_search(html, "Lone'er Kavanagh") == ["/fighter/Loneer-Kavanagh-213249"]
+    assert parse_search(html, "Casey O’Neill") == ["/fighter/Casey-ONeill-175007"]
+    assert parse_search(html, "T.J. Dillashaw") == ["/fighter/TJ-Dillashaw-52814"]
