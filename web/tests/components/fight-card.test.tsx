@@ -166,3 +166,18 @@ describe("FightCard: the official video", () => {
     expect(renderToStaticMarkup(<FightCard fight={makeFight(2, 5, { videoId: "x" })} />)).not.toContain("youtube.com");
   });
 });
+
+describe("FightCard fighting styles", () => {
+  it("shows each fighter's styles under their own name, and nothing when they are not known", () => {
+    const html = render(
+      makeFight(2, 4, {
+        fighterA: { id: "a", name: "Ann One", country: "br", styles: ["Kickboxing", "Brazilian jiu-jitsu"] },
+        fighterB: { id: "b", name: "Bea Two", country: "se" },
+      }),
+    );
+    const a = html.indexOf("Ann One");
+    const b = html.indexOf("Bea Two");
+    expect(html.slice(a, b)).toContain("Kickboxing, Brazilian jiu-jitsu");
+    expect(html.slice(b)).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
+  });
+});

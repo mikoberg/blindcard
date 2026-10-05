@@ -37,6 +37,7 @@ from blindcard_ingest.segment_pipeline import run_ingest_segments
 from blindcard_ingest.settings import Settings, SettingsError, load_settings
 from blindcard_ingest.sources.base import FightDataSource
 from blindcard_ingest.sources.sherdog import SherdogClient
+from blindcard_ingest.sources.ufc.athlete import UfcAthletes
 from blindcard_ingest.sources.ufc.event_times import DEFAULT_CRAWL_DELAY, UfcEventTimes
 from blindcard_ingest.sources.ufcstats.dataset import SOURCE_NAME, DatasetError
 from blindcard_ingest.sources.ufcstats.source import UfcStatsCsvSource
@@ -100,6 +101,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="store the announced cards of the coming events (pre-fight facts, from Wikipedia)",
     )
 
+    ufc_styles = commands.add_parser(
+        "ingest-ufc-styles",
+        parents=[common],
+        help="fill missing fighting styles from the official athlete pages (slow: 15 s per page)",
+    )
+    ufc_styles.add_argument(
+        "--limit", type=int, default=40, help="at most this many fighters per run (default 40)"
+    )
+
     commands.add_parser(
         "predict-upcoming",
         parents=[common],
@@ -160,6 +170,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--only-missing",
         action="store_true",
         help="only look up the bouts that still have no record, and leave stored records alone",
+    )
+    fighters.add_argument(
+        "--styles-only",
+        action="store_true",
+        help="Wikipedia pass only (no Sherdog, no Wikidata): mainly to fill in fighting styles",
     )
     fighters.add_argument(
         "--sherdog-only",
@@ -252,6 +267,21 @@ def _open_wikipedia(settings: Settings) -> Iterator[BonusSource]:
         min_interval_seconds=settings.request_interval_seconds,
     ) as client:
         yield WikipediaClient(client)
+
+
+@contextmanager
+def _open_ufc_athletes(settings: Settings) -> Iterator[UfcAthletes]:
+    """The official athlete pages, at the site's own crawl delay (raw replies are thrown away)."""
+    user_agent = settings.require_user_agent()
+    with (
+        tempfile.TemporaryDirectory(prefix="blindcard-athletes-") as scratch,
+        PoliteClient(
+            user_agent,
+            HtmlCache(Path(scratch)),
+            min_interval_seconds=DEFAULT_CRAWL_DELAY,
+        ) as client,
+    ):
+        yield UfcAthletes(client, user_agent)
 
 
 @contextmanager
@@ -386,12 +416,19 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 repo,
                 source_name=SOURCE_NAME,
                 from_year=args.from_year,
-                countries_source=None if args.sherdog_only else wikidata,
-                sherdog=sherdog,
+                countries_source=None if (args.sherdog_only or args.styles_only) else wikidata,
+                sherdog=None if args.styles_only else sherdog,
                 only_missing=args.sherdog_only or args.only_missing,
                 use_wikipedia=not args.sherdog_only,
                 dry_run=args.dry_run,
             )
+        return EXIT_OK
+
+    if args.command == "ingest-ufc-styles":
+        from blindcard_ingest.ufc_styles_pipeline import run_ingest_ufc_styles
+
+        with _open_repository(settings) as repo, _open_ufc_athletes(settings) as athletes:
+            run_ingest_ufc_styles(repo, athletes, limit=args.limit, dry_run=args.dry_run)
         return EXIT_OK
 
     if args.command == "ingest-upcoming":

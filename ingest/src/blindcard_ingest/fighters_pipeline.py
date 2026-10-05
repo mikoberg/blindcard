@@ -27,6 +27,7 @@ from blindcard_ingest.sources.wikipedia.fighter_record import (
     parse_record_rows,
     record_before,
 )
+from blindcard_ingest.sources.wikipedia.fighter_style import parse_styles
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ class FighterReport:
     fighters: int = 0
     fighters_resolved: int = 0
     fighters_with_country: int = 0
+    fighters_with_style: int = 0
     fighters_via_sherdog: int = 0
     fights_considered: int = 0
     fights_with_both_records: int = 0
@@ -123,6 +125,7 @@ def run_ingest_fighters(
 
     report = FighterReport(fighters=len(names), fights_considered=len(fights))
     countries: dict[str, str] = {}
+    styles: dict[str, list[str]] = {}
     records: dict[str, dict[str, Any]] = defaultdict(dict)
     pending = set(names)
 
@@ -137,6 +140,10 @@ def run_ingest_fighters(
         if code is not None:
             countries[fighter] = code
             report.fighters_with_country += 1
+        labels = parse_styles(text)
+        if labels:
+            styles[fighter] = labels
+            report.fighters_with_style += 1
         for fight_source_id, (side, record) in found.items():
             records[fight_source_id][side] = record_json(record)
         return True
@@ -200,10 +207,12 @@ def run_ingest_fighters(
     if not dry_run:
         changed_countries = repo.set_fighter_countries(source_name, countries)
         changed_records = repo.set_fight_records(source_name, records)
+        changed_styles = repo.set_fighter_styles(source_name, styles)
         logger.info(
-            "ingest-fighters: %d countries and %d fights' records changed",
+            "ingest-fighters: %d countries, %d fights' records and %d styles changed",
             changed_countries,
             changed_records,
+            changed_styles,
         )
     logger.info("ingest-fighters%s: %s", " (dry run)" if dry_run else "", report.summary())
     return report

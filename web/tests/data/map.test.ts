@@ -26,7 +26,7 @@ describe("buildCard", () => {
     const scores: ScoreRow[] = [{ fight_id: "f1", stars: 4.5, percentile: 93.25 }];
     const card = buildCard(fights, fighters, scores);
     expect(card.map((f) => f.id)).toEqual(["f1", "f2"]);
-    expect(card[0]?.fighterA).toEqual({ id: "p1", name: "One", country: null });
+    expect(card[0]?.fighterA).toEqual({ id: "p1", name: "One", country: null, styles: [] });
     expect(card[0]?.isTitleFight).toBe(true);
     expect(card[0]?.rating).toEqual({ stars: 4.5, percentile: 93.25 });
     expect(card[1]?.rating).toBeNull();
@@ -170,5 +170,15 @@ describe("country and records in buildCard", () => {
     expect(card[0]?.records).toEqual({ a: good, b: null });
     expect(card[1]?.records).toBeNull();
     expect(card[2]?.records).toBeNull();
+  });
+});
+
+describe("fighter styles on a card", () => {
+  it("passes at most three plain labels and treats anything else as unknown", async () => {
+    const { mapStyles } = await import("@/lib/data/map");
+    expect(mapStyles(["Judo", "Wrestling", "Boxing", "Karate"])).toEqual(["Judo", "Wrestling", "Boxing"]);
+    expect(mapStyles(["Judo", "", 3, null])).toEqual(["Judo"]);
+    expect(mapStyles(null)).toEqual([]);
+    expect(mapStyles("Judo")).toEqual([]);
   });
 });

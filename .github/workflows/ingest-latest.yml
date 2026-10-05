@@ -169,3 +169,17 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: blindcard-ingest audit-scores --strict
+
+      # Fighting styles that Wikipedia does not give (the Fighter facts step above fills those in),
+      # from the official athlete pages: one field per page, at the site's crawl delay of 15 s, so
+      # at most 40 fighters per run (about 10 minutes). Fighters on an announced card go first, and
+      # nobody is asked again for months.
+      - name: Fighting styles (official pages)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          args=(--limit 40)
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          blindcard-ingest ingest-ufc-styles "${args[@]}"

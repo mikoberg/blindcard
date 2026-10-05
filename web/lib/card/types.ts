@@ -3,6 +3,8 @@ export interface CardFighter {
   name: string;
   /** Lower-case ISO code (or gb-eng, gb-sct, gb-wls, gb-nir) for the flag; null = unknown. */
   country?: string | null;
+  /** Fighting styles (Kickboxing, Wrestling, ...), at most three; empty or absent = not known. */
+  styles?: string[];
 }
 
 /** A fighter's professional record going into a bout. */

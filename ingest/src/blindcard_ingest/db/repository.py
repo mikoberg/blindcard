@@ -39,10 +39,19 @@ from blindcard_ingest.scoring.features import (
     is_injury_stoppage,
 )
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
+from blindcard_ingest.sources.wikipedia.fighter_style import merge_styles
 from blindcard_ingest.upcoming import UpcomingEvent
 from blindcard_ingest.upcoming_records import current_record
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class StyleCandidate:
+    """A fighter whose style the official athlete page has not been asked about."""
+
+    fighter_id: str
+    name: str
 
 
 class RepositoryError(RuntimeError):
@@ -171,6 +180,21 @@ class Repository(Protocol):
 
     def set_fight_records(self, source: str, records: Mapping[str, Mapping[str, Any]]) -> int:
         """Set `fights.records` by fight source id; returns how many rows changed."""
+        ...
+
+    def set_fighter_styles(self, source: str, styles: Mapping[str, Sequence[str]]) -> int:
+        """Add style labels to fighters by source id (kept with what is stored, at most three);
+        returns how many rows changed."""
+        ...
+
+    def fighters_for_ufc_styles(self, limit: int, *, older_than_days: int) -> list[StyleCandidate]:
+        """Fighters with no style yet whose official page was not read within `older_than_days`:
+        those on an announced card first, then the most recently active."""
+        ...
+
+    def set_ufc_styles(self, results: Mapping[str, Sequence[str] | None]) -> int:
+        """Record that the official page of each fighter (by id) was read, adding the labels found
+        (None or empty: nothing specific, but it is not asked again for a while)."""
         ...
 
     def refresh_career_context(self, source: str) -> int:
@@ -637,6 +661,59 @@ class PostgresRepository:
                     "update public.fighters set country = %s"
                     " where source = %s and source_id = %s and country is distinct from %s",
                     (code, source, fighter_source_id, code),
+                )
+                changed += cur.rowcount
+        return changed
+
+    def set_fighter_styles(self, source: str, styles: Mapping[str, Sequence[str]]) -> int:
+        changed = 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            for fighter_source_id, labels in styles.items():
+                cur.execute(
+                    "select style from public.fighters where source = %s and source_id = %s",
+                    (source, fighter_source_id),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    continue
+                merged = merge_styles(list(labels), list(row["style"]))
+                if merged == list(row["style"]):
+                    continue
+                cur.execute(
+                    "update public.fighters set style = %s where source = %s and source_id = %s",
+                    (merged, source, fighter_source_id),
+                )
+                changed += cur.rowcount
+        return changed
+
+    def fighters_for_ufc_styles(self, limit: int, *, older_than_days: int) -> list[StyleCandidate]:
+        query = """
+            select f.id::text as id, f.name,
+                   (exists (select 1 from public.upcoming_bouts b
+                            where b.fighter_a_id = f.id or b.fighter_b_id = f.id)) as upcoming,
+                   (select max(e.event_date) from public.fights x
+                      join public.events e on e.id = x.event_id
+                     where x.fighter_a_id = f.id or x.fighter_b_id = f.id) as last_fight
+            from public.fighters f
+            where cardinality(f.style) = 0
+              and (f.style_ufc_checked_at is null
+                   or f.style_ufc_checked_at < now() - make_interval(days => %s))
+            order by upcoming desc, last_fight desc nulls last, f.name
+            limit %s
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (older_than_days, limit))
+            return [StyleCandidate(row["id"], row["name"]) for row in cur.fetchall()]
+
+    def set_ufc_styles(self, results: Mapping[str, Sequence[str] | None]) -> int:
+        changed = 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            for fighter_id, labels in results.items():
+                cur.execute(
+                    "update public.fighters set style_ufc_checked_at = now(),"
+                    " style = case when cardinality(style) = 0 then %s::text[] else style end"
+                    " where id = %s::uuid",
+                    (merge_styles(list(labels or [])), fighter_id),
                 )
                 changed += cur.rowcount
         return changed

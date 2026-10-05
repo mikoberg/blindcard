@@ -6,7 +6,7 @@
 export const EVENT_COLUMNS = "id, name, slug, event_date, location";
 export const FIGHT_COLUMNS =
   "id, event_id, card_position, card_segment, career, records, weight_class, is_title_fight, scheduled_rounds, fighter_a_id, fighter_b_id";
-export const FIGHTER_COLUMNS = "id, name, country";
+export const FIGHTER_COLUMNS = "id, name, country, style";
 export const SCORE_COLUMNS = "fight_id, stars, percentile";
 export const VERSION_COLUMNS = "version";
 export const ID_COLUMN = "id";
@@ -23,4 +23,4 @@ export const JUDGE_BASELINE_COLUMNS = "cards, dissent, abs_sum, abs_sumsq, judge
 export const UPCOMING_EVENT_COLUMNS =
   "id, name, slug, event_date, location, main_card_at, prelims_at, early_prelims_at";
 export const UPCOMING_BOUT_COLUMNS =
-  "id, event_id, card_position, segment, weight_class, is_title_fight, fighter_a_name, fighter_b_name, predicted_stars, prediction_basis, prediction_why, has_pick, fighter_a_record, fighter_b_record, fighter_a_style, fighter_b_style, fighter_a:fighters!fighter_a_id(slug, country), fighter_b:fighters!fighter_b_id(slug, country)";
+  "id, event_id, card_position, segment, weight_class, is_title_fight, fighter_a_name, fighter_b_name, predicted_stars, prediction_basis, prediction_why, has_pick, fighter_a_record, fighter_b_record, fighter_a_style, fighter_b_style, fighter_a:fighters!fighter_a_id(slug, country, style), fighter_b:fighters!fighter_b_id(slug, country, style)";

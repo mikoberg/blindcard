@@ -49,6 +49,9 @@ function FighterLine({
       <Monogram name={fighter.name} country={fighter.country} size="lg" />
       <span className="min-w-0 flex-1">
         <span className="block break-words text-xl font-extrabold leading-tight sm:text-2xl">{fighter.name}</span>
+        {fighter.styles && fighter.styles.length > 0 && (
+          <span className="block text-sm font-normal text-[var(--muted)]">{fighter.styles.join(", ")}</span>
+        )}
         {note && <span className="block text-xs font-normal text-[var(--muted)]">{note}</span>}
         {parts && (
           <span aria-hidden="true" className="mt-0.5 block text-sm font-extrabold tabular-nums sm:hidden">

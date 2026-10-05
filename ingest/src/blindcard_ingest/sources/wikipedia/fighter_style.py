@@ -25,7 +25,7 @@ _LABELS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("Capoeira", re.compile(r"capoeira", re.I)),
     # before wrestling: "submission wrestling" is grappling
     ("Grappling", re.compile(r"grappling|submission", re.I)),
-    ("Wrestling", re.compile(r"wrestling|\bcatch\b", re.I)),
+    ("Wrestling", re.compile(r"wrestling|freestyle|folkstyle|greco|\bcatch\b", re.I)),
     ("Brazilian jiu-jitsu", re.compile(r"jiu|\bbjj\b|jits", re.I)),
     ("Judo", re.compile(r"\bjudo\b", re.I)),
     ("Sambo", re.compile(r"sambo", re.I)),
@@ -70,17 +70,34 @@ def _from_rank(rank: str) -> list[str]:
     return [label for _, label in sorted(found)]
 
 
-def parse_styles(wikitext: str) -> list[str]:
-    """The labels of the infobox `style` field, in the order given, without repeats; the arts of
-    the `rank` field follow when there is room."""
-    params = _infobox_params(wikitext)
+def style_labels(text: str) -> list[str]:
+    """The labels named in a free-text style field ("Kickboxing, Brazilian jiu-jitsu"), in the order
+    given and without repeats. "MMA" and anything not on the list says nothing and is dropped."""
     labels: list[str] = []
-    for word in _SPLIT.split(clean_wikitext(params.get("style", ""))):
+    for word in _SPLIT.split(clean_wikitext(text)):
         for label, pattern in _LABELS:
             if pattern.search(word):
                 if label not in labels:
                     labels.append(label)
                 break
+    return labels
+
+
+def merge_styles(*lists: list[str]) -> list[str]:
+    """The labels of several sources, first source first, without repeats, at most three."""
+    merged: list[str] = []
+    for labels in lists:
+        for label in labels:
+            if label not in merged:
+                merged.append(label)
+    return merged[:MAX_STYLES]
+
+
+def parse_styles(wikitext: str) -> list[str]:
+    """The labels of the infobox `style` field, in the order given, without repeats; the arts of
+    the `rank` field follow when there is room."""
+    params = _infobox_params(wikitext)
+    labels = style_labels(params.get("style", ""))
     for label in _from_rank(params.get("rank", "")):
         if label not in labels:
             labels.append(label)

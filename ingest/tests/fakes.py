@@ -131,6 +131,9 @@ class FakeRepository:
     predictions: list | None = None
     outcome_rows: list = field(default_factory=list)
     picks: list | None = None
+    fighter_styles: dict = field(default_factory=dict)
+    style_candidates: list = field(default_factory=list)
+    ufc_styles: dict = field(default_factory=dict)
     event_stars: list = field(default_factory=list)
     upcoming_fighter_ids: dict = field(default_factory=dict)
     upcoming_today: object = None
@@ -286,6 +289,17 @@ class FakeRepository:
 
     def fighter_names(self) -> list[tuple[str, str]]:
         return list(self.fighters)
+
+    def set_fighter_styles(self, source, styles):  # type: ignore[no-untyped-def]
+        self.fighter_styles.update({k: list(v) for k, v in styles.items()})
+        return len(styles)
+
+    def fighters_for_ufc_styles(self, limit, *, older_than_days):  # type: ignore[no-untyped-def]
+        return list(self.style_candidates)[:limit]
+
+    def set_ufc_styles(self, results):  # type: ignore[no-untyped-def]
+        self.ufc_styles = {k: (list(v) if v else None) for k, v in results.items()}
+        return len(results)
 
     def prediction_fights(self):  # type: ignore[no-untyped-def]
         return list(self.fight_rows)

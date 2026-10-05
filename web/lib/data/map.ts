@@ -40,6 +40,13 @@ export interface FighterRow {
   id: string;
   name: string;
   country?: string | null;
+  style?: unknown;
+}
+
+/** At most three plain labels; anything else is dropped. */
+export function mapStyles(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((s): s is string => typeof s === "string" && s.trim() !== "").slice(0, 3);
 }
 
 /** `stars` and `percentile` are numeric columns; accept numbers or numeric strings. */
@@ -134,7 +141,10 @@ export function buildCard(
   videos: readonly VideoRow[] = [],
 ): CardFight[] {
   const fighterById = new Map(
-    fighters.map((row) => [row.id, { id: row.id, name: row.name, country: flagCode(row.country) }]),
+    fighters.map((row) => [
+      row.id,
+      { id: row.id, name: row.name, country: flagCode(row.country), styles: mapStyles(row.style) },
+    ]),
   );
   const videoByFight = new Map<string, string>();
   for (const row of videos) {

@@ -10,7 +10,9 @@ import type {
 } from "@/lib/upcoming/types";
 import { UPCOMING_BOUT_COLUMNS, UPCOMING_EVENT_COLUMNS } from "./columns";
 import { ensure } from "./ensure";
-import { toRecord } from "./map";
+import { mapStyles, toRecord } from "./map";
+
+export { mapStyles };
 
 interface EventRow {
   id: string;
@@ -26,6 +28,7 @@ interface EventRow {
 interface FighterJoin {
   slug: string | null;
   country: string | null;
+  style?: unknown;
 }
 
 interface BoutRow {
@@ -51,12 +54,6 @@ interface BoutRow {
 
 const SEGMENTS: readonly string[] = ["main", "prelim", "early_prelim"];
 
-/** At most three plain labels; anything else is dropped. */
-export function mapStyles(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((s): s is string => typeof s === "string" && s.trim() !== "").slice(0, 3);
-}
-
 function fighter(
   name: string,
   joined: FighterJoin | null,
@@ -69,7 +66,8 @@ function fighter(
     slug,
     country: joined?.country ?? null,
     record: record === null ? null : toRecord(record),
-    styles: mapStyles(styles),
+    // the card's own link gives the style even for a debut; otherwise what is stored on the fighter
+    styles: mapStyles(styles).length > 0 ? mapStyles(styles) : mapStyles(joined?.style),
   };
 }
 
