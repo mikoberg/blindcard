@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatPercent, formatPoints } from "@/lib/judges/format";
 import {
   MIN_CARDS,
@@ -116,9 +117,7 @@ export function JudgeProfileView({
         <p className="mt-3 text-[var(--muted)]">
           {judge.cards} scorecards, {years}
         </p>
-        <p
-          className={`mt-5 max-w-xl text-xl font-semibold ${notable.length > 0 ? "text-[var(--accent)]" : "text-[var(--text)]"}`}
-        >
+        <p className="mt-5 max-w-xl text-xl font-semibold text-[var(--text)]">
           {notable.length > 0
             ? notable.join(" ")
             : "In line with the other judges."}
@@ -133,7 +132,7 @@ export function JudgeProfileView({
 
       <Section
         id="against"
-        title="How often they score against the official result"
+        title="How often a scorecard differs from the official result"
       >
         <p className="mt-3 flex flex-wrap items-baseline gap-x-3">
           <span className="display text-6xl font-bold tabular-nums text-[var(--accent)]">
@@ -155,7 +154,7 @@ export function JudgeProfileView({
           baseRate={rate.baseRate}
         />
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Alone against both other judges in {judge.lone_dissent} scorecards (
+          At odds with both other judges on the card in {judge.lone_dissent} scorecards (
           {formatPercent(lonePct)}).
         </p>
       </Section>
@@ -176,7 +175,7 @@ export function JudgeProfileView({
       {judge.dissent > 0 && (
         <Section id="disputed" title="Where it comes from">
           <p className="mt-3 max-w-xl text-[var(--muted)]">
-            The scorecards where {judge.name} scored against the official
+            The scorecards of {judge.name} that differ from the official
             result, with the other two judges&apos; cards next to them.
           </p>
           <JudgeDisputes
@@ -187,13 +186,30 @@ export function JudgeProfileView({
         </Section>
       )}
 
-      <p className="max-w-xl border-t-2 border-[var(--text)] pt-6 text-sm text-[var(--muted)]">
-        Based on the {judge.cards} scorecards we have of this judge (fights that
-        went to the judges with a clear result; draws are left out). The
-        numbers above are totals: no fight is named until you open the list
-        above. With a few hundred scorecards, gaps of a point or two in a
-        hundred are within chance.
-      </p>
+      <div className="max-w-xl space-y-2 border-t-2 border-[var(--text)] pt-6 text-sm text-[var(--muted)]">
+        <p>
+          Based on the {judge.cards} scorecards we have of this judge (fights that
+          went to the judges with a clear result; draws are left out). The
+          numbers above are totals: no fight is named until you open the list
+          above. With a few hundred scorecards, gaps of a point or two in a
+          hundred are within chance.
+        </p>
+        <p>
+          This is a summary of public scorecards. It is not a rating of how well
+          anyone judges: a close round can fairly go either way, and a scorecard
+          that differs from the official result is not a mistake by itself.
+        </p>
+        <p>
+          Something wrong on this page?{" "}
+          <Link
+            href="/contact"
+            className="font-semibold text-[var(--text)] underline underline-offset-4"
+          >
+            Tell us
+          </Link>
+          .
+        </p>
+      </div>
     </div>
   );
 }

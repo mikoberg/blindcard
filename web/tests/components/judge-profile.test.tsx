@@ -58,7 +58,7 @@ describe("JudgeProfileView", () => {
       />,
     );
     expect(html).toContain(
-      "Scores against the official result more often than other judges.",
+      "Scorecards differ from the official result more often than other judges&#x27; do.",
     );
   });
 

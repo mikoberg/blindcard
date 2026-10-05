@@ -17,7 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const judge = isValidSlug(slug) ? await getJudge(slug) : null;
   if (!judge) return { title: "Judge not found" };
-  return { title: `${judge.name}, judge`, alternates: { canonical: `/judges/${judge.slug}` } };
+  // Statistics about a named person: reachable by link, kept out of search results.
+  return {
+    title: `${judge.name}, judge`,
+    alternates: { canonical: `/judges/${judge.slug}` },
+    robots: { index: false, follow: true },
+  };
 }
 
 export default async function JudgePage({ params }: Props) {

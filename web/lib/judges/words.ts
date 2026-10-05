@@ -4,13 +4,13 @@ import type { Verdict } from "./stats";
 export function rateSentence(verdict: Verdict): string {
   switch (verdict) {
     case "clear-high":
-      return "Scores against the official result more often than other judges.";
+      return "Scorecards differ from the official result more often than other judges' do.";
     case "lean-high":
-      return "Scores against the official result a little more often than other judges. This could be chance.";
+      return "Scorecards differ from the official result a little more often than other judges' do. This could be chance.";
     case "clear-low":
-      return "Scores against the official result less often than other judges.";
+      return "Scorecards differ from the official result less often than other judges' do.";
     case "lean-low":
-      return "Scores against the official result a little less often than other judges. This could be chance.";
+      return "Scorecards differ from the official result a little less often than other judges' do. This could be chance.";
     default:
       return "In line with the other judges.";
   }
@@ -19,15 +19,15 @@ export function rateSentence(verdict: Verdict): string {
 export function widthSentence(verdict: Verdict): string {
   switch (verdict) {
     case "clear-high":
-      return "Scores wider than other judges: bigger gaps between the fighters.";
+      return "Scorecards show wider gaps between the fighters than other judges' do.";
     case "lean-high":
-      return "Scores a little wider than other judges. This could be chance.";
+      return "Scorecards show slightly wider gaps than other judges' do. This could be chance.";
     case "clear-low":
-      return "Scores closer than other judges: smaller gaps between the fighters.";
+      return "Scorecards show narrower gaps between the fighters than other judges' do.";
     case "lean-low":
-      return "Scores a little closer than other judges. This could be chance.";
+      return "Scorecards show slightly narrower gaps than other judges' do. This could be chance.";
     default:
-      return "Scores about as wide as other judges.";
+      return "Scorecards show about the same gaps as other judges' do.";
   }
 }
 

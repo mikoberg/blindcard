@@ -39,7 +39,7 @@ export function JudgeDotPlot({
     (_, i) => i * 0.04,
   );
   const others = dots.filter((d) => d.slug !== slug);
-  const label = `${name}: ${formatPercent(rate)} of scorecards went against the official result; the average of all judges is ${formatPercent(baseRate)}. ${others.length + 1} judges are shown.`;
+  const label = `${name}: ${formatPercent(rate)} of scorecards differ from the official result; the average of all judges is ${formatPercent(baseRate)}. ${others.length + 1} judges are shown.`;
   return (
     <figure className="mt-5 max-w-2xl">
       <svg

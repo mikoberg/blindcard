@@ -10,7 +10,7 @@ type State =
   | { status: "shown"; pick: Pick };
 
 /**
- * Who is favoured in this bout. It is learned from past results, so nothing is loaded until the
+ * The model lean for this bout. It is learned from past results, so nothing is loaded until the
  * button is clicked, and only for this bout. It is a lean, not a certainty, and says so.
  */
 export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: string; nameB: string }) {
@@ -46,10 +46,10 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
           {state.status === "loading"
             ? "Loading…"
             : shown
-              ? "Hide the favourite"
+              ? "Hide the model lean"
               : state.status === "error"
                 ? "Try again"
-                : "Show who's favoured"}
+                : "Show the model lean"}
         </span>
         {!shown && (
           <span aria-hidden="true" className="flex items-center gap-1.5">
@@ -60,8 +60,8 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
       </button>
       {!shown && state.status !== "error" && (
         <p className="mt-2 text-xs text-[var(--muted)]">
-          A guess from the fighters&apos; past results. It can colour how you watch, so it stays closed until you
-          open it.
+          A statistical lean from the fighters&apos; past results, not betting advice. It can colour how you
+          watch, so it stays closed until you open it.
         </p>
       )}
       <div id={panelId} aria-live="polite" className="mt-3">
@@ -80,7 +80,7 @@ function Panel({ pick, nameA, nameB }: { pick: Pick; nameA: string; nameB: strin
   return (
     <div className="space-y-1 bg-[var(--bg)] p-4">
       <p className="display break-words text-xl">
-        {toss ? `Too close to call, slight lean to ${name}` : `${name} is favoured`}{" "}
+        {toss ? `Too close to call, slight lean to ${name}` : `Model lean: ${name}`}{" "}
         <span className="text-[var(--accent)]">{percent(pick.probability)}</span>
       </p>
       <p className="text-sm text-[var(--muted)]">
@@ -89,8 +89,8 @@ function Panel({ pick, nameA, nameB }: { pick: Pick; nameA: string; nameB: strin
           : "Only one of the two fighters has earlier results here, so this leans on that fighter."}
       </p>
       <p className="text-xs text-[var(--muted)]">
-        Picks like this were right about {percent(pick.accuracy)} of the time on past fights (a coin flip is
-        50%). A small lean, never a certainty.
+        Leans like this were right about {percent(pick.accuracy)} of the time on past fights (a coin flip is
+        50%). A small lean, never a certainty, and not betting advice.
       </p>
     </div>
   );

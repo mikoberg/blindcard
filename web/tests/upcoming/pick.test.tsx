@@ -54,7 +54,7 @@ describe("fetchPick", () => {
 describe("UpcomingPick (before the click)", () => {
   it("offers a closed button with a warning and names nobody", () => {
     const html = renderToStaticMarkup(<UpcomingPick boutId="b1" nameA="Alan A" nameB="Ben B" />);
-    expect(html).toContain("Show who&#x27;s favoured");
+    expect(html).toContain("Show the model lean");
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain("stays closed until you open it");
     expect(html).not.toMatch(/Alan A|Ben B|%/);
@@ -88,9 +88,9 @@ describe("the bout card", () => {
 
   it("shows the button only for a bout that has a pick, and no side in the page", () => {
     const withPick = renderToStaticMarkup(<UpcomingView event={event(true)} today={new Date("2026-10-05")} />);
-    expect(withPick).toContain("Show who&#x27;s favoured");
-    expect(withPick).not.toMatch(/is favoured|Too close|slight lean|\d+%/);
+    expect(withPick).toContain("Show the model lean");
+    expect(withPick).not.toMatch(/Model lean:|Too close|slight lean|\d+%/);
     const without = renderToStaticMarkup(<UpcomingView event={event(false)} today={new Date("2026-10-05")} />);
-    expect(without).not.toContain("favoured");
+    expect(without).not.toContain("model lean");
   });
 });
