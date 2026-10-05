@@ -11,6 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${base}/` },
     { url: `${base}/best` },
+    { url: `${base}/fighters` },
     ...events.map((event) => ({ url: `${base}/events/${event.slug}`, lastModified: event.eventDate })),
   ];
 }

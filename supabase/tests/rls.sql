@@ -185,6 +185,27 @@ begin
   raise notice 'PASS event_overview is public, active version only';
 end $$;
 
+-- Fighter leaderboard: public, active version only, aggregates only.
+do $$
+declare
+  n integer;
+  r record;
+begin
+  select count(*) into n from public.fighter_ratings;
+  if n <> 2 then raise exception 'FAIL: anon should see the two seeded fighters in fighter_ratings, saw %', n; end if;
+  select * into r from public.fighter_ratings where name = 'Fighter A';
+  -- one fight, rated by the active version 9001 (4.5), not by the inactive 9002 (1.5)
+  if r.rated_fights <> 1 or r.avg_stars <> 4.5 then
+    raise exception 'FAIL: fighter_ratings should hold the active version only, got % / %', r.rated_fights, r.avg_stars;
+  end if;
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'fighter_ratings'
+    and column_name not in ('id', 'name', 'country', 'rated_fights', 'avg_stars');
+  if n <> 0 then raise exception 'FAIL: fighter_ratings has unexpected columns'; end if;
+  raise notice 'PASS fighter_ratings is public, active version only';
+end $$;
+
 -- Card segments are a public, pre-fight fact: readable, but only the three known values.
 do $$
 declare
