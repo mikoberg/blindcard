@@ -26,9 +26,8 @@ export default async function FightersPage() {
           Fighters worth watching
         </h1>
         <p className="mt-4 max-w-xl text-lg text-[var(--muted)]">
-          Fighters ranked by how highly their fights are rated. A fighter needs at least {MIN_FIGHTS}{" "}
-          rated fights, and the rating leans towards the middle until a fighter has many fights, so one
-          great fight is not enough.
+          Fighters ranked by the average rating of their fights. A fighter needs at least {MIN_FIGHTS}{" "}
+          rated fights to be listed, so one great fight is not enough.
         </p>
       </section>
       <FighterLeaderboard entries={ranked.slice(0, SHOWN)} />

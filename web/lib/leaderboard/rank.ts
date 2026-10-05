@@ -1,35 +1,25 @@
 import type { FighterRatingRow, LeaderboardEntry } from "./types";
 
-/** A fighter needs this many rated fights to be ranked: one great fight is not a record. */
-export const MIN_FIGHTS = 6;
 /**
- * How many fights' worth of "ordinary" rating each fighter starts with. With few fights the
- * ranking value stays close to the overall mean, so a fighter climbs by delivering many good
- * fights, not by one lucky one.
+ * A fighter needs this many rated fights to be ranked, so a couple of lucky fights cannot put
+ * anyone on top.
  */
-export const PRIOR_FIGHTS = 5;
+export const MIN_FIGHTS = 8;
 
 /**
- * Fighters ranked by how worth watching their fights are. The order uses a damped average
- * ((sum of ratings + prior) / (fights + prior)), which the entry carries as `score`, next to
- * the plain average and the number of fights. Only public, active-version ratings.
+ * Fighters ranked by the plain average of their fights' ratings (best first; ties go to the
+ * fighter with more fights). Only public, active-version ratings.
  */
 export function rankFighters(rows: readonly FighterRatingRow[]): LeaderboardEntry[] {
-  const valid = rows
+  return rows
     .map((row) => ({ row, average: Number(row.avg_stars), fights: row.rated_fights }))
-    .filter((r) => Number.isFinite(r.average) && Number.isInteger(r.fights) && r.fights > 0);
-  const total = valid.reduce((sum, r) => sum + r.fights, 0);
-  if (total === 0) return [];
-  const mean = valid.reduce((sum, r) => sum + r.average * r.fights, 0) / total;
-
-  const damped = (r: { average: number; fights: number }) =>
-    (r.average * r.fights + mean * PRIOR_FIGHTS) / (r.fights + PRIOR_FIGHTS);
-
-  return valid
-    .filter((r) => r.fights >= MIN_FIGHTS)
+    .filter(
+      (r) =>
+        Number.isFinite(r.average) && Number.isInteger(r.fights) && r.fights >= MIN_FIGHTS,
+    )
     .sort(
       (a, b) =>
-        damped(b) - damped(a) ||
+        b.average - a.average ||
         b.fights - a.fights ||
         a.row.name.localeCompare(b.row.name) ||
         a.row.id.localeCompare(b.row.id),
@@ -41,6 +31,5 @@ export function rankFighters(rows: readonly FighterRatingRow[]): LeaderboardEntr
       country: r.row.country,
       fights: r.fights,
       average: r.average,
-      score: damped(r),
     }));
 }

@@ -14,8 +14,6 @@ export interface LeaderboardEntry {
   name: string;
   country: string | null;
   fights: number;
-  /** Plain average of their fights' ratings. */
+  /** Average of their fights' ratings. */
   average: number;
-  /** The damped average the ranking is sorted on (never above the plain one for a fighter above the mean). */
-  score: number;
 }
