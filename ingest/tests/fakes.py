@@ -298,7 +298,8 @@ class FakeRepository:
         return list(self.style_candidates)[:limit]
 
     def set_ufc_styles(self, results):  # type: ignore[no-untyped-def]
-        self.ufc_styles = {k: (list(v) if v else None) for k, v in results.items()}
+        self.ufc_styles.update({k: (list(v) if v else None) for k, v in results.items()})
+        self.ufc_saves = getattr(self, "ufc_saves", 0) + 1
         return len(results)
 
     def prediction_fights(self):  # type: ignore[no-untyped-def]

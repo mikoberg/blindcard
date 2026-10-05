@@ -139,3 +139,24 @@ def test_the_limit_and_a_dry_run_and_a_robots_refusal() -> None:
     stopped = FakeRepository(style_candidates=cands)
     report = run_ingest_ufc_styles(stopped, Refusing(), limit=5)
     assert report.stopped_by_robots and report.asked == 0 and stopped.ufc_styles == {}
+
+
+def test_progress_is_saved_in_steps_and_survives_an_interrupted_run() -> None:
+    cands = [StyleCandidate(f"id{i}", f"Fighter {i}") for i in range(25)]
+
+    class Interrupted:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def style_of(self, name: str) -> list[str] | None:
+            self.calls += 1
+            if self.calls == 14:
+                raise KeyboardInterrupt  # e.g. the job hits its time limit
+            return ["Boxing"]
+
+    repo = FakeRepository(style_candidates=cands)
+    with pytest.raises(KeyboardInterrupt):
+        run_ingest_ufc_styles(repo, Interrupted(), limit=25)
+    # 13 fighters were read before the interruption: all 13 are saved, none is read again
+    assert len(repo.ufc_styles) == 13
+    assert repo.ufc_saves == 2  # one save at ten, one at the interruption

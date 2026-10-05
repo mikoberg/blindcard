@@ -40,6 +40,7 @@ class Settings:
     database_url: str | None = field(default=None, repr=False)
     scraper_contact: str | None = None
     youtube_api_key: str | None = field(default=None, repr=False)
+    test_database_url: str | None = field(default=None, repr=False)
     cache_dir: Path = DEFAULT_CACHE_DIR
     request_interval_seconds: float = 1.0
     log_level: str = "INFO"
@@ -49,6 +50,14 @@ class Settings:
         if not self.database_url:
             raise SettingsError("DATABASE_URL is not set (see .env.example).")
         return self.database_url
+
+    def require_test_database_url(self) -> str:
+        """The throwaway database for the RLS tests. Deliberately separate from DATABASE_URL."""
+        if not self.test_database_url:
+            raise SettingsError(
+                "TEST_DATABASE_URL is not set (a throwaway database; see .env.example)."
+            )
+        return self.test_database_url
 
     def require_youtube_api_key(self) -> str:
         if not self.youtube_api_key:
@@ -95,6 +104,7 @@ def load_settings(
         database_url=merged.get("DATABASE_URL") or None,
         scraper_contact=merged.get("SCRAPER_CONTACT") or None,
         youtube_api_key=merged.get("YOUTUBE_API_KEY") or None,
+        test_database_url=merged.get("TEST_DATABASE_URL") or None,
         cache_dir=cache_dir,
         request_interval_seconds=interval,
         log_level=merged.get("LOG_LEVEL", "INFO").upper(),

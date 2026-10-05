@@ -33,6 +33,10 @@ class UfcStylesReport:
     stopped_by_robots: bool = False
 
 
+#: Progress is saved after this many fighters, so a run that is cut off loses at most this many.
+SAVE_EVERY = 10
+
+
 def run_ingest_ufc_styles(
     repo: Repository,
     athletes: AthleteSource,
@@ -41,20 +45,31 @@ def run_ingest_ufc_styles(
     dry_run: bool = False,
 ) -> UfcStylesReport:
     report = UfcStylesReport()
-    results: dict[str, list[str] | None] = {}
-    for candidate in repo.fighters_for_ufc_styles(limit, older_than_days=RECHECK_AFTER_DAYS):
-        try:
-            labels = athletes.style_of(candidate.name)
-        except RobotsRefused:
-            logger.warning("ufc styles: not allowed by robots.txt; none are read")
-            report.stopped_by_robots = True
-            break
-        report.asked += 1
-        if labels is None:
-            report.no_page += 1
-        elif labels:
-            report.with_style += 1
-        results[candidate.fighter_id] = labels
+    pending: dict[str, list[str] | None] = {}
+
+    def save() -> None:
+        if pending and not dry_run:
+            repo.set_ufc_styles(dict(pending))
+        pending.clear()
+
+    try:
+        for candidate in repo.fighters_for_ufc_styles(limit, older_than_days=RECHECK_AFTER_DAYS):
+            try:
+                labels = athletes.style_of(candidate.name)
+            except RobotsRefused:
+                logger.warning("ufc styles: not allowed by robots.txt; none are read")
+                report.stopped_by_robots = True
+                break
+            report.asked += 1
+            if labels is None:
+                report.no_page += 1
+            elif labels:
+                report.with_style += 1
+            pending[candidate.fighter_id] = labels
+            if len(pending) >= SAVE_EVERY:
+                save()
+    finally:
+        save()  # also when the run is interrupted: what was read is not read again
     # Logs carry counts only.
     logger.info(
         "ingest-ufc-styles%s: %d asked, %d with a style, %d without a matching page",
@@ -63,6 +78,4 @@ def run_ingest_ufc_styles(
         report.with_style,
         report.no_page,
     )
-    if results and not dry_run:
-        repo.set_ufc_styles(results)
     return report

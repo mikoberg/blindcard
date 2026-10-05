@@ -1,9 +1,10 @@
 # Blindcard web
 
-Next.js 16 (App Router, TypeScript, Tailwind) site: the latest card on `/`, an event list on
-`/events`, and a card page per event at `/events/[slug]` with 1-5 star ratings, "Watch these",
-"Hidden gem" and a per-fight Reveal. Fans see which fights are worth watching without learning
-any result.
+Next.js 16 (App Router, TypeScript, Tailwind) site: the latest and upcoming cards on `/`, the best
+fights on `/best` and `/classics`, an event list on `/events`, a card page per event at
+`/events/[slug]` and per upcoming event at `/upcoming/[slug]`, fighter and judge pages, 1-5 star
+ratings, "Watch these", "Hidden gem" and a per-fight Reveal. Fans see which fights are worth
+watching without learning any result.
 
 Design: `../docs/superpowers/specs/2026-10-04-web-phase2-design.md`. The spoiler rule and the
 legal guardrails are in `../CLAUDE.md`.
@@ -25,8 +26,8 @@ npm run dev                            # http://localhost:3000
 `http://localhost:3000`). `.env.local` is gitignored. Use the DEV Supabase project and the anon
 (publishable) key only; the service-role key must never be used in this app.
 
-The data must exist first: run `backfill` and `rescore --version 1` from `ingest/` (see the root
-README).
+The data must exist first: run `migrate`, `backfill` and `rescore --version 22 --activate` from `ingest/` (see
+`../docs/RUNBOOK.md`).
 
 ## Deploy
 
@@ -85,7 +86,8 @@ Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue
 
 - Only `lib/data/*` runs table queries (`.from` / `.select`), with explicit column lists
   (`lib/data/columns.ts`). The one other database call is the `reveal_fight` RPC in
-  `lib/reveal/service.ts`.
+  `lib/reveal/service.ts`. That file holds every `.rpc(` call (reveal, score, judge disputes and
+  upcoming picks); `tests/columns.test.ts` fails if another file calls one.
 - `tests/columns.test.ts` is the guard: it fails if a result column, a result table, `select *`
   or a `source_id` appears in the code. It is a static check on the source, not proof that no
   result reaches the browser; the live spoiler suite is what scans the rendered output.
@@ -100,11 +102,13 @@ Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue
 ## Layout
 
 ```
-app/          routes: /, /events, /events/[slug], /api/reveal/[fightId], sitemap, robots, OG image
-components/   CardView, FightList, FightCard, StarRating, WatchThese, RevealButton, ...
+app/          routes: /, /best, /classics, /events, /events/[slug], /upcoming/[slug], fighters, judges,
+              /api/* (reveal, search, judge disputes, upcoming pick), sitemap, robots, OG image
+components/   CardView, FightList, FightCard, StarRating, EventPoster, RevealButton, ...
 lib/card/     pure card logic: stars, sort, "Watch these", "Hidden gem", state, blurb
 lib/reveal/   reveal service (the `reveal_fight` RPC), response shaping, client, formatting
-lib/data/     table queries (columns, events, card, mapping, error helpers)
+lib/data/     table queries (columns, events, card, upcoming, mapping, error helpers)
+lib/upcoming/ expected rating, start times, place and pick helpers
 lib/supabase/ server client
 tests/        vitest: unit tests, columns guard, spoiler regression (tests/spoiler)
 ```

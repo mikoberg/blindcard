@@ -101,6 +101,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="store the announced cards of the coming events (pre-fight facts, from Wikipedia)",
     )
 
+    migrate_cmd = commands.add_parser(
+        "migrate",
+        parents=[common],
+        help="apply supabase/migrations in order, recording each in a ledger",
+    )
+    migrate_cmd.add_argument(
+        "--baseline-through",
+        type=int,
+        metavar="N",
+        help="record migrations up to N as applied WITHOUT running them (empty ledger only)",
+    )
+
+    commands.add_parser(
+        "rls-test",
+        parents=[common],
+        help="run supabase/tests/rls.sql on TEST_DATABASE_URL (a throwaway database), rolled back",
+    )
+
     ufc_styles = commands.add_parser(
         "ingest-ufc-styles",
         parents=[common],
@@ -379,6 +397,43 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
         with _open_repository(settings) as repo:
             examples, _ = build_examples(repo.prediction_fights())
         print(evaluation_report(walk_forward(examples, test_from_year=args.test_from_year)))
+        return EXIT_OK
+
+    if args.command == "rls-test":
+        from blindcard_ingest.rls_check import run_rls_test
+
+        outcome = run_rls_test(settings.require_test_database_url())
+        for line in outcome.passed:
+            print(line)
+        if outcome.error:
+            print(f"FAILED: {outcome.error}")
+            return EXIT_RUN_ERRORS
+        print(f"rls-test: {len(outcome.passed)} assertions passed; everything was rolled back")
+        return EXIT_OK
+
+    if args.command == "migrate":
+        import psycopg
+
+        from blindcard_ingest.migrate import load_migrations, migrate
+
+        with psycopg.connect(
+            settings.require_database_url(), autocommit=True, prepare_threshold=None
+        ) as conn:
+            migrate_report = migrate(
+                conn,
+                load_migrations(),
+                baseline_through=args.baseline_through,
+                dry_run=args.dry_run,
+            )
+        verb = "would apply" if args.dry_run else "applied"
+        for name in migrate_report.baselined:
+            print(f"baseline  {name}")
+        for name in migrate_report.applied:
+            print(f"{verb}  {name}")
+        print(
+            f"{migrate_report.already} already in the ledger,"
+            f" {len(migrate_report.baselined)} baselined, {len(migrate_report.applied)} {verb}"
+        )
         return EXIT_OK
 
     # Fail on missing configuration before anything is fetched.

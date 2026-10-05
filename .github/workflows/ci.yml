@@ -1,0 +1,95 @@
+name: ci
+
+# Runs on every pull request and every push to main. Fast and without secrets: the checks that need a
+# database (the RLS tests) run only when a throwaway database is configured (see the last job).
+# The web build is not run here: it prerenders pages from the database. The live spoiler suite needs
+# a running build; docs/RUNBOOK.md says when to run it.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            ingest/pyproject.toml
+            ingest/constraints.txt
+      - name: Install
+        run: python -m pip install -c ingest/constraints.txt -e "ingest[dev]"
+      # The tests import their helpers relative to ingest/, so both run from there.
+      - name: Lint
+        working-directory: ingest
+        run: ruff check .
+      - name: Tests
+        working-directory: ingest
+        run: python -m pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx eslint .
+      - name: Tests
+        run: npx vitest run
+      - name: Known vulnerabilities (production dependencies)
+        run: npm audit --omit=dev --audit-level=high
+
+  rls:
+    # Needs the repository secret TEST_DATABASE_URL: a THROWAWAY Supabase project with the migrations
+    # applied, never the live one. Skipped when the secret is not set.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+    steps:
+      - name: Skip without a throwaway database
+        if: ${{ env.TEST_DATABASE_URL == '' }}
+        run: echo "TEST_DATABASE_URL is not set: the RLS tests were not run."
+      - uses: actions/checkout@v4
+        if: ${{ env.TEST_DATABASE_URL != '' }}
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        if: ${{ env.TEST_DATABASE_URL != '' }}
+        with:
+          python-version: "3.12"
+      - name: Install
+        if: ${{ env.TEST_DATABASE_URL != '' }}
+        run: python -m pip install -c ingest/constraints.txt -e ingest
+      - name: Row level security tests
+        if: ${{ env.TEST_DATABASE_URL != '' }}
+        run: blindcard-ingest rls-test

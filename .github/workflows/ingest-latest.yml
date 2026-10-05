@@ -1,17 +1,24 @@
 name: ingest-latest
 
-# Ingests recent events that are not complete yet and scores their fights.
+# The daily data job, in three jobs so that one slow or failing part cannot hold up the rest:
+#   ingest   what happened: completed events, ratings, records, bonuses, judges   (up to 30 min)
+#   upcoming the announced cards, start times, expected ratings, favourites, the audit (up to 30 min)
+#   styles   fighting styles from the official athlete pages, 15 s per page       (up to 45 min)
+# `upcoming` and `styles` wait for `ingest` but run even when it failed. Inside a job every step runs
+# even when an earlier one failed (the job is still red): a failed step must not hide the others.
 #
-# Timing: the data mirror commits a refresh about once a day, around 18:04 UTC (observed,
-# not guaranteed). We run shortly after, plus a later retry. GitHub cron is UTC only, so the
-# Amsterdam time shifts by an hour with daylight saving. The command is condition-driven
-# (it only does work for events that are not complete yet), so extra runs are harmless.
+# Timing: the data mirror commits a refresh when there is something new (event days, about 18:00
+# UTC). We run shortly after, plus a later retry. GitHub cron is UTC only and may start late (hours
+# at busy times), so the Amsterdam time shifts by an hour with daylight saving. Every command is
+# condition-driven (it only does work that is not done yet), so extra runs are harmless.
 #
-# Prerequisites, once: apply supabase/migrations, run `backfill`, then
-# `rescore --version 1`. Without an active score version this job fails on purpose.
+# Prerequisites, once: the migrations (`blindcard-ingest migrate`), `backfill --from 2001`, then
+# `rescore --version 22 --activate`. Without an active score version `ingest` fails on purpose.
+# docs/RUNBOOK.md has the full order.
 #
-# Needs the repository secret DATABASE_URL. Optional repository variable SCRAPER_CONTACT
-# (public contact URL for the User-Agent; defaults to this repository).
+# Needs the repository secret DATABASE_URL (the session pooler URL: the runners have IPv4 only).
+# Optional repository variable SCRAPER_CONTACT (public contact URL for the User-Agent; defaults to
+# this repository).
 #
 # Note: GitHub disables scheduled workflows in a public repository after 60 days without
 # repository activity; re-enable them under the Actions tab if that happens.
@@ -38,24 +45,35 @@ concurrency:
   group: ingest-latest
   cancel-in-progress: false
 
+env:
+  SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
+  DRY_RUN: ${{ inputs.dry_run || 'false' }}
+
 jobs:
   ingest:
     # Scheduled runs of forks would have no secrets and only add noise.
     if: github.repository == 'mikoberg/blindcard'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: ingest/pyproject.toml
+          cache-dependency-path: |
+            ingest/pyproject.toml
+            ingest/constraints.txt
 
-      # Editable install on purpose: the scoring config is located relative to the source tree.
+      # Editable install on purpose (the scoring config and migrations are located relative to the
+      # source tree), with exact versions from the constraints file.
       - name: Install
-        run: python -m pip install -e ingest
+        run: python -m pip install -c ingest/constraints.txt -e ingest
 
       # Raw downloads are pinned to a commit and never change, so caching them is safe.
       # Old snapshots are pruned so the cache does not grow without bound.
@@ -71,10 +89,7 @@ jobs:
 
       - name: Ingest latest events
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
           SINCE_DAYS: ${{ inputs.since_days || '21' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
         run: |
           args=(--since-days "$SINCE_DAYS")
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
@@ -82,57 +97,77 @@ jobs:
 
       # Rematch, win streaks and unbeaten status of each bout, from the fighters' earlier bouts.
       - name: Career context
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        if: ${{ !cancelled() }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-context "${args[@]}"
 
-      # Each fighter's country (flag) and the records going into every bout, from their
-      # Wikipedia page. A page counts only when one of the fighter's stored bouts is in it.
+      # Each fighter's country (flag), fighting style and the records going into every bout, from
+      # their Wikipedia page. A page counts only when one of the fighter's stored bouts is in it.
+      # The window starts 90 days back, so the last events of December are still refreshed in
+      # January.
       - name: Fighter facts
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        if: ${{ !cancelled() }}
         run: |
-          args=(--from "$(date -u +%Y)")
+          args=(--from "$(date -u -d '90 days ago' +%Y)")
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-fighters "${args[@]}"
 
-      # Which part of the card each fight was on (main card / prelims / early prelims), read
-      # from the event's Wikipedia article. An event is only segmented when every fight matches,
-      # so a card whose article is not updated yet simply shows no split until a later run.
+      # Which part of the card each fight was on (main card / prelims / early prelims), from the
+      # event's Wikipedia article. An event is only segmented when every fight matches, so a card
+      # whose article is not updated yet simply shows no split until a later run.
       - name: Card segments
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        if: ${{ !cancelled() }}
         run: |
-          args=(--from "$(date -u +%Y)")
+          args=(--from "$(date -u -d '90 days ago' +%Y)")
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-segments "${args[@]}"
+
+      # Fight / Performance of the Night labels, from the event articles (used by reveals).
+      - name: Bonuses
+        if: ${{ !cancelled() }}
+        run: |
+          args=(--from "$(date -u -d '90 days ago' +%Y)")
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          blindcard-ingest ingest-bonuses "${args[@]}"
 
       # How often each judge scores against the final result (public aggregates only; the
       # scorecards stay private). Rebuilt in full each run: it is a small table.
       - name: Judge statistics
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        if: ${{ !cancelled() }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-judges "${args[@]}"
 
-      # The announced cards of the coming events (pre-fight facts only, from Wikipedia). A page is
+  upcoming:
+    needs: ingest
+    if: ${{ !cancelled() && github.repository == 'mikoberg/blindcard' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            ingest/pyproject.toml
+            ingest/constraints.txt
+
+      - name: Install
+        run: python -m pip install -c ingest/constraints.txt -e ingest
+
+      # The announced cards of the coming events (pre-fight facts only, from Wikipedia) and their
+      # start times from the official event pages (15 s per page, events within 45 days). A page is
       # only read while its event is still ahead, and a card that already shows a result is refused.
       - name: Upcoming events
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
@@ -141,21 +176,17 @@ jobs:
       # An expected rating for each announced bout, learned from the public ratings of the
       # fighters' earlier fights and the card's public context (never a result, never who wins).
       - name: Expected ratings
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        if: ${{ !cancelled() }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest predict-upcoming "${args[@]}"
 
-      # Who is favoured in each announced bout, learned from past results. Stored privately and
-      # only shown after a click. Refused (nothing stored) unless a walk-forward test on past
-      # fights clearly beats a coin.
-      - name: Favourites
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+      # A model lean for each announced bout, learned from past results. Stored privately and only
+      # shown after a click. Refused (nothing stored) unless a walk-forward test on past fights
+      # clearly beats a coin.
+      - name: Model leans
+        if: ${{ !cancelled() }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
@@ -164,21 +195,39 @@ jobs:
       # Does the newest data still look like the scores say it should? Compares the rate of
       # classics (5.0) and of 4.5 and up in the latest events and years with the long-run rate and
       # fails when a stretch is too unlikely to be luck (under 1%). Notes (under 5%) only show in
-      # the log. Runs last, so a flag never blocks the ingest itself.
+      # the log.
       - name: Score sanity check
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        if: ${{ !cancelled() }}
         run: blindcard-ingest audit-scores --strict
 
-      # Fighting styles that Wikipedia does not give (the Fighter facts step above fills those in),
-      # from the official athlete pages: one field per page, at the site's crawl delay of 15 s, so
-      # at most 40 fighters per run (about 10 minutes). Fighters on an announced card go first, and
-      # nobody is asked again for months.
+  styles:
+    needs: ingest
+    if: ${{ !cancelled() && github.repository == 'mikoberg/blindcard' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            ingest/pyproject.toml
+            ingest/constraints.txt
+
+      - name: Install
+        run: python -m pip install -c ingest/constraints.txt -e ingest
+
+      # Fighting styles that Wikipedia does not give (the Fighter facts step fills those in), from
+      # the official athlete pages: one field per page, at the site's crawl delay of 15 s, so at
+      # most 40 fighters per run (about 10 minutes). Fighters on an announced card go first, nobody
+      # is asked again for months, and progress is saved every 10 fighters.
       - name: Fighting styles (official pages)
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SCRAPER_CONTACT: ${{ vars.SCRAPER_CONTACT || 'https://github.com/mikoberg/blindcard' }}
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
         run: |
           args=(--limit 40)
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi

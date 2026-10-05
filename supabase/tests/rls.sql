@@ -109,6 +109,12 @@ insert into public.upcoming_bouts (id, event_id, card_position, fighter_a_name, 
 values ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000d1', 1, 'Test A', 'Test B', true);
 insert into public.upcoming_picks (bout_id, favoured, probability, basis, accuracy, version)
 values ('00000000-0000-0000-0000-0000000000d2', 'a', 0.6, 'both', 0.57, 1);
+insert into public.upcoming_events (id, wiki_title, name, slug, event_date)
+values ('00000000-0000-0000-0000-0000000000d3', 'Test past', 'Test Past Event', 'test-past', '2020-01-01');
+insert into public.upcoming_bouts (id, event_id, card_position, fighter_a_name, fighter_b_name, has_pick)
+values ('00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-0000000000d3', 1, 'Old A', 'Old B', true);
+insert into public.upcoming_picks (bout_id, favoured, probability, basis, accuracy, version)
+values ('00000000-0000-0000-0000-0000000000d4', 'b', 0.6, 'both', 0.57, 1);
 insert into public.judge_disputes (judge_slug, fight_id, judge_card, margin, lone, severity)
 values ('test-judge', '00000000-0000-0000-0000-0000000000f1', 'Test Judge 29 - 28', -1, true, 3);
 
@@ -380,6 +386,8 @@ begin
   end;
   select count(*) into n from public.upcoming_pick('00000000-0000-0000-0000-0000000000d2');
   if n <> 1 then raise exception 'FAIL: upcoming_pick should return exactly 1 row, got %', n; end if;
+  select count(*) into n from public.upcoming_pick('00000000-0000-0000-0000-0000000000d4');
+  if n <> 0 then raise exception 'FAIL: upcoming_pick answered for an event that is over'; end if;
   select count(*) into n from public.upcoming_pick('00000000-0000-0000-0000-00000000dead');
   if n <> 0 then raise exception 'FAIL: upcoming_pick leaked a row for an unknown bout'; end if;
   select count(*) into n from public.upcoming_bouts where has_pick;
@@ -482,20 +490,19 @@ begin
     end;
   end loop;
 
-  -- Own rating: allowed. Someone else's rating row is invisible.
-  insert into public.ratings (fight_id, user_id, stars)
-  values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c1', 5);
-  select count(*) into n from public.ratings;
-  if n <> 1 then raise exception 'FAIL: user should see only their own rating, saw %', n; end if;
-  raise notice 'PASS ratings are own-rows only (read)';
-
-  -- Rating on behalf of another user: rejected by RLS.
+  -- A visitor's own rating is a later feature: until it exists nobody signed in can touch it.
+  begin
+    perform count(*) from public.ratings;
+    raise exception 'FAIL: authenticated could read ratings';
+  exception when insufficient_privilege then
+    raise notice 'PASS authenticated cannot read ratings (feature not switched on)';
+  end;
   begin
     insert into public.ratings (fight_id, user_id, stars)
-    values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c2', 1);
-    raise exception 'FAIL: user could insert a rating for another user';
+    values ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000c1', 5);
+    raise exception 'FAIL: authenticated could write a rating';
   exception when insufficient_privilege then
-    raise notice 'PASS ratings are own-rows only (write)';
+    raise notice 'PASS authenticated cannot write ratings';
   end;
 end $$;
 
