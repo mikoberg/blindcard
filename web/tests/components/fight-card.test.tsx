@@ -106,19 +106,19 @@ describe("FightCard fighters, records and storylines", () => {
 });
 
 
-describe("FightCard: the record in the promotion as a fallback", () => {
+describe("FightCard: no guessed records", () => {
   const own = { w: 6, l: 4, d: 0, nc: 0 };
 
-  it("shows the record in the promotion, labelled, when there is no professional record", () => {
+  it("shows no record at all when only the record in the promotion is known", () => {
     const html = render(
       makeFight(2, 4, {
         fighterA: { id: "a", name: "Ann One" },
         career: { meetings: 0, a: { streak: 0, unbeaten: false, record: own }, b: { streak: 0, unbeaten: false } },
       }),
     );
-    expect(html).toContain("6-4");
-    expect(html).toContain("in the promotion");
-    expect(html).toContain('aria-label="Record before the fight: 6-4 in the promotion"');
+    expect(html).not.toContain("6-4");
+    expect(html).not.toContain("in the promotion");
+    expect(html).not.toContain("Record before the fight");
   });
 
   it("notes a promotion debut instead of a 0-0 record", () => {

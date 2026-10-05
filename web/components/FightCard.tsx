@@ -3,7 +3,7 @@ import { isHiddenGem } from "@/lib/card/hiddenGem";
 import { recordParts } from "@/lib/card/record";
 import { SEGMENT_LABELS } from "@/lib/card/segments";
 import { formatStars } from "@/lib/card/stars";
-import { displayRecord, fighterNote, pairingLabel } from "@/lib/card/story";
+import { fighterNote, pairingLabel } from "@/lib/card/story";
 import type { CardFight, CardFighter, FighterCareer, FighterRecord } from "@/lib/card/types";
 import { Monogram } from "./Monogram";
 import { RevealButton } from "./RevealButton";
@@ -40,9 +40,8 @@ function FighterLine({
   career: FighterCareer | null | undefined;
 }) {
   const note = fighterNote(career);
-  const shown = displayRecord(record, career);
-  const parts = shown ? recordParts(shown.record) : null;
-  const caption = [parts?.extra, shown?.inPromotion ? "in the promotion" : null].filter(Boolean).join(" ");
+  const parts = record ? recordParts(record) : null;
+  const caption = parts?.extra ?? null;
   return (
     <span className="flex items-center gap-3">
       <Monogram name={fighter.name} country={fighter.country} size="lg" />

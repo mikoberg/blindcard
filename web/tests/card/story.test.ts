@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayRecord, fighterNote, pairingLabel } from "@/lib/card/story";
+import { fighterNote, pairingLabel } from "@/lib/card/story";
 import { makeFight } from "./helpers";
 
 const career = (meetings: number, a: [number, boolean], b: [number, boolean]) => ({
@@ -42,28 +42,5 @@ describe("fighterNote: a debut", () => {
   it("does not claim a debut when the record is not known", () => {
     expect(fighterNote({ streak: 0, unbeaten: false, record: null })).toBeNull();
     expect(fighterNote({ streak: 0, unbeaten: false })).toBeNull();
-  });
-});
-
-describe("displayRecord", () => {
-  const pro = { w: 23, l: 3, d: 0, nc: 0 };
-  const own = { w: 6, l: 4, d: 0, nc: 0 };
-
-  it("prefers the professional record", () => {
-    expect(displayRecord(pro, { streak: 0, unbeaten: false, record: own })).toEqual({ record: pro, inPromotion: false });
-  });
-
-  it("falls back to the record in the promotion, marked as such", () => {
-    expect(displayRecord(null, { streak: 0, unbeaten: false, record: own })).toEqual({
-      record: own,
-      inPromotion: true,
-    });
-  });
-
-  it("shows nothing for a debut or when nothing is known", () => {
-    const debut = { streak: 0, unbeaten: false, record: { w: 0, l: 0, d: 0, nc: 0 } };
-    expect(displayRecord(null, debut)).toBeNull();
-    expect(displayRecord(null, { streak: 0, unbeaten: false, record: null })).toBeNull();
-    expect(displayRecord(undefined, undefined)).toBeNull();
   });
 });
