@@ -66,8 +66,8 @@ describe("FightCard fighters, records and storylines", () => {
 
   it("puts each fighter on a line of their own: flag, name, note and the record going in", () => {
     const html = render(fight);
-    const a = html.indexOf("Ann One");
-    const b = html.indexOf("Bea Two");
+    const a = html.indexOf(">Ann One<");
+    const b = html.indexOf(">Bea Two<");
     expect(a).toBeGreaterThan(-1);
     expect(b).toBeGreaterThan(a);
     // each record sits with its own fighter (between their name and the next fighter)
@@ -89,8 +89,8 @@ describe("FightCard fighters, records and storylines", () => {
     expect(html).toContain("Won 5 in a row");
     expect(html).toContain("Unbeaten in the promotion");
     expect(html).toContain("Rematch");
-    expect(html.indexOf("Won 5 in a row")).toBeLessThan(html.indexOf("Bea Two"));
-    expect(html.indexOf("Unbeaten in the promotion")).toBeGreaterThan(html.indexOf("Bea Two"));
+    expect(html.indexOf("Won 5 in a row")).toBeLessThan(html.indexOf(">Bea Two<"));
+    expect(html.indexOf("Unbeaten in the promotion")).toBeGreaterThan(html.indexOf(">Bea Two<"));
   });
 
   it("shows a fighter without a known record as just their name", () => {
@@ -175,8 +175,8 @@ describe("FightCard fighting styles", () => {
         fighterB: { id: "b", name: "Bea Two", country: "se" },
       }),
     );
-    const a = html.indexOf("Ann One");
-    const b = html.indexOf("Bea Two");
+    const a = html.indexOf(">Ann One<");
+    const b = html.indexOf(">Bea Two<");
     expect(html.slice(a, b)).toContain("Kickboxing, Brazilian jiu-jitsu");
     expect(html.slice(b)).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
   });

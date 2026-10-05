@@ -16,37 +16,59 @@ import { StarRating } from "./StarRating";
 
 const TAG = "inline-flex items-center border-2 px-2 py-0.5 text-xs font-bold";
 
-/** The big number in its box: red from 4, gold foil from 5, plain ink below. */
-function RatingPlate({ stars }: { stars: number | null }) {
-  if (isClassic(stars)) return <ClassicSeal value={formatStars(stars as number)} />;
-  const tone =
-    stars === null
-      ? "border-dashed border-[var(--muted)] bg-transparent text-[var(--muted)]"
-      : stars >= 4
-        ? "scorebox-hot"
-        : "";
+/**
+ * The rating, as a panel down the left side of the card: ink with the gold seal for a classic, red
+ * from 4, plain paper below, dashed when there is no rating. The number is decorative; the stars
+ * beside it carry the spoken label.
+ */
+function RatingPanel({ stars }: { stars: number | null }) {
+  const classic = isClassic(stars);
+  const hot = stars !== null && stars >= 4;
+  const tone = classic
+    ? "bg-[var(--text)] text-[var(--bg)]"
+    : hot
+      ? "bg-[var(--accent)] text-[var(--accent-ink)]"
+      : stars === null
+        ? "bg-transparent text-[var(--muted)]"
+        : "bg-[var(--surface-2)] text-[var(--text)]";
   return (
-    <div aria-hidden="true" className={`scorebox h-[4.25rem] w-[4.25rem] shrink-0 text-3xl ${tone}`}>
-      {stars === null ? "–" : formatStars(stars)}
+    <div
+      className={`flex items-center gap-4 border-b-2 px-4 py-3 sm:flex-col sm:justify-center sm:gap-3 sm:border-b-0 sm:border-r-2 sm:px-3 sm:py-6 ${
+        stars === null ? "border-dashed border-[var(--muted)]" : "border-[var(--text)]"
+      } ${tone}`}
+    >
+      {stars !== null &&
+        (classic ? (
+          <ClassicSeal value={formatStars(stars)} />
+        ) : (
+          <span aria-hidden="true" className="display text-5xl leading-none tabular-nums sm:text-6xl">
+            {formatStars(stars)}
+          </span>
+        ))}
+      <StarRating stars={stars} showNumber={false} onDark={classic || hot} />
     </div>
   );
 }
 
-/** One fighter: flag, name, what was known before (unbeaten, streak) and the record going in. */
-function FighterLine({
+/** One fighter: flag, name, style, what was known before (unbeaten, streak) and the record going in. */
+function FighterBlock({
   fighter,
   record,
   career,
+  side,
 }: {
   fighter: CardFighter;
   record: FighterRecord | null;
   career: FighterCareer | null | undefined;
+  /** On wide screens the second fighter is mirrored, so the pair faces each other across the "vs". */
+  side: "left" | "right";
 }) {
   const note = fighterNote(career);
   const parts = record ? recordParts(record) : null;
   const caption = parts?.extra ?? null;
+  const mirrored = side === "right";
   return (
-    <span className="flex items-center gap-3">
+    <span className={`flex items-center gap-3 ${mirrored ? "sm:flex-row-reverse sm:text-right" : ""}`}>
       <Monogram name={fighter.name} country={fighter.country} size="lg" />
       <span className="min-w-0 flex-1">
         <span className="block break-words text-xl font-extrabold leading-tight sm:text-2xl">{fighter.name}</span>
@@ -55,26 +77,21 @@ function FighterLine({
         )}
         {note && <span className="block text-xs font-normal text-[var(--muted)]">{note}</span>}
         {parts && (
-          <span aria-hidden="true" className="mt-0.5 block text-sm font-extrabold tabular-nums sm:hidden">
-            {parts.main}
+          <span
+            className="mt-1 block leading-none"
+            aria-label={`Record before the fight: ${parts.main}${caption ? ` ${caption}` : ""}`}
+          >
+            <span aria-hidden="true" className="display-tight text-lg tabular-nums">
+              {parts.main}
+            </span>
+            {caption && (
+              <span aria-hidden="true" className="ml-1.5 text-xs font-normal text-[var(--muted)]">
+                {caption}
+              </span>
+            )}
           </span>
         )}
       </span>
-      {parts && (
-        <span
-          className="hidden shrink-0 text-right leading-none sm:block"
-          aria-label={`Record before the fight: ${parts.main}${caption ? ` ${caption}` : ""}`}
-        >
-          <span aria-hidden="true" className="block text-2xl font-extrabold tabular-nums">
-            {parts.main}
-          </span>
-          {caption && (
-            <span aria-hidden="true" className="mt-1 block text-xs font-normal text-[var(--muted)]">
-              {caption}
-            </span>
-          )}
-        </span>
-      )}
     </span>
   );
 }
@@ -96,51 +113,56 @@ export function FightCard({
       className="scroll-mt-20 overflow-hidden border-2 border-[var(--text)] bg-[var(--surface)]"
     >
       {classic && <div aria-hidden="true" className="h-2 border-b-2 border-[var(--text)]" style={{ backgroundImage: GOLD_FOIL }} />}
-      <div className="flex gap-4 p-4 sm:p-5">
-        <RatingPlate stars={fight.rating?.stars ?? null} />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-h-7 flex-wrap items-center gap-2">
-            {showSegment && fight.cardSegment && (
-              <span className={`${TAG} border-[var(--border)] text-[var(--muted)]`}>
-                {SEGMENT_LABELS[fight.cardSegment]}
-              </span>
-            )}
-            {classic && <ClassicBadge />}
-            {fight.isTitleFight && (
-              <span className={`${TAG} border-[var(--text)] bg-[var(--text)] text-[var(--bg)]`}>Title fight</span>
-            )}
-            {isHiddenGem(fight) && (
-              <span className={`${TAG} border-[var(--accent)] text-[var(--accent)]`}>Hidden gem</span>
-            )}
-            {pairing && <span className={`${TAG} border-[var(--text)]/35`}>{pairing}</span>}
+      <div className="grid sm:grid-cols-[9rem_1fr]">
+        <RatingPanel stars={fight.rating?.stars ?? null} />
+        <div className="min-w-0 p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-h-7 flex-wrap items-center gap-2">
+              {showSegment && fight.cardSegment && (
+                <span className={`${TAG} border-[var(--border)] text-[var(--muted)]`}>
+                  {SEGMENT_LABELS[fight.cardSegment]}
+                </span>
+              )}
+              {classic && <ClassicBadge />}
+              {fight.isTitleFight && (
+                <span className={`${TAG} border-[var(--text)] bg-[var(--text)] text-[var(--bg)]`}>Title fight</span>
+              )}
+              {isHiddenGem(fight) && (
+                <span className={`${TAG} border-[var(--accent)] text-[var(--accent-text)]`}>Hidden gem</span>
+              )}
+              {pairing && <span className={`${TAG} border-[var(--text)]/35`}>{pairing}</span>}
+            </div>
+            <ShareFightButton fightId={fight.id} fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} />
           </div>
-          <h3 className="mt-3">
-            <FighterLine
+
+          <h3 className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-5">
+            <FighterBlock
               fighter={fight.fighterA}
               record={fight.records?.a ?? null}
               career={fight.career?.a}
+              side="left"
             />
-            <span className="-ml-[5.25rem] my-3 flex items-center gap-3">
-              <span className="h-px flex-1 bg-[var(--border)]" />
-              <span className="display-tight flex items-baseline gap-2 bg-[var(--surface-2)] px-3 py-1 text-base leading-none sm:text-lg">
+            <span className="flex items-center gap-3 sm:flex-col sm:gap-1.5">
+              <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
+              <span className="display-tight flex flex-col items-center bg-[var(--surface-2)] px-3 py-1 leading-none">
                 <span className="text-sm font-bold text-[var(--accent-text)]">vs</span>
-                {fight.weightClass && <span aria-hidden="true">{fight.weightClass}</span>}
+                {fight.weightClass && (
+                  <span aria-hidden="true" className="mt-1 text-center text-sm sm:max-w-[7.5rem]">
+                    {fight.weightClass}
+                  </span>
+                )}
               </span>
-              <span className="h-px flex-1 bg-[var(--border)]" />
+              <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
             </span>
-            <FighterLine
+            <FighterBlock
               fighter={fight.fighterB}
               record={fight.records?.b ?? null}
               career={fight.career?.b}
+              side="right"
             />
           </h3>
-          <p className="mt-3 text-sm text-[var(--muted)]">{fightBlurb(fight)}</p>
-          <div className="mt-3">
-            <StarRating stars={fight.rating?.stars ?? null} showNumber={false} />
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-4">
-            <ShareFightButton fightId={fight.id} fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} />
-          </div>
+
+          <p className="mt-4 text-sm text-[var(--muted)]">{fightBlurb(fight)}</p>
           {fight.videoId && (
             <WatchButton
               fighterA={fight.fighterA.name}

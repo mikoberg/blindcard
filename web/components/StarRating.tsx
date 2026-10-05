@@ -21,11 +21,11 @@ export function StarDefs() {
 }
 
 /** One of the five stars: gold when earned, an empty contour when not, half gold for a half. */
-function Star({ fill }: { fill: StarFill }) {
+function Star({ fill, onDark }: { fill: StarFill; onDark: boolean }) {
   return (
     <span className="relative inline-block h-6 w-6">
       <svg viewBox="0 0 24 24" className="absolute inset-0 h-6 w-6" fill="none">
-        <path d={STAR_PATH} stroke="var(--text)" strokeOpacity="0.3" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d={STAR_PATH} stroke={onDark ? "var(--bg)" : "var(--text)"} strokeOpacity={onDark ? "0.55" : "0.3"} strokeWidth="1.4" strokeLinejoin="round" />
       </svg>
       {fill !== "empty" && (
         <svg
@@ -49,8 +49,11 @@ function Star({ fill }: { fill: StarFill }) {
 export function StarRating({
   stars,
   showNumber = true,
+  onDark = false,
 }: {
   stars: number | null;
+  /** Empty stars are drawn light, for use on an ink or red background. */
+  onDark?: boolean;
   /** Hide the number when it is shown elsewhere (the rating plate); the label stays. */
   showNumber?: boolean;
 }) {
@@ -65,7 +68,7 @@ export function StarRating({
     <span className="inline-flex items-center gap-2.5" role="img" aria-label={starsLabel(stars)}>
       <span className="flex gap-0.5" aria-hidden="true">
         {starFills(stars).map((fill, index) => (
-          <Star key={index} fill={fill} />
+          <Star key={index} fill={fill} onDark={onDark} />
         ))}
       </span>
       {showNumber && (

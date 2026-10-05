@@ -63,10 +63,11 @@ export function RevealButton({ fightId, fighterA, fighterB }: Props) {
       >
         <span>{label}</span>
         {!shown && (
-          <span aria-hidden="true" className="flex items-center gap-1.5">
-            <span className="h-2 w-10 bg-current opacity-40" />
-            <span className="h-2 w-6 bg-current opacity-40" />
-            <span className="h-2 w-14 bg-current opacity-40" />
+          <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center border-2 border-current opacity-70">
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="5" y="11" width="14" height="10" rx="1" />
+              <path d="M8 11V8a4 4 0 018 0v3" />
+            </svg>
           </span>
         )}
       </button>

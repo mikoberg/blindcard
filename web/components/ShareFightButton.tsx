@@ -38,18 +38,23 @@ export function ShareFightButton({
   }
 
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex shrink-0 items-center gap-2">
+      <span aria-live="polite" className="text-xs font-semibold text-[var(--muted)]">
+        {state === "copied" ? "Link copied" : state === "failed" ? "Could not copy" : ""}
+      </span>
       <button
         type="button"
         onClick={share}
         aria-label={`Share ${fighterA} versus ${fighterB}`}
-        className="inline-flex min-h-11 items-center px-1 text-sm font-semibold text-[var(--muted)] underline underline-offset-4 hover:text-[var(--accent)]"
+        title="Share this fight"
+        className="inline-flex h-11 w-11 items-center justify-center border-2 border-[var(--border)] text-[var(--muted)] transition-colors hover:border-[var(--text)] hover:bg-[var(--text)] hover:text-[var(--bg)]"
       >
-        Share
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 15V3" />
+          <path d="M7.5 7.5L12 3l4.5 4.5" />
+          <path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+        </svg>
       </button>
-      <span aria-live="polite" className="text-sm text-[var(--muted)]">
-        {state === "copied" ? "Link copied" : state === "failed" ? "Could not copy the link" : ""}
-      </span>
     </span>
   );
 }
