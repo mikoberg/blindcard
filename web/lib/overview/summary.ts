@@ -6,16 +6,16 @@ export function eventStats(event: EventSummary): EventStats {
   const stars = event.ratings.map((slot) => slot.stars);
   return {
     ratedCount: stars.length,
-    bestStars: stars.length === 0 ? null : Math.max(...stars),
+    cardRating: stars.length === 0 ? null : Math.round((stars.reduce((sum, s) => sum + s, 0) / stars.length) * 10) / 10,
     hiddenGems: event.ratings.filter((slot) => isHiddenGemRating(slot.stars, slot.position)).length,
   };
 }
 
-/** Screen-reader text for the rating strip: counts and the best rating, nothing else. */
+/** Screen-reader text for the rating strip: counts and the card rating, nothing else. */
 export function stripLabel(event: EventSummary): string {
-  const { ratedCount, bestStars } = eventStats(event);
-  if (bestStars === null) return "Ratings are on their way";
-  return `${ratedCount} ${ratedCount === 1 ? "fight" : "fights"} rated, best ${bestStars.toFixed(1)} out of 5`;
+  const { ratedCount, cardRating } = eventStats(event);
+  if (cardRating === null) return "Ratings are on their way";
+  return `${ratedCount} ${ratedCount === 1 ? "fight" : "fights"} rated, card rating ${cardRating.toFixed(1)} out of 5`;
 }
 
 export function summariesByYear(

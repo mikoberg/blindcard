@@ -18,19 +18,19 @@ const event = (patch: Partial<EventSummary> = {}): EventSummary => ({
 });
 
 describe("eventStats", () => {
-  it("counts rated fights, finds the best rating and the hidden gems (early card, 4+ stars)", () => {
-    expect(eventStats(event())).toEqual({ ratedCount: 3, bestStars: 4.5, hiddenGems: 1 });
+  it("counts rated fights, averages the ratings and finds the hidden gems (early card, 4+ stars)", () => {
+    expect(eventStats(event())).toEqual({ ratedCount: 3, cardRating: 3.7, hiddenGems: 1 });
   });
 
-  it("has no best rating and no gems when nothing is rated", () => {
-    expect(eventStats(event({ ratings: [] }))).toEqual({ ratedCount: 0, bestStars: null, hiddenGems: 0 });
+  it("has no card rating and no gems when nothing is rated", () => {
+    expect(eventStats(event({ ratings: [] }))).toEqual({ ratedCount: 0, cardRating: null, hiddenGems: 0 });
   });
 });
 
 describe("stripLabel", () => {
-  it("says how many fights are rated and the best rating, nothing about results", () => {
-    expect(stripLabel(event())).toBe("3 fights rated, best 4.5 out of 5");
-    expect(stripLabel(event({ ratings: [{ position: 1, stars: 3 }] }))).toBe("1 fight rated, best 3.0 out of 5");
+  it("says how many fights are rated and the card rating, nothing about results", () => {
+    expect(stripLabel(event())).toBe("3 fights rated, card rating 3.7 out of 5");
+    expect(stripLabel(event({ ratings: [{ position: 1, stars: 3 }] }))).toBe("1 fight rated, card rating 3.0 out of 5");
   });
 
   it("says ratings are on their way when there are none", () => {

@@ -27,6 +27,7 @@ export interface EventSummary {
 
 export interface EventStats {
   ratedCount: number;
-  bestStars: number | null;
+  /** Average of all the fight ratings on the card, one decimal; null when nothing is rated. */
+  cardRating: number | null;
   hiddenGems: number;
 }

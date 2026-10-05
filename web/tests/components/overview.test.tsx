@@ -32,9 +32,9 @@ describe("EventPoster", () => {
     expect(html.match(/class="bar"/g)).toHaveLength(2);
   });
 
-  it("describes the strip with counts and the best rating only", () => {
+  it("describes the strip with counts and the card rating only", () => {
     const html = renderToStaticMarkup(<EventPoster event={event()} size="md" />);
-    expect(html).toContain('aria-label="4 fights rated, best 4.5 out of 5"');
+    expect(html).toContain('aria-label="4 fights rated, card rating 3.4 out of 5"');
   });
 
   it("shows a flat baseline and says ratings are coming when nothing is rated", () => {
@@ -106,13 +106,13 @@ describe("EventPoster type", () => {
 });
 
 describe("EventCard", () => {
-  it("links to the event and shows name, date, location and the best fight", () => {
+  it("links to the event and shows name, date, location and the card rating", () => {
     const html = renderToStaticMarkup(<EventCard event={event()} />);
     expect(html).toContain('href="/events/fight-night-alpha-vs-beta"');
     expect(html).toContain("Fight Night: Alpha vs. Beta");
     expect(html).toContain("Sat 12 Sep 2026");
     expect(html).toContain("Las Vegas, Nevada");
-    expect(html).toContain('aria-label="Best fight rated 4.5 out of 5"');
+    expect(html).toContain('aria-label="Card rating 3.4 out of 5"');
   });
 
   it("counts hidden gems (4+ stars from card position 6) and says nothing when there are none", () => {
@@ -126,10 +126,10 @@ describe("EventCard", () => {
     expect(html).toContain("Main event: Raoni Barcelos versus Raul Rosas Jr.");
   });
 
-  it("shows no best-fight rating for an event without ratings", () => {
+  it("shows no card rating for an event without ratings", () => {
     const html = renderToStaticMarkup(<EventCard event={event({ ratings: [] })} />);
-    expect(html).not.toContain("Best fight");
-    expect(html).not.toContain("best fight");
+    expect(html).not.toContain("Card rating");
+    expect(html).not.toContain("card rating");
   });
 
   it("escapes hostile names and lets long ones wrap", () => {
