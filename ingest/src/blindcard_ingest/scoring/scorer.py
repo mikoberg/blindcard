@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import bisect
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from blindcard_ingest.scoring.config import ScoringConfig
@@ -29,6 +29,8 @@ class Reference:
     pool_size: int
     #: Same for the private performance axis; None when the version has no such axis.
     performance_knots: list[float] | None = None
+    #: Per event year: what the era-adjusted features are multiplied by (see `era_scales`).
+    era_scales: dict[str, float] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -38,6 +40,8 @@ class Reference:
         }
         if self.performance_knots is not None:
             data["performance_knots"] = list(self.performance_knots)
+        if self.era_scales:
+            data["era_scales"] = dict(self.era_scales)
         return data
 
     @classmethod
@@ -49,6 +53,7 @@ class Reference:
             knots=knots,
             pool_size=int(data["pool_size"]),
             performance_knots=None if performance is None else _checked_knots(performance),
+            era_scales={str(k): float(v) for k, v in data.get("era_scales", {}).items()},
         )
 
 
@@ -109,10 +114,68 @@ def features_of(config: ScoringConfig) -> tuple[str, ...]:
     )
 
 
+#: The pace of the era is the median strikes per minute of the fights around a year.
+ERA_FEATURE = "pace"
+ERA_WINDOW_YEARS = 1  # a year's scale uses the fights of the year before and after, too
+ERA_MIN_FIGHTS = 60  # ... and widens until at least this many fights are in the window
+ERA_SCALE_RANGE = (0.5, 2.5)
+
+
+def era_scales(pool: Sequence[Mapping[str, float]]) -> dict[str, float]:
+    """Per event year, how much to multiply pace-like features so a fight is compared with its era.
+
+    Strikes per minute grew over the years (a median decision in 2013 lands far fewer strikes than
+    one in 2022), so absolute volume rates old fights as dull. The multiplier of a year is the
+    median pace of all fights divided by the median pace of the fights around that year.
+    """
+    paced = sorted((int(raw["event_year"]), raw[ERA_FEATURE]) for raw in pool if raw["event_year"])
+    if not paced:
+        return {}
+    overall = quantile(sorted(pace for _, pace in paced), 0.5)
+    low, high = ERA_SCALE_RANGE
+    scales: dict[str, float] = {}
+    for year in range(paced[0][0], paced[-1][0] + 1):
+        window = ERA_WINDOW_YEARS
+        while True:
+            around = [pace for y, pace in paced if abs(y - year) <= window]
+            if len(around) >= ERA_MIN_FIGHTS or window > paced[-1][0] - paced[0][0]:
+                break
+            window += 1
+        median = quantile(sorted(around), 0.5)
+        scales[str(year)] = min(max(overall / median, low), high) if median > 0 else 1.0
+    return scales
+
+
+def era_adjusted(
+    config: ScoringConfig, scales: Mapping[str, float], raw: Mapping[str, float]
+) -> Mapping[str, float]:
+    """`raw` with the config's era-adjusted features multiplied by their year's scale."""
+    return apply_era(config.era_adjusted, scales, raw)
+
+
+def apply_era(
+    features: Sequence[str], scales: Mapping[str, float], raw: Mapping[str, float]
+) -> Mapping[str, float]:
+    """`raw` with `features` multiplied by the scale of the fight's year (nearest known year)."""
+    if not features or not scales:
+        return raw
+    year = int(raw["event_year"])
+    if year == 0:  # unknown year: no adjustment
+        return raw
+    known = sorted(int(y) for y in scales)
+    nearest = min(known, key=lambda y: abs(y - year))
+    factor = scales[str(nearest)]
+    return {name: value * factor if name in features else value for name, value in raw.items()}
+
+
 def normalise(
-    config: ScoringConfig, caps: Mapping[str, float], raw: Mapping[str, float]
+    config: ScoringConfig,
+    caps: Mapping[str, float],
+    raw: Mapping[str, float],
+    scales: Mapping[str, float] | None = None,
 ) -> dict[str, float]:
     """Scale the version's features to 0..1: capped ones by their frozen cap, the rest as-is."""
+    raw = era_adjusted(config, scales or {}, raw)
     result: dict[str, float] = {}
     for name in features_of(config):
         value = raw[name]
@@ -178,12 +241,14 @@ def build_reference(config: ScoringConfig, pool: Sequence[Mapping[str, float]]) 
         raise ScoringError(
             f"calibration pool has {len(pool)} fights, need at least {config.min_pool_size}"
         )
+    scales = era_scales(pool) if config.era_adjusted else {}
+    adjusted = [era_adjusted(config, scales, raw) for raw in pool]
     caps = {
-        name: quantile(sorted(raw[name] for raw in pool), config.cap_quantile)
+        name: quantile(sorted(raw[name] for raw in adjusted), config.cap_quantile)
         for name in CAPPED_FEATURES
         if name in features_of(config)
     }
-    normalised = [normalise(config, caps, raw) for raw in pool]
+    normalised = [normalise(config, caps, raw, scales) for raw in pool]
     performance_knots = None
     if config.performance_weights:
         performance_knots = _knots(performance_composite_of(config, n) for n in normalised)
@@ -192,6 +257,7 @@ def build_reference(config: ScoringConfig, pool: Sequence[Mapping[str, float]]) 
         knots=_knots(composite_of(config, n) for n in normalised),
         pool_size=len(pool),
         performance_knots=performance_knots,
+        era_scales=scales,
     )
 
 
@@ -201,7 +267,7 @@ def _knots(composites: Iterable[float]) -> list[float]:
 
 
 def score(config: ScoringConfig, reference: Reference, raw: Mapping[str, float]) -> ScoredFight:
-    normalised = normalise(config, reference.caps, raw)
+    normalised = normalise(config, reference.caps, raw, reference.era_scales)
     composite = composite_of(config, normalised)
     percentile = round(percentile_of(reference.knots, composite), 2)
     performance = None

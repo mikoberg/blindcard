@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatEventDate } from "@/lib/format";
+import { formatRating, isHighRating } from "@/lib/leaderboard/format";
 import { MIN_FIGHTS } from "@/lib/leaderboard/rank";
 import type { FighterProfile } from "@/lib/leaderboard/types";
 import { Monogram } from "./Monogram";
@@ -34,10 +35,10 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         </div>
         <p
           role="img"
-          aria-label={`Average rating ${profile.average.toFixed(1)} out of 5`}
-          className={`shrink-0 font-[family-name:var(--font-display)] text-5xl font-bold tabular-nums ${profile.average >= 4 ? "text-[var(--accent)]" : ""}`}
+          aria-label={`Average rating ${formatRating(profile.average)} out of 5`}
+          className={`shrink-0 font-[family-name:var(--font-display)] text-5xl font-bold tabular-nums ${isHighRating(profile.average) ? "text-[var(--accent)]" : ""}`}
         >
-          <span aria-hidden="true">{profile.average.toFixed(1)}</span>
+          <span aria-hidden="true">{formatRating(profile.average)}</span>
         </p>
       </section>
 
@@ -65,10 +66,10 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
               </span>
               <span
                 role="img"
-                aria-label={`Rated ${fight.stars.toFixed(1)} out of 5`}
-                className={`shrink-0 font-[family-name:var(--font-display)] text-3xl font-bold tabular-nums ${fight.stars >= 4 ? "text-[var(--accent)]" : ""}`}
+                aria-label={`Rated ${formatRating(fight.stars)} out of 5`}
+                className={`shrink-0 font-[family-name:var(--font-display)] text-3xl font-bold tabular-nums ${isHighRating(fight.stars) ? "text-[var(--accent)]" : ""}`}
               >
-                <span aria-hidden="true">{fight.stars.toFixed(1)}</span>
+                <span aria-hidden="true">{formatRating(fight.stars)}</span>
               </span>
             </Link>
           </li>

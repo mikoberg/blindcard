@@ -47,3 +47,12 @@ export interface LeaderboardEntry {
   /** Average of their fights' ratings. */
   average: number;
 }
+
+/** A fighter found by the search, ranked or not. */
+export interface FighterSearchResult {
+  slug: string;
+  name: string;
+  country: string | null;
+  fights: number;
+  average: number;
+}

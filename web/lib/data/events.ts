@@ -1,15 +1,11 @@
 import type { CardEvent } from "@/lib/card/types";
+import { isValidSlug } from "@/lib/slug";
 import { getSupabase } from "@/lib/supabase/server";
 import { EVENT_COLUMNS, ID_COLUMN } from "./columns";
 import { DataError, ensure, ensureOptional } from "./ensure";
 import { mapEvent, type EventRow } from "./map";
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-/** Slugs are lowercase words joined by single hyphens. Anything else never reaches the database. */
-export function isValidSlug(slug: string): boolean {
-  return slug.length >= 1 && slug.length <= 200 && SLUG_PATTERN.test(slug);
-}
+export { isValidSlug };
 
 export async function listEvents(): Promise<CardEvent[]> {
   const result = await getSupabase()

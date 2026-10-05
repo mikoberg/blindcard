@@ -16,6 +16,7 @@ Everything is deterministic: same labels in, same weights out.
 
 from __future__ import annotations
 
+import dataclasses
 import statistics
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -29,7 +30,7 @@ from blindcard_ingest.fit.stats import (
 )
 from blindcard_ingest.scoring.config import StarThreshold
 from blindcard_ingest.scoring.features import CAPPED_FEATURES
-from blindcard_ingest.scoring.scorer import quantile
+from blindcard_ingest.scoring.scorer import apply_era, era_scales, quantile
 
 #: Candidates. time_fraction and finish lateness are left out: early_finish says the same.
 #: close_decision is left out too: how the judges split says how the fight ended, and a close,
@@ -72,6 +73,10 @@ FIXED_WEIGHTS: dict[str, float] = {
     # only a KO-loss history clearly above the usual counts.
     "fragile_ko": -0.5,
 }
+
+#: Compared with fights of their own era: strikes per minute grew over the years, so a typical
+#: fight of 2013 would otherwise look dull next to one of 2022.
+ERA_FEATURES: tuple[str, ...] = ("pace", "min_pace", "volume")
 
 #: Share of the Performance fit blended into the score, tried in this order.
 BLEND_GRID: tuple[float, ...] = tuple(i / 40 for i in range(25))
@@ -329,6 +334,9 @@ def fit_scoring(
     `pool` is every scorable fight's raw features (what `rescore` builds the caps from).
     `baseline` maps fight id -> composite of the score being replaced, for the comparison.
     """
+    scales = era_scales(pool)
+    pool = [apply_era(ERA_FEATURES, scales, raw) for raw in pool]
+    rows = [dataclasses.replace(r, raw=dict(apply_era(ERA_FEATURES, scales, r.raw))) for r in rows]
     caps = feature_caps(pool, cap_quantile)
     normalised = [_normalised(r, caps) for r in rows]
     train = [i for i, r in enumerate(rows) if r.year < test_from_year]
@@ -443,6 +451,8 @@ def render_config_toml(
         "[normalisation]",
         f"cap_quantile = {cap_quantile}",
         f"min_pool_size = {min_pool_size}",
+        "# Compared with fights of their own era (strikes per minute grew over the years):",
+        "era_adjusted = [" + ", ".join(f'"{name}"' for name in ERA_FEATURES) + "]",
         "",
         "# composite = sum(weight * normalised_feature). Negative weights penalise.",
         "[weights]",

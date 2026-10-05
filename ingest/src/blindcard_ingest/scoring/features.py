@@ -61,6 +61,8 @@ NEW_FEATURES: tuple[str, ...] = (
     "expected_finish",  # real_finish x how often the two fighters' earlier fights finished
     "expected_ko",  # KO/TKO x how often the more fragile of the two was stopped by KO/TKO before
     "fragile_ko",  # KO/TKO x how far that share is above the usual one (only above counts)
+    # Bookkeeping, never weighted: the year of the event, for era-relative pace and volume.
+    "event_year",
 )
 
 FEATURE_NAMES: tuple[str, ...] = V1_FEATURES + NEW_FEATURES
@@ -153,6 +155,8 @@ class ScoringInput:
     context: CareerContext | None = None
     #: The source's detail of how it ended (e.g. "to Knee Injury"); None = not known.
     method_detail: str | None = None
+    #: The year of the event (pre-fight fact); None = not known.
+    event_year: int | None = None
 
     @classmethod
     def from_fight(cls, fight: ParsedFight) -> ScoringInput:
@@ -281,6 +285,7 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "title_fight": 1.0 if inp.is_title_fight else 0.0,
         "volume": float(total_sig),
         "five_rounds": 1.0 if inp.scheduled_rounds == 5 else 0.0,
+        "event_year": float(inp.event_year or 0),
         "cut_short": (1.0 - time_fraction) if cut_short else 0.0,
         "real_finish": 1.0 if real_finish else 0.0,
         "real_early_finish": 1.0 - time_fraction if real_finish else 0.0,

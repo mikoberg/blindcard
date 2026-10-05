@@ -32,6 +32,9 @@ class ScoringConfig:
     star_thresholds: tuple[StarThreshold, ...]
     #: Optional second axis, scored privately and shown only after a reveal. Empty = none.
     performance_weights: dict[str, float] = field(default_factory=dict)
+    #: Features compared with fights of their own era (pace-like ones: strike counts per minute
+    #: grew over the years). Empty = no adjustment.
+    era_adjusted: tuple[str, ...] = ()
 
     def to_json(self) -> dict[str, Any]:
         """JSON snapshot stored in `scoring_versions.config` for reproducibility."""
@@ -45,6 +48,8 @@ class ScoringConfig:
         }
         if self.performance_weights:
             snapshot["performance_weights"] = dict(self.performance_weights)
+        if self.era_adjusted:
+            snapshot["era_adjusted"] = list(self.era_adjusted)
         return snapshot
 
     @classmethod
@@ -62,6 +67,7 @@ class ScoringConfig:
             performance_weights={
                 str(k): float(v) for k, v in data.get("performance_weights", {}).items()
             },
+            era_adjusted=tuple(str(name) for name in data.get("era_adjusted", ())),
         )
 
 
@@ -84,6 +90,12 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
     if not isinstance(min_pool_size, int) or min_pool_size < 1:
         raise ScoringConfigError("normalisation.min_pool_size must be an integer >= 1")
 
+    era_adjusted = tuple(normalisation.get("era_adjusted", ()))
+    unknown_era = sorted(set(era_adjusted) - set(FEATURE_NAMES))
+    if unknown_era:
+        raise ScoringConfigError(
+            f"normalisation.era_adjusted names an unknown feature: {unknown_era}"
+        )
     weights = _parse_weights(raw_weights, "weights")
     performance_weights: dict[str, float] = {}
     if "performance" in data:
@@ -103,6 +115,7 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
         weights=weights,
         star_thresholds=thresholds,
         performance_weights=performance_weights,
+        era_adjusted=era_adjusted,
     )
 
 

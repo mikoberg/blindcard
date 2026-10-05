@@ -2,6 +2,7 @@ import type {
   FighterFightRow,
   FighterProfile,
   FighterRatingRow,
+  FighterSearchResult,
   LeaderboardEntry,
 } from "./types";
 
@@ -82,4 +83,17 @@ export function buildProfile(
     average: Math.round((total / fights.length) * 100) / 100,
     fights,
   };
+}
+
+/** Search results for the page: anyone with rated fights, whether or not they are ranked. */
+export function toSearchResults(rows: readonly FighterRatingRow[]): FighterSearchResult[] {
+  return rows.flatMap((row) => {
+    const average = Number(row.avg_stars);
+    if (!Number.isFinite(average) || !Number.isInteger(row.rated_fights) || row.rated_fights < 1) {
+      return [];
+    }
+    return [
+      { slug: row.slug, name: row.name, country: row.country, fights: row.rated_fights, average },
+    ];
+  });
 }

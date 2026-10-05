@@ -190,6 +190,7 @@ class FakeRepository:
                             is_title_fight=fight.is_title_fight,
                             context=contexts.get(fight.source_id),
                             method_detail=fight.result.method_detail,
+                            event_year=bundle.event.event_date.year,
                         ),
                     )
                 )

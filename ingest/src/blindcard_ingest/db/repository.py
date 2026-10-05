@@ -396,7 +396,7 @@ class PostgresRepository:
         missing_score_for_version: int | None = None,
     ) -> list[FightScoringInput]:
         query = """
-            select f.id, e.source_id as event_source_id, f.scheduled_rounds,
+            select f.id, e.source_id as event_source_id, e.event_date, f.scheduled_rounds,
                    f.card_position, f.is_title_fight,
                    r.method, r.method_detail, r.end_round, r.end_time_seconds
             from public.fights f
@@ -453,6 +453,7 @@ class PostgresRepository:
                     is_title_fight=row["is_title_fight"],
                     context=contexts.get(str(row["id"])),
                     method_detail=row["method_detail"],
+                    event_year=row["event_date"].year,
                 ),
             )
             for row in fights

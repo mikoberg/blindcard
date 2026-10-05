@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FighterLeaderboard } from "@/components/FighterLeaderboard";
+import { FighterSearch } from "@/components/FighterSearch";
 import { Notice } from "@/components/Notice";
 import { listFighterRatings } from "@/lib/data/leaderboard";
 import { MIN_FIGHTS, rankFighters } from "@/lib/leaderboard/rank";
@@ -30,7 +31,9 @@ export default async function FightersPage() {
           rated fights to be listed, so one great fight is not enough.
         </p>
       </section>
-      <FighterLeaderboard entries={ranked.slice(0, SHOWN)} />
+      <FighterSearch>
+        <FighterLeaderboard entries={ranked.slice(0, SHOWN)} />
+      </FighterSearch>
     </div>
   );
 }

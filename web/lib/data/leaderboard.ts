@@ -1,4 +1,5 @@
 import { buildProfile } from "@/lib/leaderboard/rank";
+import { cleanSearchTerm, containsPattern } from "@/lib/leaderboard/search";
 import type { FighterFightRow, FighterProfile, FighterRatingRow } from "@/lib/leaderboard/types";
 import { getSupabase } from "@/lib/supabase/server";
 import { FIGHTER_FIGHT_COLUMNS, FIGHTER_RATING_COLUMNS } from "./columns";
@@ -42,4 +43,23 @@ export async function getFighterProfile(slug: string): Promise<FighterProfile | 
     "load fighter fights",
   );
   return buildProfile(fighter, fights);
+}
+
+const SEARCH_LIMIT = 20;
+
+/** Fighters whose name contains `raw`, most rated fights first. Not limited to the ranked ones. */
+export async function searchFighters(raw: string): Promise<FighterRatingRow[]> {
+  const term = cleanSearchTerm(raw);
+  if (term === null) return [];
+  const pattern = containsPattern(term);
+  return ensure<FighterRatingRow[]>(
+    await getSupabase()
+      .from("fighter_ratings")
+      .select(FIGHTER_RATING_COLUMNS)
+      .ilike("name", pattern)
+      .order("rated_fights", { ascending: false })
+      .order("name")
+      .limit(SEARCH_LIMIT),
+    "search fighters",
+  );
 }
