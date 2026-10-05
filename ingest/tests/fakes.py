@@ -17,6 +17,7 @@ from blindcard_ingest.db.repository import (
     RatedFight,
     StoredScoringVersion,
 )
+from blindcard_ingest.judges import JudgeReport
 from blindcard_ingest.models import EventBundle, ParsedEvent, ParsedFight
 from blindcard_ingest.scoring.career import (
     CareerContext,
@@ -119,6 +120,8 @@ class FakeRepository:
     rated: list[RatedFight] = field(default_factory=list)
     videos: dict[str, str] = field(default_factory=dict)
     video_channel: str | None = None
+    scorecards: list[tuple[int, list[str]]] = field(default_factory=list)
+    judge_report: JudgeReport | None = None
     upserts: int = 0
 
     def complete_event_source_ids(self, source: str) -> set[str]:
@@ -261,6 +264,13 @@ class FakeRepository:
                 self.records[key] = merged
                 changed += 1
         return changed
+
+    def decision_scorecards(self) -> list[tuple[int, list[str]]]:
+        return list(self.scorecards)
+
+    def replace_judge_stats(self, report: JudgeReport) -> int:
+        self.judge_report = report
+        return len(report.judges)
 
     def rated_fights(self, min_stars: float) -> list[RatedFight]:
         return [fight for fight in self.rated if fight.stars >= min_stars]

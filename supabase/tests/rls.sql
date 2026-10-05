@@ -98,6 +98,12 @@ end $$;
 insert into public.fight_videos (fight_id, youtube_id, channel)
 values ('00000000-0000-0000-0000-0000000000f1', 'dQw4w9WgXcQ', 'Test channel');
 
+insert into public.judge_stats (slug, name, slugs, cards, dissent, lone_dissent, abs_sum, abs_sumsq, first_year, last_year)
+values ('test-judge', 'Test Judge', '{test-judge}', 40, 3, 1, 80, 170, 2015, 2025);
+insert into public.judge_baseline (id, cards, dissent, abs_sum, abs_sumsq, judges_with_enough)
+values (1, 100, 7, 205, 450, 2)
+on conflict (id) do nothing;
+
 ------------------------------------------------------------------------------
 -- anon
 ------------------------------------------------------------------------------
@@ -265,6 +271,29 @@ begin
     and column_name not in ('fight_id', 'youtube_id', 'channel', 'created_at');
   if n <> 0 then raise exception 'FAIL: fight_videos has unexpected columns (a title would spoil)'; end if;
   raise notice 'PASS fight_videos is public read, no title, no writes';
+end $$;
+
+-- Judge statistics: public read, never writable, aggregates only (no fight or score columns).
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from public.judge_stats where slug = 'test-judge';
+  if n <> 1 then raise exception 'FAIL: anon should read the seeded judge, saw %', n; end if;
+  select count(*) into n from public.judge_baseline;
+  if n < 1 then raise exception 'FAIL: anon should read the judge baseline'; end if;
+  begin
+    insert into public.judge_stats (slug, name, slugs, cards, dissent, lone_dissent, abs_sum, abs_sumsq, first_year, last_year)
+      values ('x', 'x', '{x}', 1, 0, 0, 1, 1, 2020, 2020);
+    raise exception 'FAIL: anon could write judge stats';
+  exception when insufficient_privilege then null;
+  end;
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name in ('judge_stats', 'judge_baseline')
+    and column_name ~ '(fight|event|fighter|winner|method|score)';
+  if n <> 0 then raise exception 'FAIL: judge tables have a per-bout column'; end if;
+  raise notice 'PASS judge statistics are public aggregates';
 end $$;
 
 -- Card segments are a public, pre-fight fact: readable, but only the three known values.

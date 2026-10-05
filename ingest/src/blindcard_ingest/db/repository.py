@@ -19,6 +19,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from blindcard_ingest.bonus_matching import EventToLabel, FightNames
+from blindcard_ingest.judges import JudgeReport
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
 from blindcard_ingest.scoring.career import HistoryBout, career_contexts, career_json
 from blindcard_ingest.scoring.config import ScoringConfig
@@ -166,6 +167,14 @@ class Repository(Protocol):
 
         Built from the fighters' history before each bout. Returns how many rows changed.
         """
+        ...
+
+    def decision_scorecards(self) -> list[tuple[int, list[str]]]:
+        """(event year, scorecard texts) of every decision that has a winner and three cards."""
+        ...
+
+    def replace_judge_stats(self, report: JudgeReport) -> int:
+        """Replace the stored judge statistics (public aggregates). Returns the judges stored."""
         ...
 
     def rated_fights(self, min_stars: float) -> list[RatedFight]:
@@ -602,6 +611,53 @@ class PostgresRepository:
                 )
                 changed += cur.rowcount
         return changed
+
+    def decision_scorecards(self) -> list[tuple[int, list[str]]]:
+        query = """
+            select extract(year from e.event_date)::int as year, r.scorecards
+            from public.fight_results r
+            join public.fights f on f.id = r.fight_id
+            join public.events e on e.id = f.event_id
+            where r.method like 'Decision%' and r.outcome = 'win'
+              and jsonb_typeof(r.scorecards) = 'array' and jsonb_array_length(r.scorecards) = 3
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+        return [(row["year"], [str(card) for card in row["scorecards"]]) for row in rows]
+
+    def replace_judge_stats(self, report: JudgeReport) -> int:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("delete from public.judge_stats")
+            for j in report.judges:
+                cur.execute(
+                    "insert into public.judge_stats (slug, name, slugs, cards, dissent,"
+                    " lone_dissent, abs_sum, abs_sumsq, first_year, last_year)"
+                    " values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        j.slug,
+                        j.name,
+                        j.slugs,
+                        j.cards,
+                        j.dissent,
+                        j.lone_dissent,
+                        j.abs_sum,
+                        j.abs_sumsq,
+                        j.first_year,
+                        j.last_year,
+                    ),
+                )
+            b = report.baseline
+            cur.execute(
+                "insert into public.judge_baseline (id, cards, dissent, abs_sum, abs_sumsq,"
+                " judges_with_enough, updated_at) values (1, %s, %s, %s, %s, %s, now())"
+                " on conflict (id) do update set cards = excluded.cards,"
+                " dissent = excluded.dissent,"
+                " abs_sum = excluded.abs_sum, abs_sumsq = excluded.abs_sumsq,"
+                " judges_with_enough = excluded.judges_with_enough, updated_at = now()",
+                (b.cards, b.dissent, b.abs_sum, b.abs_sumsq, b.judges_with_enough),
+            )
+        return len(report.judges)
 
     def rated_fights(self, min_stars: float) -> list[RatedFight]:
         query = """

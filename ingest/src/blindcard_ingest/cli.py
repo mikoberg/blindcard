@@ -93,6 +93,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     segments.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
 
+    commands.add_parser(
+        "ingest-judges",
+        parents=[common],
+        help="store how often each judge scores against the final result (public aggregates only)",
+    )
+
     videos = commands.add_parser(
         "ingest-videos",
         parents=[common],
@@ -296,6 +302,13 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 use_wikipedia=not args.sherdog_only,
                 dry_run=args.dry_run,
             )
+        return EXIT_OK
+
+    if args.command == "ingest-judges":
+        from blindcard_ingest.judges_pipeline import run_ingest_judges
+
+        with _open_repository(settings) as repo:
+            run_ingest_judges(repo, dry_run=args.dry_run)
         return EXIT_OK
 
     if args.command == "ingest-videos":

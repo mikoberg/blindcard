@@ -114,3 +114,14 @@ jobs:
           args=(--from "$(date -u +%Y)")
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-segments "${args[@]}"
+
+      # How often each judge scores against the final result (public aggregates only; the
+      # scorecards stay private). Rebuilt in full each run: it is a small table.
+      - name: Judge statistics
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          args=()
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          blindcard-ingest ingest-judges "${args[@]}"
