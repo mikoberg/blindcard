@@ -61,7 +61,7 @@ export function JudgeDisputes({
         disabled={state.status === "loading"}
         aria-expanded={shown}
         aria-controls={panelId}
-        className="mt-3 min-h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm font-semibold transition-colors hover:border-[var(--accent)] disabled:opacity-60"
+        className={`mt-3 flex min-h-12 w-full max-w-md items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors disabled:opacity-70 ${shown ? "border-2 border-[var(--text)] hover:bg-[var(--surface-2)]" : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"}`}
       >
         {state.status === "loading"
           ? "Loading…"
@@ -111,8 +111,8 @@ export function DisputeItem({
   slugs: readonly string[];
 }) {
   return (
-    <li className="space-y-1 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4">
-      <p className="break-words font-[family-name:var(--font-display)] text-xl font-bold">
+    <li className="space-y-1 border-2 border-[var(--text)] bg-[var(--surface)] p-4">
+      <p className="break-words display text-xl font-bold">
         <Link
           href={`/fighters/${card.fighterA.slug}`}
           className="hover:text-[var(--accent)]"

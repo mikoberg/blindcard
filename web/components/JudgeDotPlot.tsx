@@ -8,7 +8,7 @@ const AXIS_Y = 140;
 
 /**
  * Every judge with enough scorecards as a dot on one line (how often they scored against the
- * official result), the chosen judge as a gold dot with the likely range around it, and the
+ * official result), the chosen judge as a red dot with the likely range around it, and the
  * average of all judges as a dashed line. The point of the picture: most dots sit in the same
  * crowd. The other dots link to their judges.
  */
@@ -126,7 +126,7 @@ export function JudgeDotPlot({
         />
       </svg>
       <figcaption className="text-sm text-[var(--muted)]">
-        Each dot is a judge with at least 30 scorecards. The gold band is the
+        Each dot is a judge with at least 30 scorecards. The shaded band is the
         likely range for this judge.
       </figcaption>
     </figure>

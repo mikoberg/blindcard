@@ -15,7 +15,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
     <div className="space-y-6">
       <Link
         href="/fighters"
-        className="inline-flex min-h-11 items-center text-sm text-[var(--muted)] hover:text-[var(--text)]"
+        className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--muted)] underline underline-offset-4 hover:text-[var(--accent)]"
       >
         All fighters
       </Link>
@@ -25,7 +25,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         <div className="min-w-0 flex-1">
           <h1
             id="fighter"
-            className="break-words font-[family-name:var(--font-display)] text-4xl font-bold leading-tight sm:text-5xl"
+            className="page-title break-words"
           >
             {profile.name}
           </h1>
@@ -36,7 +36,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         <p
           role="img"
           aria-label={`Average rating ${formatRating(profile.average)} out of 5`}
-          className={`shrink-0 font-[family-name:var(--font-display)] text-5xl font-bold tabular-nums ${isHighRating(profile.average) ? "text-[var(--accent)]" : ""}`}
+          className={`scorebox h-20 w-24 shrink-0 text-5xl ${isHighRating(profile.average) ? "scorebox-hot" : ""}`}
         >
           <span aria-hidden="true">{formatRating(profile.average)}</span>
         </p>
@@ -49,7 +49,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         )}
       </p>
 
-      <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <ul className="divide-y-2 divide-[var(--text)] border-2 border-[var(--text)] bg-[var(--surface)]">
         {fights.map((fight) => (
           <li key={`${fight.eventSlug}-${fight.opponent}`}>
             <Link
@@ -57,7 +57,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
               className="flex items-center gap-3 px-3 py-3 hover:bg-[var(--surface-2)] sm:px-4"
             >
               <span className="min-w-0 flex-1">
-                <span className="block break-words font-[family-name:var(--font-display)] text-xl font-bold leading-tight">
+                <span className="block break-words text-lg font-extrabold leading-tight sm:text-xl">
                   vs {fight.opponent}
                 </span>
                 <span className="block break-words text-sm text-[var(--muted)]">
@@ -67,7 +67,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
               <span
                 role="img"
                 aria-label={`Rated ${formatRating(fight.stars)} out of 5`}
-                className={`shrink-0 font-[family-name:var(--font-display)] text-3xl font-bold tabular-nums ${isHighRating(fight.stars) ? "text-[var(--accent)]" : ""}`}
+                className={`scorebox h-11 w-14 shrink-0 text-2xl ${isHighRating(fight.stars) ? "scorebox-hot" : ""}`}
               >
                 <span aria-hidden="true">{formatRating(fight.stars)}</span>
               </span>

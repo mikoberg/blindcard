@@ -1,13 +1,14 @@
 import { eventLabel, labelFontSize, matchupFontSize, posterNames } from "@/lib/overview/matchup";
-import { barHeight, posterArt } from "@/lib/overview/poster";
+import { barHeight } from "@/lib/overview/poster";
 import { stripLabel } from "@/lib/overview/summary";
 import type { EventSummary } from "@/lib/overview/types";
 
 type Size = "sm" | "md" | "lg";
 
+/** Least height; the poster grows with its type, so the strip never covers a name. */
 const HEIGHT: Record<Size, string> = {
-  sm: "h-48",
-  md: "h-60",
+  sm: "min-h-52",
+  md: "min-h-72",
   lg: "min-h-80",
 };
 
@@ -25,16 +26,20 @@ const STRIP_SPACE: Record<Size, string> = {
   lg: "pb-28",
 };
 
+/** Average width of a capital / of a label letter in the poster typeface (wide Archivo), in em. */
+const CAPITAL_EM = 0.92;
+const LABEL_EM = 0.7;
+
 /** Largest size of the matchup type, in cqw (1% of the poster's width). */
-const TYPE_CQW: Record<Size, number> = { sm: 9.5, md: 13.5, lg: 11 };
+const TYPE_CQW: Record<Size, number> = { sm: 9, md: 11.5, lg: 10.5 };
 /** Largest size of the event label line above the names, in cqw. */
-const LABEL_CQW: Record<Size, number> = { sm: 5.6, md: 6, lg: 4.2 };
+const LABEL_CQW: Record<Size, number> = { sm: 5.4, md: 5.4, lg: 4 };
 
 /**
- * A typographic poster for one event: the main event's two family names set large, the colour
- * art generated from the event's name, and the rating strip (one bar per rated fight in card
- * order). Built from names and star ratings only: no photos, no logos, no results.
- * `header` and `footer` sit above and below the matchup (the event page puts its text there).
+ * A typographic bill for one event: the main event's two family names set large in ink on the
+ * paper, and the rating strip (one column per rated fight in card order) on a ruled baseline.
+ * Built from names and star ratings only: no photos, no logos, no results.
+ * `header` and `footer` sit above and below the matchup.
  */
 export function EventPoster({
   event,
@@ -52,27 +57,17 @@ export function EventPoster({
   header?: React.ReactNode;
   footer?: React.ReactNode;
 }) {
-  const art = posterArt(event.name);
   const main = event.mainEvent;
   const names = main ? posterNames(event.name, main.a, main.b) : [event.name];
-  const fontSize = matchupFontSize(names, TYPE_CQW[size]);
+  const fontSize = matchupFontSize(names, TYPE_CQW[size], CAPITAL_EM);
   const label = eventLabel(event.name);
   return (
-    <div
-      className={`poster-box relative isolate overflow-hidden ${HEIGHT[size]}`}
-      style={{ backgroundColor: art.ground }}
-    >
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-10"
-        style={{ backgroundColor: art.slab, clipPath: art.cut }}
-      />
-      <div aria-hidden="true" className="poster-stripes absolute inset-0 -z-10" />
-      <div className={`relative flex h-full flex-col justify-end gap-2 p-4 ${STRIP_SPACE[size]}`}>
+    <div className={`poster-box relative isolate flex flex-col overflow-hidden ${HEIGHT[size]}${size === "lg" ? " [&_.bar]:max-w-none" : ""}`}>
+      <div className={`relative flex flex-1 flex-col justify-end gap-2 px-4 pt-4 sm:px-5 sm:pt-5 ${STRIP_SPACE[size]}`}>
         {main && (
           <p
             className="poster-label mb-auto max-w-[70%]"
-            style={{ fontSize: `${labelFontSize(label, LABEL_CQW[size])}cqw` }}
+            style={{ fontSize: `${labelFontSize(label, LABEL_CQW[size], LABEL_EM)}cqw` }}
             aria-hidden="true"
           >
             {label}
@@ -93,7 +88,7 @@ export function EventPoster({
         {footer}
       </div>
       {main?.title && (
-        <span className="absolute right-3 top-3 rounded-sm bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-ink)]">
+        <span className="absolute right-0 top-4 bg-[var(--text)] px-2.5 py-1 text-xs font-bold text-[var(--bg)] sm:top-5">
           Title fight
         </span>
       )}
@@ -101,7 +96,7 @@ export function EventPoster({
         role={decorative ? undefined : "img"}
         aria-label={decorative ? undefined : stripLabel(event)}
         aria-hidden={decorative ? true : undefined}
-        className={`absolute inset-x-0 bottom-0 flex items-end gap-[3px] px-4 ${STRIP_HEIGHT[size]}`}
+        className={`absolute inset-x-0 bottom-0 flex items-end gap-[3px] border-b-2 border-[var(--text)] px-4 sm:px-5 ${STRIP_HEIGHT[size]}`}
       >
         {event.ratings.length === 0 ? (
           <span aria-hidden="true" className="h-[3px] w-full bg-[var(--text)]/25" />

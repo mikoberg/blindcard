@@ -18,7 +18,7 @@ export default async function BestPage() {
   return (
     <div className="space-y-6">
       <section aria-labelledby="best">
-        <h1 id="best" className="font-[family-name:var(--font-display)] text-5xl font-bold leading-[0.95] sm:text-7xl">
+        <h1 id="best" className="display text-5xl font-bold leading-[0.95] sm:text-7xl">
           Best cards
         </h1>
         <p className="mt-4 max-w-xl text-lg text-[var(--muted)]">

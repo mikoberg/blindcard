@@ -61,7 +61,7 @@ export function FighterSearch({ children }: { children: ReactNode }) {
   return (
     <div className="space-y-4">
       <div role="search">
-        <label htmlFor={inputId} className="block text-sm font-semibold text-[var(--muted)]">
+        <label htmlFor={inputId} className="block text-sm font-bold">
           Find a fighter
         </label>
         <input
@@ -73,7 +73,7 @@ export function FighterSearch({ children }: { children: ReactNode }) {
           autoComplete="off"
           spellCheck={false}
           maxLength={50}
-          className="mt-1 min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-lg text-[var(--text)] placeholder:text-[var(--muted)] focus:border-[var(--accent)]"
+          className="mt-1.5 min-h-12 w-full border-2 border-[var(--text)] bg-[var(--surface)] px-3 text-lg font-semibold text-[var(--text)] placeholder:font-normal placeholder:text-[var(--muted)]"
         />
       </div>
 
@@ -97,7 +97,7 @@ export function FighterSearch({ children }: { children: ReactNode }) {
       {term === null ? (
         children
       ) : results !== null && results.length > 0 ? (
-        <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+        <ul className="divide-y-2 divide-[var(--text)] border-2 border-[var(--text)] bg-[var(--surface)]">
           {results.map((result) => (
             <li key={result.slug}>
               <FighterRow

@@ -20,10 +20,17 @@ const CAPITAL_WIDTH_EM = 0.47;
 /** Share of the poster's width the longest name may fill. */
 const FILL = 84;
 
-/** Font size in cqw (1% of the poster's width): as large as `maxCqw`, smaller for long names. */
-export function matchupFontSize(names: readonly string[], maxCqw: number): number {
+/**
+ * Font size in cqw (1% of the poster's width): as large as `maxCqw`, smaller for long names.
+ * `charWidthEm` is the average width of a capital in the typeface the poster is set in.
+ */
+export function matchupFontSize(
+  names: readonly string[],
+  maxCqw: number,
+  charWidthEm: number = CAPITAL_WIDTH_EM,
+): number {
   const longest = Math.max(1, ...names.map((name) => name.length));
-  const fitted = FILL / (longest * CAPITAL_WIDTH_EM);
+  const fitted = FILL / (longest * charWidthEm);
   return Math.round(Math.min(maxCqw, fitted) * 10) / 10;
 }
 
@@ -90,7 +97,7 @@ export function eventLabel(eventName: string): string {
 }
 
 /** Font size in cqw for the label line: at most `maxCqw`, smaller for a long label. */
-export function labelFontSize(label: string, maxCqw: number): number {
-  const fitted = 62 / (Math.max(1, label.length) * 0.52);
+export function labelFontSize(label: string, maxCqw: number, charWidthEm = 0.52): number {
+  const fitted = 62 / (Math.max(1, label.length) * charWidthEm);
   return Math.round(Math.min(maxCqw, fitted) * 10) / 10;
 }

@@ -7,28 +7,27 @@ import { StarRating } from "./StarRating";
 export function WatchThese({ fights }: { fights: readonly CardFight[] }) {
   return (
     <section aria-labelledby="watch-these">
-      <h2 id="watch-these" className="font-[family-name:var(--font-display)] text-2xl font-bold">
+      <h2 id="watch-these" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
         Watch these
       </h2>
       {fights.length === 0 ? (
-        <p className="mt-2 text-[var(--muted)]">No standout fights on this card</p>
+        <p className="mt-3 text-[var(--muted)]">No standout fights on this card</p>
       ) : (
-        <ol className="mt-3 space-y-2">
+        <ol className="mt-4 border-2 border-[var(--text)] bg-[var(--surface)]">
           {fights.map((fight) => (
-            <li key={fight.id}>
+            <li key={fight.id} className="border-b-2 border-[var(--text)] last:border-b-0">
               <a
                 href={`#fight-${fight.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 hover:border-[var(--accent)]"
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 hover:bg-[var(--surface-2)]"
               >
-                <span className="break-words font-semibold">
-                  {fight.fighterA.name} <span className="text-[var(--muted)]">vs</span> {fight.fighterB.name}
-                  {isClassic(fight.rating?.stars) && (
-                    <span className="ml-2 inline-block align-middle">
-                      <ClassicBadge />
-                    </span>
-                  )}
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1 break-words font-extrabold">
+                  <span>
+                    {fight.fighterA.name} <span className="font-semibold text-[var(--accent)]">vs</span>{" "}
+                    {fight.fighterB.name}
+                  </span>
+                  {isClassic(fight.rating?.stars) && <ClassicBadge />}
                   {isHiddenGem(fight) && (
-                    <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-ink)]">
+                    <span className="whitespace-nowrap border-2 border-[var(--accent)] px-2 py-0.5 text-xs font-bold text-[var(--accent)]">
                       Hidden gem
                     </span>
                   )}

@@ -7,11 +7,16 @@ export function ClassicIcon({ className = "h-3.5 w-3.5" }: { className?: string 
   );
 }
 
-/** The mark of a five-star fight: only the classics get it. */
+/** The gold foil of a five-star fight. Only the classics get it. */
+export const GOLD_FOIL = "linear-gradient(145deg, var(--gold-hi) 0%, var(--gold-mid) 45%, var(--gold-lo) 100%)";
+
+/** The mark of a five-star fight: gold foil in an ink frame. */
 export function ClassicBadge({ label = "Classic" }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-bold text-[var(--accent-ink)] shadow-[0_0_0_1px_#ffe9a6,0_0_14px_rgb(255_176_32/0.5)]"
-      style={{ backgroundImage: "linear-gradient(145deg, #fff0b8 0%, #ffc233 45%, #d98a00 100%)" }}>
+    <span
+      className="inline-flex items-center gap-1 whitespace-nowrap border-2 border-[var(--text)] px-2 py-0.5 text-xs font-extrabold text-[var(--text)]"
+      style={{ backgroundImage: GOLD_FOIL }}
+    >
       <ClassicIcon />
       {label}
     </span>

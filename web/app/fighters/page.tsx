@@ -22,7 +22,7 @@ export default async function FightersPage() {
       <section aria-labelledby="fighters">
         <h1
           id="fighters"
-          className="font-[family-name:var(--font-display)] text-5xl font-bold leading-[0.95] sm:text-7xl"
+          className="display text-5xl font-bold leading-[0.95] sm:text-7xl"
         >
           Fighters worth watching
         </h1>

@@ -16,8 +16,7 @@ vi.mock("@/lib/data/events", () => ({
 vi.mock("@/lib/data/card", () => ({ getCard: mocks.getCard }));
 // The layout loads fonts through a Next build plugin that does not exist under Vitest.
 vi.mock("next/font/google", () => ({
-  Barlow: () => ({ variable: "barlow-body-var" }),
-  Barlow_Condensed: () => ({ variable: "barlow-var" }),
+  Archivo: () => ({ variable: "archivo-var" }),
 }));
 
 import { generateMetadata as eventMetadata } from "@/app/events/[slug]/page";

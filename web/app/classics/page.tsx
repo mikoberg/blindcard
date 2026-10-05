@@ -22,7 +22,7 @@ export default async function ClassicsPage() {
         <div>
           <h1
             id="classics"
-            className="font-[family-name:var(--font-display)] text-5xl font-bold leading-[0.95] sm:text-7xl"
+            className="display text-5xl font-bold leading-[0.95] sm:text-7xl"
           >
             The classics
           </h1>

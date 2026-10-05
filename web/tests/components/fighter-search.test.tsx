@@ -21,12 +21,12 @@ describe("FighterRow", () => {
 
   it("highlights an average that shows as 4.0, like every other 4.0", () => {
     const html = renderToStaticMarkup(<FighterRow {...props} average={3.96} />);
-    expect(html).toContain("text-[var(--accent)]");
+    expect(html).toContain("scorebox-hot");
     expect(html).toContain('aria-label="Average rating 4.0 out of 5"');
   });
 
   it("does not highlight 3.9", () => {
-    expect(renderToStaticMarkup(<FighterRow {...props} average={3.94} />)).not.toContain("text-[var(--accent)]");
+    expect(renderToStaticMarkup(<FighterRow {...props} average={3.94} />)).not.toContain("scorebox-hot");
   });
 
   it("says why a fighter is not ranked and links to their fights", () => {

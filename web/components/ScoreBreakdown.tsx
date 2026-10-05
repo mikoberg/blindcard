@@ -6,7 +6,7 @@ function FactorList({ title, factors, tone }: { title: string; factors: FactorVi
   const bar = tone === "up" ? "bg-[var(--accent)]" : "bg-[var(--muted)]";
   return (
     <div className="mt-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{title}</p>
+      <p className="text-sm font-bold">{title}</p>
       <ul className="mt-1 space-y-2">
         {factors.map((factor) => (
           <li key={factor.label} className="text-sm">
@@ -16,9 +16,9 @@ function FactorList({ title, factors, tone }: { title: string; factors: FactorVi
               </span>
               <span className="shrink-0 tabular-nums">{factor.amount}</span>
             </div>
-            <div className="mt-1 h-1.5 rounded-full bg-[var(--border)]" aria-hidden="true">
+            <div className="mt-1 h-2 bg-[var(--border)]" aria-hidden="true">
               <div
-                className={`h-full rounded-full ${bar}`}
+                className={`h-full ${bar}`}
                 style={{ width: `${Math.max(4, Math.round(factor.share * 100))}%` }}
               />
             </div>
@@ -47,16 +47,16 @@ function Axis({ axis }: { axis: AxisView }) {
  */
 export function ScoreBreakdown({ score }: { score: ScoreView }) {
   return (
-    <section className="mt-4 border-t border-[var(--border)] pt-4" aria-label="Why this rating">
-      <h3 className="font-[family-name:var(--font-display)] text-base font-bold">Why this rating</h3>
+    <section className="mt-4 border-t-2 border-[var(--text)] pt-4" aria-label="Why this rating">
+      <h3 className="display text-base font-bold">Why this rating</h3>
       <p className="mt-1 text-sm text-[var(--muted)]">
         The stars on the card rate how worth watching the fight is. Each line shows what it
         added or took away.
       </p>
       <Axis axis={score.fight} />
       {score.performance && (
-        <div className="mt-4 border-t border-[var(--border)] pt-4">
-          <h3 className="font-[family-name:var(--font-display)] text-base font-bold">Performance</h3>
+        <div className="mt-4 border-t-2 border-[var(--border)] pt-4">
+          <h3 className="display text-base font-bold">Performance</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">
             How dominant the performance was. This one is only shown after a reveal, because it
             gives away how the fight ended.

@@ -1,32 +1,48 @@
 @import "tailwindcss";
 
+/*
+ * Blindcard: a judge's scorecard you read before the fight is revealed.
+ * Ringside paper, pen ink, one stamp colour. Results stay sealed under ink bars.
+ */
 :root {
-  --bg: #0b0d10;
-  --surface: #14181d;
-  --surface-2: #1c222a;
-  --border: #2a323c;
-  --text: #eef1f4;
-  --muted: #9aa4af;
-  --accent: #ffb020;
-  --accent-ink: #1a1200;
-  --focus: #7cc4ff;
-  color-scheme: dark;
+  --bg: #e8eae3; /* ringside paper: cool, a little green */
+  --surface: #f5f6f1; /* the slip lying on it */
+  --surface-2: #dadcd2; /* pressed / hover */
+  --border: #b5baae; /* ruled lines */
+  --text: #101a2c; /* blue-black pen ink */
+  --muted: #566073; /* pencil */
+  --accent: #c23314; /* stamp: vermilion */
+  --accent-ink: #fff6ee; /* paper on a stamp */
+  --focus: #1c4fd6;
+  --gold-hi: #fff0b8;
+  --gold-mid: #f2b52a;
+  --gold-lo: #b97a00;
+  --font-display: var(--font-archivo), system-ui, sans-serif;
+  --font-body: var(--font-archivo), system-ui, sans-serif;
+  color-scheme: light;
 }
 
 html {
   background: var(--bg);
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-body), system-ui, sans-serif;
+  font-family: var(--font-body);
+  font-stretch: 100%;
   -webkit-font-smoothing: antialiased;
 }
 
 :focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+::selection {
+  background: var(--text);
+  color: var(--bg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -40,20 +56,91 @@ body {
   }
 }
 
-html {
-  scroll-behavior: smooth;
+/*
+ * Display type: Archivo at its widest and heaviest. The width axis is the whole voice of the
+ * site: wide black for names and numbers, normal width for everything you read.
+ */
+.display {
+  font-family: var(--font-display);
+  font-stretch: 118%;
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
-/* Poster art: a fine diagonal hatch over the colour slab, like screen-printed bill posters. */
-.poster-stripes {
-  background-image: repeating-linear-gradient(
-    135deg,
-    rgb(255 255 255 / 0.045) 0 2px,
-    transparent 2px 9px
-  );
+.display-tight {
+  font-family: var(--font-display);
+  font-stretch: 100%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
-/* The one moment of motion: rating bars rise once when a featured poster first renders. */
+/* A page title: the loudest thing on the page, with a thick ink rule above it like a form head. */
+.page-title {
+  font-family: var(--font-display);
+  font-stretch: 122%;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+  font-size: clamp(2.5rem, 7.5vw, 5.25rem);
+  text-wrap: balance;
+}
+
+/* Form field: a value on a ruled line, with its small label under it. */
+.field {
+  border-bottom: 1.5px solid var(--text);
+  padding-bottom: 0.25rem;
+}
+
+.field-label {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+/* The box a rating is written in, like the boxes on a scorecard. */
+.scorebox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--text);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-stretch: 118%;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.scorebox-hot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Redaction: where a result would be. Fixed look, never sized by anything the fight did. */
+.redact {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* Rating strip: one ink column per rated fight, on a ruled baseline. */
+.bar {
+  display: block;
+  flex: 1 1 0%;
+  min-width: 5px;
+  max-width: 1.75rem;
+  background: var(--text);
+}
+
+.bar-hi {
+  background: var(--accent);
+}
+
+/* The one moment of motion: rating columns rise once when the featured card first renders. */
 @keyframes bar-rise {
   from {
     transform: scaleY(0);
@@ -68,55 +155,51 @@ html {
   animation: bar-rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-/* One bar of a rating strip. Kept as classes: the overview renders thousands of them. */
-.bar {
-  display: block;
-  flex: 1 1 0%;
-  min-width: 5px;
-  max-width: 1.75rem;
-  border-top-left-radius: 2px;
-  border-top-right-radius: 2px;
-  background: rgb(238 241 244 / 0.82);
-}
-
-.bar-hi {
-  background: var(--accent);
-}
-
 /* Poster type: the main event's family names, set like a fight bill. */
 .poster-box {
   container-type: inline-size;
 }
 
 .poster-type {
-  font-family: var(--font-display), system-ui, sans-serif;
-  font-weight: 700;
-  line-height: 0.86;
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  font-weight: 850;
+  line-height: 0.88;
   text-transform: uppercase;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.04em;
   color: var(--text);
-  text-shadow: 0 0.04em 0 rgb(0 0 0 / 0.28);
-  transform: skewX(-7deg);
-  transform-origin: left bottom;
   overflow-wrap: anywhere;
 }
 
 .poster-vs {
-  font-size: 0.34em;
-  letter-spacing: 0.08em;
-  line-height: 1.5;
+  font-size: 0.3em;
+  font-stretch: 100%;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.7;
+  text-transform: lowercase;
   color: var(--accent);
-  text-shadow: none;
 }
 
-/* The event's series line at the top of a poster ("UFC 332"): small, tracked, plain text. */
+/* The event's series line ("UFC 332"): plain, small, heavy. */
 .poster-label {
-  font-family: var(--font-display), system-ui, sans-serif;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
   color: var(--text);
-  opacity: 0.9;
   white-space: nowrap;
+}
+
+/* Hover lift of an event slip: it slides up off the paper, leaving a hard ink shadow. */
+.slip {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.slip:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--text);
 }

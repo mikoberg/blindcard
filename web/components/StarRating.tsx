@@ -1,21 +1,14 @@
 import { formatStars, starFills, starsLabel, type StarFill } from "@/lib/card/stars";
 
-const STAR_PATH = "M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z";
-
-function Star({ fill }: { fill: StarFill }) {
+/** One box of the five a scorecard row has: empty, half (left half inked) or full. */
+function Box({ fill }: { fill: StarFill }) {
   return (
-    <span className="relative inline-block h-5 w-5">
-      <svg viewBox="0 0 24 24" className="absolute inset-0 h-5 w-5 fill-[var(--border)]">
-        <path d={STAR_PATH} />
-      </svg>
+    <span className="relative inline-block h-[1.1rem] w-[1.1rem] overflow-hidden border-2 border-[var(--text)] bg-[var(--surface)]">
       {fill !== "empty" && (
-        <svg
-          viewBox="0 0 24 24"
-          className="absolute inset-0 h-5 w-5 fill-[var(--accent)]"
-          style={fill === "half" ? { clipPath: "inset(0 50% 0 0)" } : undefined}
-        >
-          <path d={STAR_PATH} />
-        </svg>
+        <span
+          className="absolute inset-y-0 left-0 bg-[var(--text)]"
+          style={{ width: fill === "half" ? "50%" : "100%" }}
+        />
       )}
     </span>
   );
@@ -31,23 +24,20 @@ export function StarRating({
 }) {
   if (stars === null) {
     return (
-      <span className="inline-flex items-center rounded-full border border-[var(--border)] px-2.5 py-0.5 text-xs text-[var(--muted)]">
+      <span className="inline-flex items-center border-2 border-dashed border-[var(--muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--muted)]">
         Not rated yet
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-2" role="img" aria-label={starsLabel(stars)}>
-      <span className="flex gap-0.5" aria-hidden="true">
+    <span className="inline-flex items-center gap-2.5" role="img" aria-label={starsLabel(stars)}>
+      <span className="flex gap-1" aria-hidden="true">
         {starFills(stars).map((fill, index) => (
-          <Star key={index} fill={fill} />
+          <Box key={index} fill={fill} />
         ))}
       </span>
       {showNumber && (
-        <span
-          className="font-[family-name:var(--font-display)] text-xl font-bold tabular-nums"
-          aria-hidden="true"
-        >
+        <span className="display-tight text-xl tabular-nums" aria-hidden="true">
           {formatStars(stars)}
         </span>
       )}
