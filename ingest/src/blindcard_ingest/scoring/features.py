@@ -6,6 +6,7 @@ exposed to public queries. Only the resulting stars/percentile are public.
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -52,6 +53,13 @@ NEW_FEATURES: tuple[str, ...] = (
     "star_power",  # their earlier main events and title fights, added
     "unbeaten_fighter",  # at least one of them has no UFC loss (after a few fights)
     "experience",  # UFC fights of the less experienced of the two
+    # A finish that took real action: a stoppage because of an injury is not one.
+    "real_finish",  # KO/TKO or submission, unless it ended because of an injury
+    "real_early_finish",  # early_finish, for real finishes only
+    "cut_short",  # share of the scheduled time not fought, if an injury or CNC ended it
+    # Finishes the fighters' own history made likely (pre-fight facts, the same for both sides).
+    "expected_finish",  # real_finish x how often the two fighters' earlier fights finished
+    "expected_ko",  # KO/TKO x how often the more fragile of the two was stopped by KO/TKO before
 )
 
 FEATURE_NAMES: tuple[str, ...] = V1_FEATURES + NEW_FEATURES
@@ -70,6 +78,8 @@ CAPPED_FEATURES: tuple[str, ...] = (
     "streak",
     "star_power",
     "experience",
+    "expected_finish",
+    "expected_ko",
 )
 
 
@@ -110,6 +120,21 @@ def classify_method(method: str) -> MethodKind:
     return MethodKind.UNKNOWN
 
 
+_INJURY = re.compile(r"injur", re.IGNORECASE)
+
+
+def is_injury_stoppage(method: str, method_detail: str | None) -> bool:
+    """A KO/TKO or submission that the source describes as ending because of an injury.
+
+    The fight stopped because someone could not go on, not because of what the other fighter
+    did; it must not earn the credit of a finish. Cuts and corner stoppages are real finishes.
+    """
+    kind = classify_method(method)
+    return kind in (MethodKind.KO_TKO, MethodKind.SUBMISSION) and bool(
+        method_detail and _INJURY.search(method_detail)
+    )
+
+
 @dataclass(frozen=True)
 class ScoringInput:
     """Everything the scorer needs, independent of where it was loaded from."""
@@ -124,6 +149,8 @@ class ScoringInput:
     is_title_fight: bool = False
     #: What was known about the two fighters before the bout (None = not available).
     context: CareerContext | None = None
+    #: The source's detail of how it ended (e.g. "to Knee Injury"); None = not known.
+    method_detail: str | None = None
 
     @classmethod
     def from_fight(cls, fight: ParsedFight) -> ScoringInput:
@@ -137,6 +164,7 @@ class ScoringInput:
             rounds=fight.rounds,
             card_position=fight.card_position,
             is_title_fight=fight.is_title_fight,
+            method_detail=fight.result.method_detail,
         )
 
     @property
@@ -211,6 +239,11 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         last_leader = leader
 
     finished = kind in (MethodKind.KO_TKO, MethodKind.SUBMISSION)
+    real_finish = finished and not is_injury_stoppage(inp.method, inp.method_detail)
+    cut_short = (finished and not real_finish) or (
+        kind is MethodKind.NO_RESULT and inp.method.strip().upper().startswith("COULD NOT")
+    )
+    career = _career_features(inp.context)
     scheduled_seconds = inp.scheduled_rounds * SECONDS_PER_ROUND
     time_fraction = min(inp.fight_seconds / scheduled_seconds, 1.0)
     control_share = min(total_control / inp.fight_seconds, 1.0)
@@ -246,11 +279,20 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "title_fight": 1.0 if inp.is_title_fight else 0.0,
         "volume": float(total_sig),
         "five_rounds": 1.0 if inp.scheduled_rounds == 5 else 0.0,
-        **_career_features(inp.context),
+        "cut_short": (1.0 - time_fraction) if cut_short else 0.0,
+        "real_finish": 1.0 if real_finish else 0.0,
+        "real_early_finish": 1.0 - time_fraction if real_finish else 0.0,
+        "expected_finish": career["finish_prone"] if real_finish else 0.0,
+        "expected_ko": career["ko_prone"] if real_finish and kind is MethodKind.KO_TKO else 0.0,
+        **{name: value for name, value in career.items() if name in _CAREER_FEATURE_NAMES},
     }
 
 
+_CAREER_FEATURE_NAMES = ("rematch", "streak", "star_power", "unbeaten_fighter", "experience")
+
+
 def _career_features(context: CareerContext | None) -> dict[str, float]:
+    """The career features plus `finish_prone` / `ko_prone`, which only feed the interactions."""
     if context is None:
         return {
             "rematch": 0.0,
@@ -258,8 +300,12 @@ def _career_features(context: CareerContext | None) -> dict[str, float]:
             "star_power": 0.0,
             "unbeaten_fighter": 0.0,
             "experience": 0.0,
+            "finish_prone": 0.0,
+            "ko_prone": 0.0,
         }
     return {
+        "finish_prone": context.finish_prone,
+        "ko_prone": context.ko_prone,
         "rematch": 1.0 if context.prior_meetings > 0 else 0.0,
         "streak": float(sum(context.win_streaks)),
         "star_power": float(sum(context.prior_headliners)),

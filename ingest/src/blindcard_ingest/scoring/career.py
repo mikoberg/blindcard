@@ -31,6 +31,9 @@ class HistoryBout:
     has_result: bool = True
     #: "no_contest" bouts neither add a win nor break a streak.
     outcome: str = "win"
+    #: How a decided bout ended: "ko" (KO/TKO), "sub" (submission, injury stoppages excluded)
+    #: or "other". Only ever read for LATER bouts of the same fighters.
+    ended_by: str = "other"
 
 
 @dataclass(frozen=True)
@@ -53,9 +56,34 @@ class CareerContext:
     #: True when the fighter's WHOLE promotion career is in our history (they debuted after
     #: UNBEATEN_RELIABLE_FROM), so the record above is complete and a "debut" is a real debut.
     complete_history: tuple[bool, bool] = (False, False)
+    #: Earlier bouts of each fighter that ended in a KO/TKO or submission (either way round) ...
+    prior_finishes: tuple[int, int] = (0, 0)
+    #: ... and the earlier bouts each lost by KO/TKO.
+    prior_ko_losses: tuple[int, int] = (0, 0)
+
+    @property
+    def finish_prone(self) -> float:
+        """How often the two fighters' earlier bouts ended in a finish (0..1, shrunk to 0)."""
+        return (
+            sum(
+                finishes / (fights + PRONE_PRIOR)
+                for finishes, fights in zip(self.prior_finishes, self.prior_fights, strict=True)
+            )
+            / 2
+        )
+
+    @property
+    def ko_prone(self) -> float:
+        """The higher of the two fighters' share of earlier bouts lost by KO/TKO (0..1)."""
+        return max(
+            losses / (fights + PRONE_PRIOR)
+            for losses, fights in zip(self.prior_ko_losses, self.prior_fights, strict=True)
+        )
 
 
 UNBEATEN_MIN_FIGHTS = 5
+#: Pseudo-fights that pull a rate of earlier bouts towards 0 for fighters with little history.
+PRONE_PRIOR = 4
 #: Our history starts in 2001. Someone whose first stored bout is earlier than this much later
 #: may have fought (and lost) before it, so "unbeaten" is only claimed for later debuts.
 UNBEATEN_RELIABLE_FROM = dt.date(2003, 1, 1)
@@ -95,6 +123,8 @@ class _Record:
     streak: int = 0
     headliners: int = 0
     first_seen: dt.date | None = None
+    finishes: int = 0
+    ko_losses: int = 0
 
 
 def career_contexts(bouts: Sequence[HistoryBout]) -> dict[str, CareerContext]:
@@ -120,6 +150,8 @@ def career_contexts(bouts: Sequence[HistoryBout]) -> dict[str, CareerContext]:
                 unbeaten=(_unbeaten(a), _unbeaten(b)),
                 prior_records=(_tuple(a), _tuple(b)),
                 complete_history=(_complete(a, day), _complete(b, day)),
+                prior_finishes=(a.finishes, b.finishes),
+                prior_ko_losses=(a.ko_losses, b.ko_losses),
             )
         # ... then let them count for later days.
         for bout in todays:
@@ -163,6 +195,10 @@ def _apply(
             record.first_seen = bout.event_date
         record.fights += 1
         record.headliners += headliner
+        if bout.ended_by in ("ko", "sub"):
+            record.finishes += 1
+            if bout.ended_by == "ko" and bout.winner is not None and bout.winner != fighter:
+                record.ko_losses += 1
         if bout.outcome == "no_contest":
             record.no_contests += 1
             continue

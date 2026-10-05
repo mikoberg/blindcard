@@ -54,6 +54,7 @@ def scoring_input(
     card_position: int | None = None,
     is_title_fight: bool = False,
     context: CareerContext | None = None,
+    method_detail: str | None = None,
 ) -> ScoringInput:
     return ScoringInput(
         scheduled_rounds=scheduled,
@@ -64,6 +65,7 @@ def scoring_input(
         card_position=card_position,
         is_title_fight=is_title_fight,
         context=context,
+        method_detail=method_detail,
     )
 
 

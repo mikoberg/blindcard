@@ -22,7 +22,12 @@ from blindcard_ingest.bonus_matching import EventToLabel, FightNames
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
 from blindcard_ingest.scoring.career import HistoryBout, career_contexts, career_json
 from blindcard_ingest.scoring.config import ScoringConfig
-from blindcard_ingest.scoring.features import ScoringInput
+from blindcard_ingest.scoring.features import (
+    MethodKind,
+    ScoringInput,
+    classify_method,
+    is_injury_stoppage,
+)
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
 
 logger = logging.getLogger(__name__)
@@ -393,7 +398,7 @@ class PostgresRepository:
         query = """
             select f.id, e.source_id as event_source_id, f.scheduled_rounds,
                    f.card_position, f.is_title_fight,
-                   r.method, r.end_round, r.end_time_seconds
+                   r.method, r.method_detail, r.end_round, r.end_time_seconds
             from public.fights f
             join public.events e on e.id = f.event_id
             join public.fight_results r on r.fight_id = f.id
@@ -447,6 +452,7 @@ class PostgresRepository:
                     card_position=row["card_position"],
                     is_title_fight=row["is_title_fight"],
                     context=contexts.get(str(row["id"])),
+                    method_detail=row["method_detail"],
                 ),
             )
             for row in fights
@@ -457,7 +463,7 @@ class PostgresRepository:
         query = """
             select f.id, e.event_date, f.card_position, f.is_title_fight,
                    a.source_id as a_id, b.source_id as b_id, w.source_id as winner,
-                   r.outcome, (r.fight_id is not null) as has_result
+                   r.outcome, r.method, r.method_detail, (r.fight_id is not null) as has_result
             from public.fights f
             join public.events e on e.id = f.event_id
             join public.fighters a on a.id = f.fighter_a_id
@@ -479,6 +485,7 @@ class PostgresRepository:
                 winner=row["winner"],
                 has_result=row["has_result"],
                 outcome=row["outcome"] or "win",
+                ended_by=_ended_by(row["method"], row["method_detail"]),
             )
             for row in rows
         ]
@@ -718,3 +725,13 @@ class PostgresRepository:
             """,
             [(fid, version, s.percentile, s.stars) for fid, s in scored],
         )
+
+
+def _ended_by(method: str | None, method_detail: str | None) -> str:
+    """How a stored bout ended, as the career history needs it ("ko", "sub" or "other")."""
+    if method is None or is_injury_stoppage(method, method_detail):
+        return "other"
+    kind = classify_method(method)
+    if kind is MethodKind.KO_TKO:
+        return "ko"
+    return "sub" if kind is MethodKind.SUBMISSION else "other"

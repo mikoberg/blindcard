@@ -43,6 +43,8 @@ def synthetic_rows(seed: int = 1) -> list[LabeledRow]:
                 time_fraction=0.2 + 0.1 * rng.random() if ko else 1.0,
                 early_finish=0.8 if ko else 0.0,
                 finish=1.0 if ko else 0.0,
+                real_finish=1.0 if ko else 0.0,
+                real_early_finish=0.8 if ko else 0.0,
                 competitiveness=rng.random(),
             )
             rows.append(
@@ -98,7 +100,7 @@ def test_nothing_that_makes_a_fight_good_ever_subtracts(result: FitResult) -> No
 
 def test_a_finish_adds_to_the_score_when_the_margin_allows_it(result: FitResult) -> None:
     assert result.blend > 0
-    assert result.weights["finish"] > 0
+    assert result.weights["real_finish"] > 0
 
 
 def test_held_out_metrics_cover_both_bonus_kinds(result: FitResult) -> None:

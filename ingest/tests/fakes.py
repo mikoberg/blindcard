@@ -189,6 +189,7 @@ class FakeRepository:
                             card_position=fight.card_position,
                             is_title_fight=fight.is_title_fight,
                             context=contexts.get(fight.source_id),
+                            method_detail=fight.result.method_detail,
                         ),
                     )
                 )

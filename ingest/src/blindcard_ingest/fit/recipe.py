@@ -1,4 +1,4 @@
-"""The recipe behind score v7: one score, fitted to the night bonuses, written as TOML.
+"""The recipe behind score v9: one score, fitted to the night bonuses, written as TOML.
 
 The score blends two fits of the same features:
   * Fight of the Night: how worth watching a fight is (two-way action, pace, swings);
@@ -32,6 +32,8 @@ from blindcard_ingest.scoring.features import CAPPED_FEATURES
 from blindcard_ingest.scoring.scorer import quantile
 
 #: Candidates. time_fraction and finish lateness are left out: early_finish says the same.
+#: close_decision is left out too: how the judges split says how the fight ended, and a close,
+#: competitive fight is not worth less (or more) for it.
 SCORE_FEATURES: tuple[str, ...] = (
     "pace",
     "knockdowns",
@@ -39,13 +41,12 @@ SCORE_FEATURES: tuple[str, ...] = (
     "reversals",
     "swings",
     "competitiveness",
-    "close_decision",
-    "finish",
+    "real_finish",
     "control_share_nofinish",
     "knockdowns_both",
     "min_pace",
     "takedown_rate",
-    "early_finish",
+    "real_early_finish",
     "main_event",
     "co_main",
     "title_fight",
@@ -56,7 +57,20 @@ SCORE_FEATURES: tuple[str, ...] = (
     "star_power",
     "unbeaten_fighter",
     "experience",
+    "cut_short",
+    "expected_ko",
 )
+
+#: Editorial weights, set by hand instead of fitted (relative to the largest fitted weight, 1.0).
+#: The bonus labels cannot teach these: a fight that was stopped by an injury hardly ever earns
+#: a bonus but there are too few of them to show it, and the labels reward a KO of a fighter
+#: who is often stopped as much as any other. They say what a fan means by "worth watching".
+FIXED_WEIGHTS: dict[str, float] = {
+    # A fight stopped early by an injury (or "could not continue") did not get to happen.
+    "cut_short": -0.6,
+    # Stopping a fighter who is rarely stopped is worth more than stopping one who often is.
+    "expected_ko": -0.3,
+}
 
 #: Share of the Performance fit blended into the score, tried in this order.
 BLEND_GRID: tuple[float, ...] = tuple(i / 40 for i in range(25))
@@ -79,8 +93,8 @@ DEFAULT_CAREER_CAP = 0.35
 #: Good for a fight by definition: they may add to a score but never subtract from it.
 NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(
     {
-        "finish",
-        "early_finish",
+        "real_finish",
+        "real_early_finish",
         "main_event",
         "co_main",
         "title_fight",
@@ -105,12 +119,12 @@ FEATURE_NOTES: dict[str, str] = {
     "swings": "round-to-round lead changes",
     "competitiveness": "1 - |A - B| / (A + B) on significant strikes landed",
     "close_decision": "split or majority decision",
-    "finish": "ended by KO/TKO or submission (adds, never subtracts)",
+    "real_finish": "ended by KO/TKO or submission, not by an injury (adds, never subtracts)",
     "control_share_nofinish": "share of the fight under control, when it did not end in a finish",
     "knockdowns_both": "both fighters scored a knockdown",
     "min_pace": "significant strikes per minute of the less active fighter",
     "takedown_rate": "takedowns landed per minute, both fighters",
-    "early_finish": "how early a finish came (1 - share of the scheduled time used)",
+    "real_early_finish": "how early a real finish came (1 - share of the scheduled time used)",
     "main_event": "the main event of the card",
     "co_main": "the co-main event",
     "title_fight": "a championship bout",
@@ -121,6 +135,8 @@ FEATURE_NOTES: dict[str, str] = {
     "star_power": "their earlier main events and title fights, added",
     "unbeaten_fighter": "at least one of them has no UFC loss",
     "experience": "UFC fights of the less experienced of the two",
+    "cut_short": "share of the scheduled time not fought, if an injury or CNC ended it",
+    "expected_ko": "KO/TKO, times how often the more fragile of the two was stopped by one before",
 }
 
 
@@ -240,28 +256,32 @@ def _fit_blend(
     """
     fotn = [int(r.fotn) for r in rows]
     potn = [int(r.potn) for r in rows]
-    fight = _linear(normalised, fotn, SCORE_FEATURES, l2)
-    side = _linear(normalised, potn, SCORE_FEATURES, l2)
+    fitted = tuple(f for f in SCORE_FEATURES if f not in FIXED_WEIGHTS)
+    fight = _linear(normalised, fotn, fitted, l2)
+    side = _linear(normalised, potn, fitted, l2)
     spread_fight = statistics.pstdev([_predict(fight, n) for n in normalised]) or 1.0
     spread_side = statistics.pstdev([_predict(side, n) for n in normalised]) or 1.0
 
     def blended(share: float) -> dict[str, float]:
         return {
             name: (1 - share) * fight[name] / spread_fight + share * side[name] / spread_side
-            for name in SCORE_FEATURES
+            for name in fitted
         }
+
+    def shipped(share: float) -> dict[str, float]:
+        return {**_scaled(blended(share), stakes_cap), **FIXED_WEIGHTS}
 
     if blend is None:
         finished = [int(r.finished) for r in rows]
 
         def leaks_too_much(share: float) -> bool:
-            weights = _scaled(blended(share), stakes_cap)
+            weights = shipped(share)
             leak = auc([_predict(weights, n) for n in normalised], finished)
             return (NEUTRAL_LEAK if leak is None else leak) > NEUTRAL_LEAK + finish_leak
 
         allowed = [share for share in BLEND_GRID if not leaks_too_much(share)]
         blend = max(allowed) if allowed else BLEND_GRID[0]
-    return _Fit(weights=_scaled(blended(blend), stakes_cap), blend=blend)
+    return _Fit(weights=shipped(blend), blend=blend)
 
 
 def evaluate(rows: Sequence[LabeledRow], scores: Sequence[float]) -> Metrics:
@@ -412,6 +432,7 @@ def render_config_toml(
         "# Performance of the Night fit: the largest share of the second that keeps",
         f"# AUC(stars -> finished) within {result.finish_leak} of neutral on the training years.",
         "# A finish adds to a fight's score and never subtracts from it.",
+        f"# Set by hand, not fitted: {', '.join(f'{n} {w}' for n, w in FIXED_WEIGHTS.items())}.",
         "",
         f"version = {version}",
         'description = "Fitted to the Fight/Performance of the Night bonuses: one score."',
