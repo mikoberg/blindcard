@@ -102,3 +102,31 @@ def test_a_year_outside_the_pool_uses_the_nearest_known_year_and_unknown_year_no
 def test_the_scale_is_bounded() -> None:
     extreme = [raw(2001, 0.01) for _ in range(100)] + [raw(2020, 9.0) for _ in range(100)]
     assert max(era_scales(extreme).values()) <= 2.5
+
+
+def test_a_short_fight_cannot_get_the_top_star_level() -> None:
+    from blindcard_ingest.scoring.scorer import stars_with_gate
+
+    cfg = parse_scoring_config(
+        {
+            "version": 12,
+            "normalisation": {"cap_quantile": 1, "min_pool_size": 1},
+            "weights": {"pace": 1.0},
+            "stars": {"thresholds": [[0, 1.0], [50, 4.5], [90, 5.0]], "classic_min_seconds": 120},
+        }
+    )
+    assert cfg.classic_min_seconds == 120
+    assert stars_with_gate(cfg, 95, {"fight_seconds": 300.0}) == 5.0
+    assert stars_with_gate(cfg, 95, {"fight_seconds": 13.0}) == 4.5  # one level lower
+    assert stars_with_gate(cfg, 70, {"fight_seconds": 13.0}) == 4.5  # others are untouched
+    again = type(cfg).from_json(cfg.to_json())
+    assert again.classic_min_seconds == 120
+    plain = parse_scoring_config(
+        {
+            "version": 12,
+            "normalisation": {"cap_quantile": 1, "min_pool_size": 1},
+            "weights": {"pace": 1.0},
+            "stars": {"thresholds": [[0, 1.0], [90, 5.0]]},
+        }
+    )
+    assert stars_with_gate(plain, 95, {"fight_seconds": 5.0}) == 5.0  # no rule, no change

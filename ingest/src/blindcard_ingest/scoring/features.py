@@ -66,6 +66,7 @@ NEW_FEATURES: tuple[str, ...] = (
     "volume_nofinish",
     # Bookkeeping, never weighted: the year of the event, for era-relative pace and volume.
     "event_year",
+    "fight_seconds",  # how long the fight lasted (used by a star rule, never weighted)
 )
 
 FEATURE_NAMES: tuple[str, ...] = V1_FEATURES + NEW_FEATURES
@@ -290,6 +291,7 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "volume": float(total_sig),
         "five_rounds": 1.0 if inp.scheduled_rounds == 5 else 0.0,
         "event_year": float(inp.event_year or 0),
+        "fight_seconds": float(inp.fight_seconds),
         "volume_nofinish": 0.0 if real_finish else float(total_sig),
         "cut_short": (1.0 - time_fraction) if cut_short else 0.0,
         "real_finish": 1.0 if real_finish else 0.0,

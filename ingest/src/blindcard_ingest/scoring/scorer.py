@@ -235,6 +235,23 @@ def stars_for_percentile(config: ScoringConfig, percentile: float) -> float:
     return earned
 
 
+def stars_with_gate(config: ScoringConfig, percentile: float, raw: Mapping[str, float]) -> float:
+    """The stars of a percentile, with the "classic needs some fight" rule applied.
+
+    A fight shorter than `classic_min_seconds` cannot get the top star level: it gets the level
+    below instead (a 13-second knockout can be a great moment, but is not a classic fight).
+    """
+    stars = stars_for_percentile(config, percentile)
+    top = config.star_thresholds[-1].stars
+    if (
+        config.classic_min_seconds
+        and stars >= top
+        and raw["fight_seconds"] < config.classic_min_seconds
+    ):
+        return config.star_thresholds[-2].stars if len(config.star_thresholds) > 1 else stars
+    return stars
+
+
 def build_reference(config: ScoringConfig, pool: Sequence[Mapping[str, float]]) -> Reference:
     """Build the frozen reference from the calibration pool's raw features."""
     if len(pool) < config.min_pool_size:
@@ -286,7 +303,7 @@ def score(config: ScoringConfig, reference: Reference, raw: Mapping[str, float])
     return ScoredFight(
         composite=composite,
         percentile=percentile,
-        stars=stars_for_percentile(config, percentile),
+        stars=stars_with_gate(config, percentile, raw),
         # Only what this version weights: extra candidate features never leak into its record.
         raw={name: raw[name] for name in features_of(config)},
         normalised=normalised,

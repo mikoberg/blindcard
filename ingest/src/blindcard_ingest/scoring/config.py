@@ -35,6 +35,9 @@ class ScoringConfig:
     #: Features compared with fights of their own era (pace-like ones: strike counts per minute
     #: grew over the years). Empty = no adjustment.
     era_adjusted: tuple[str, ...] = ()
+    #: A fight shorter than this many seconds cannot reach the top star level (a "classic" needs
+    #: some fight in it). 0 = no such rule.
+    classic_min_seconds: float = 0.0
 
     def to_json(self) -> dict[str, Any]:
         """JSON snapshot stored in `scoring_versions.config` for reproducibility."""
@@ -50,6 +53,8 @@ class ScoringConfig:
             snapshot["performance_weights"] = dict(self.performance_weights)
         if self.era_adjusted:
             snapshot["era_adjusted"] = list(self.era_adjusted)
+        if self.classic_min_seconds:
+            snapshot["classic_min_seconds"] = self.classic_min_seconds
         return snapshot
 
     @classmethod
@@ -68,6 +73,7 @@ class ScoringConfig:
                 str(k): float(v) for k, v in data.get("performance_weights", {}).items()
             },
             era_adjusted=tuple(str(name) for name in data.get("era_adjusted", ())),
+            classic_min_seconds=float(data.get("classic_min_seconds", 0.0)),
         )
 
 
@@ -104,6 +110,13 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
             raise ScoringConfigError("performance must be a table with weights")
         performance_weights = _parse_weights(performance.get("weights"), "performance weights")
 
+    classic_min_seconds = data["stars"].get("classic_min_seconds", 0)
+    if (
+        not isinstance(classic_min_seconds, int | float)
+        or isinstance(classic_min_seconds, bool)
+        or classic_min_seconds < 0
+    ):
+        raise ScoringConfigError("stars.classic_min_seconds must be a number >= 0")
     thresholds = tuple(_parse_threshold(entry) for entry in raw_thresholds)
     _validate_thresholds(thresholds)
 
@@ -116,6 +129,7 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
         star_thresholds=thresholds,
         performance_weights=performance_weights,
         era_adjusted=era_adjusted,
+        classic_min_seconds=float(classic_min_seconds),
     )
 
 
