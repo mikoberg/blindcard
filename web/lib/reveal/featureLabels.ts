@@ -38,6 +38,7 @@ const LABELS: Record<string, FeatureLabel> = {
   time_fraction: { label: "Share of the scheduled time used", format: percent },
   control_share: { label: "Time spent under control", format: percent },
   volume: { label: "Strikes landed over the whole fight", format: count },
+  volume_nofinish: { label: "Strikes landed over the whole fight", format: count },
   five_rounds: { label: "Scheduled for five rounds", format: yesNo },
   main_event: { label: "Main event", format: yesNo },
   co_main: { label: "Co-main event", format: yesNo },
