@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { formatEventDate } from "@/lib/format";
 import { eventLabel, posterNames } from "@/lib/overview/matchup";
-import { expectedCardRating } from "@/lib/upcoming/prediction";
+import { formatExpected, lookOutFor } from "@/lib/upcoming/prediction";
 import type { UpcomingEvent } from "@/lib/upcoming/types";
-import { ExpectedPlate } from "./ExpectedPlate";
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
@@ -33,7 +32,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
   const names = headliners(event);
   const days = daysUntil(event.eventDate, today);
   const title = event.bouts.some((b) => b.position <= 2 && b.isTitleFight);
-  const expected = expectedCardRating(event.bouts);
+  const watch = lookOutFor(event.bouts);
   return (
     <Link
       href={`/upcoming/${event.slug}`}
@@ -62,8 +61,26 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
           </span>
           {title && <span className="redact px-1.5 text-xs font-bold leading-5">Title fight</span>}
         </p>
+        {watch.length > 0 && (
+          <p className="mt-3 text-sm">
+            <span className="text-[var(--muted)]">Look out for </span>
+            {watch.map((bout, index) => {
+              const [a, b] = posterNames(event.name, bout.a.name, bout.b.name);
+              return (
+                <span key={bout.id}>
+                  {index > 0 && <span className="text-[var(--muted)]">, </span>}
+                  <span className="font-bold">
+                    {a} vs {b}
+                  </span>{" "}
+                  <span className="text-[var(--muted)]">
+                    (~{formatExpected(bout.prediction?.stars ?? 0)})
+                  </span>
+                </span>
+              );
+            })}
+          </p>
+        )}
       </div>
-      {expected !== null && <ExpectedPlate stars={expected} />}
     </Link>
   );
 }

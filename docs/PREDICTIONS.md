@@ -49,3 +49,17 @@ Honest limits:
 
 Re-run `blindcard-ingest evaluate-predictions` after any change to the features or the scores, and
 update this table. Ship gate used: beat the context-only baseline on Spearman and MAE.
+
+## Card level: tried and dropped
+
+An "expected card rating" (the average of a card's bout expectations) was shown on the home tiles and
+event headers at first. Checked walk-forward over 447 cards: Pearson 0.37 against the real card average,
+but the expectations hardly differ between cards (sd 0.10 against 0.36 for the real averages), so
+almost every event read 3.0. A linear calibration (slope 1.28) does not widen it (sd 0.13) and improves
+the typical miss from 0.294 (always guess the average) to only 0.268. The honest conclusion: with public
+data alone, cards cannot be told apart much beforehand. The tiles now name the bouts that promise the
+most instead ("Look out for", expected 3.5 or more, at most two), which is the part that was validated.
+
+Ideas to get sharper over time: fighter style features (pace, finish rate) would help, but they are
+private result-derived data, and a prediction that moves after a finish would leak it; betting odds or
+fan anticipation would be a separate, external signal.

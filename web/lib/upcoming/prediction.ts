@@ -8,14 +8,18 @@ export function formatExpected(stars: number): string {
   return stars.toFixed(1);
 }
 
+/** At least this expected rating to be pointed out on an event tile. */
+export const LOOK_OUT_MIN = 3.5;
+
 /**
- * The expected card rating: the average of the expected ratings of the bouts, one decimal.
- * null unless at least half of the announced bouts have one (a short card says too little).
+ * The bouts that promise the most, best first: at most `limit`, and only those expected at
+ * LOOK_OUT_MIN or more. A card average was tried and dropped: it hardly differs between cards.
  */
-export function expectedCardRating(bouts: readonly UpcomingBout[]): number | null {
-  const stars = bouts.flatMap((b) => (b.prediction ? [b.prediction.stars] : []));
-  if (stars.length === 0 || stars.length * 2 < bouts.length) return null;
-  return Math.round((stars.reduce((sum, s) => sum + s, 0) / stars.length) * 10) / 10;
+export function lookOutFor(bouts: readonly UpcomingBout[], limit = 2): UpcomingBout[] {
+  return bouts
+    .filter((b) => b.prediction !== null && b.prediction.stars >= LOOK_OUT_MIN)
+    .sort((x, y) => (y.prediction?.stars ?? 0) - (x.prediction?.stars ?? 0) || x.position - y.position)
+    .slice(0, limit);
 }
 
 /** What the expectation rests on, in words. */

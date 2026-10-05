@@ -3,7 +3,6 @@ import { formatEventDate } from "@/lib/format";
 import { eventLabel } from "@/lib/overview/matchup";
 import {
   basisSentence,
-  expectedCardRating,
   formatAmount,
 } from "@/lib/upcoming/prediction";
 import type { UpcomingBout, UpcomingEvent, UpcomingSegment } from "@/lib/upcoming/types";
@@ -155,16 +154,15 @@ export function UpcomingView({ event, today }: { event: UpcomingEvent; today: Da
   const names = headliners(event);
   const days = daysUntil(event.eventDate, today);
   const parts = groups(event.bouts);
-  const expectedCard = expectedCardRating(event.bouts);
+  const hasExpectations = event.bouts.some((b) => b.prediction !== null);
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <header className="border-2 border-[var(--text)] bg-[var(--surface)] p-5 sm:p-6">
         <p className="display-tight text-lg text-[var(--muted)]">{eventLabel(event.name)}</p>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <h1 className="display mt-1 w-full min-w-0 break-words sm:w-auto sm:flex-1 text-4xl leading-[0.95] sm:text-5xl">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="display mt-1 min-w-0 break-words text-4xl leading-[0.95] sm:text-5xl">
             {names ? `${names[0]} vs ${names[1]}` : event.name}
           </h1>
-          {expectedCard !== null && <ExpectedPlate stars={expectedCard} size="lg" />}
         </div>
         <div className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-3">
           <div className="field">
@@ -182,9 +180,6 @@ export function UpcomingView({ event, today }: { event: UpcomingEvent; today: Da
             </div>
           )}
         </div>
-        {expectedCard !== null && (
-          <p className="mt-4 text-sm text-[var(--muted)]">Expected card rating: the average of the expected ratings below.</p>
-        )}
       </header>
 
       {parts.length === 0 ? (
@@ -192,7 +187,7 @@ export function UpcomingView({ event, today }: { event: UpcomingEvent; today: Da
       ) : (
         <>
           <Notice>Announced card. Bouts can still change before the event.</Notice>
-          {expectedCard !== null && <About />}
+          {hasExpectations && <About />}
           {parts.map((part) => (
             <section key={part.label ?? "card"} aria-label={part.label ?? "Card"}>
               {part.label && (

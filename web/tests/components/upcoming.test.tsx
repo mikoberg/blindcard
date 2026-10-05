@@ -4,7 +4,7 @@ import { UpcomingCard } from "@/components/UpcomingCard";
 import { UpcomingSection } from "@/components/UpcomingSection";
 import { UpcomingView } from "@/components/UpcomingView";
 import { mapPrediction } from "@/lib/data/upcoming";
-import { expectedCardRating } from "@/lib/upcoming/prediction";
+import { lookOutFor } from "@/lib/upcoming/prediction";
 import type { UpcomingBout, UpcomingEvent } from "@/lib/upcoming/types";
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 
@@ -150,22 +150,31 @@ describe("expected ratings", () => {
     expect(html).toContain("About the expected ratings");
   });
 
-  it("shows the expected card rating only when at least half the bouts have an expectation", () => {
-    const some = event({ bouts: [predicted(4), predicted(3, { id: "b2", position: 2 }), bout({ id: "b3", position: 3 })] });
-    expect(renderToStaticMarkup(<UpcomingView event={some} today={TODAY} />)).toContain("Expected card rating");
-    const few = event({ bouts: [predicted(4), bout({ id: "b2", position: 2 }), bout({ id: "b3", position: 3 })] });
-    expect(renderToStaticMarkup(<UpcomingView event={few} today={TODAY} />)).not.toContain("Expected card rating");
-    expect(expectedCardRating(some.bouts)).toBe(3.5);
-    expect(expectedCardRating(few.bouts)).toBeNull();
-    expect(expectedCardRating([])).toBeNull();
+  it("points out the most promising bouts on the tile, best first, and only strong ones", () => {
+    const bouts = [
+      predicted(3.4, { id: "weak", position: 1 }),
+      predicted(4.1, { id: "best", position: 2, a: { name: "Petr Yan", slug: null, country: null }, b: { name: "Merab Dvalishvili", slug: null, country: null } }),
+      predicted(3.8, { id: "good", position: 3 }),
+      predicted(3.6, { id: "third", position: 4 }),
+    ];
+    expect(lookOutFor(bouts).map((b) => b.id)).toEqual(["best", "good"]);
+    expect(lookOutFor([predicted(3.4)])).toEqual([]);
+    expect(lookOutFor([bout()])).toEqual([]);
+    const html = renderToStaticMarkup(<UpcomingCard event={event({ bouts })} today={TODAY} />);
+    expect(html).toContain("Look out for");
+    expect(html).toContain("(~4.1)");
+    expect(html).not.toContain("(~3.4)");
   });
 
-  it("puts the expected card rating on the home tile", () => {
+  it("shows no card-level number: it hardly differs between cards", () => {
     const html = renderToStaticMarkup(
-      <UpcomingCard event={event({ bouts: [predicted(3.8)] })} today={TODAY} />,
+      <UpcomingView event={event({ bouts: [predicted(4), predicted(3, { id: "b2", position: 2 })] })} today={TODAY} />,
     );
-    expect(html).toContain("~");
-    expect(html).toContain("3.8");
+    expect(html).not.toContain("Expected card rating");
+    const tile = renderToStaticMarkup(
+      <UpcomingCard event={event({ bouts: [predicted(3.0)] })} today={TODAY} />,
+    );
+    expect(tile).not.toContain("expected</p>");
   });
 
   it("uses no result words anywhere on the page", () => {
