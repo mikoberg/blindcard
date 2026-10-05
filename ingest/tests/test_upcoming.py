@@ -128,16 +128,23 @@ class FakeWiki:
     def __init__(self, pages: dict[str, str]) -> None:
         self.pages = pages
         self.requested: list[str] = []
+        self.calls: list[list[str]] = []
         self.max_age: float | None = None
 
     def events_list_wikitext(self) -> str:
         return LIST
 
     def page_wikitexts(
-        self, titles: Sequence[str], *, max_age_seconds: float | None = None
+        self,
+        titles: Sequence[str],
+        *,
+        batch_size: int = 50,
+        max_age_seconds: float | None = None,
     ) -> dict[str, str]:
-        self.requested = list(titles)
-        self.max_age = max_age_seconds
+        self.calls.append(list(titles))
+        if len(self.calls) == 1:  # the event pages; later calls are fighter pages
+            self.requested = list(titles)
+            self.max_age = max_age_seconds
         return {t: self.pages[t] for t in titles if t in self.pages}
 
 

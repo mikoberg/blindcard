@@ -51,6 +51,9 @@ function FighterName({ fighter }: { fighter: UpcomingBout["a"] }) {
         ) : (
           name
         )}
+        {fighter.styles.length > 0 && (
+          <span className="mt-0.5 block text-sm font-normal text-[var(--muted)]">{fighter.styles.join(", ")}</span>
+        )}
         {parts && (
           <span aria-hidden="true" className="mt-0.5 block text-sm font-extrabold tabular-nums sm:hidden">
             {parts.main}

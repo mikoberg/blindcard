@@ -40,6 +40,12 @@ class UpcomingBout:
     a: str
     b: str
     is_title_fight: bool
+    #: Wikipedia article of each fighter, when the card links one (the link target, not a guess).
+    a_page: str | None = None
+    b_page: str | None = None
+    #: Fighting styles from the fighter's page, in the page's order; empty when not known.
+    a_style: tuple[str, ...] = ()
+    b_style: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -65,6 +71,19 @@ class UpcomingCard:
 
 def _name(raw: str) -> str:
     return _OTHER_MARK.sub("", clean_wikitext(raw)).strip()
+
+
+_LINK_TARGET = re.compile(r"\[\[\s*([^\]|#]+?)\s*(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]")
+
+
+def _page(raw: str) -> str | None:
+    """The article a name links to: `[[Brendan Allen]]` and `[[Page|Display name]]` both give the
+    page title. A name without a link has no page (never guessed)."""
+    match = _LINK_TARGET.search(raw)
+    if match is None:
+        return None
+    target = match.group(1).strip()
+    return None if ":" in target else target
 
 
 def _header_key(header: str) -> str:
@@ -135,6 +154,8 @@ def parse_upcoming_card(wikitext: str) -> UpcomingCard | None:
                 a=a,
                 b=b,
                 is_title_fight=title,
+                a_page=_page(params[2]),
+                b_page=_page(params[4]),
             )
         )
     return UpcomingCard(bouts=tuple(bouts), has_results=has_results)

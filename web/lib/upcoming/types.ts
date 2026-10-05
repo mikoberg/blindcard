@@ -8,6 +8,8 @@ export interface UpcomingFighter {
   country: string | null;
   /** The record going into this bout (as it stands today); null when not known. */
   record: FighterRecord | null;
+  /** Fighting styles from the fighter's page (Kickboxing, Wrestling, ...); empty when not known. */
+  styles: string[];
 }
 
 /** A reason behind an expected rating: what moved it, in stars, against an average fight. */

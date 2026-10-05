@@ -109,3 +109,15 @@ last). Prompted by a user spotting 4 classics in 6 events. On the dev data: the 
 1.27% (below the 1.5% target), and the only flag is a note for 2025 (12 of 520, 2.3%, chance 3.7%);
 four of the six tiles on the home page is a stretch that has happened in about 1.3% of all 6-event
 windows in the history.
+
+## Fighting style on the upcoming cards (display only)
+
+Shown under a fighter's name on `/upcoming/[slug]` ("Brazilian jiu-jitsu", "Muay Thai, Brazilian
+jiu-jitsu"). Source: the infobox of the fighter's Wikipedia page, found through the link target of the
+name on the card (a name without a link has no page and no style; nothing is guessed). The `style` field
+is read first, then the arts named in `rank` (a black belt in kickboxing is a fair sign of a background);
+only words from a fixed list come out (no stance, belt colour or hometown), at most three. Coverage on
+the dev data: 65 of 148 fighters on the announced cards (87 have a linked page; many pages name neither a
+style nor a rank). It is NOT used by the expected rating or the favourite: style was tested for the
+expected rating and did not help (see above). The earlier test used a cruder parse that let stance and
+hometown lines through as "styles"; it showed no gain either way and was not rerun on the clean labels.

@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 from blindcard_ingest.db.repository import Repository
@@ -22,6 +22,7 @@ from blindcard_ingest.sources.ufc.event_times import (
     event_url_from_wikitext,
 )
 from blindcard_ingest.sources.wikipedia.events_list import parse_events_list
+from blindcard_ingest.sources.wikipedia.fighter_style import is_mma_fighter_page, parse_styles
 from blindcard_ingest.upcoming import (
     UpcomingEvent,
     event_slug,
@@ -43,7 +44,11 @@ class UpcomingSource(Protocol):
     def events_list_wikitext(self) -> str: ...
 
     def page_wikitexts(
-        self, titles: Sequence[str], *, max_age_seconds: float | None = None
+        self,
+        titles: Sequence[str],
+        *,
+        batch_size: int = ...,
+        max_age_seconds: float | None = None,
     ) -> dict[str, str]: ...
 
 
@@ -60,6 +65,7 @@ class UpcomingReport:
     events_refused: int = 0  # the article already shows results
     bouts: int = 0
     times_found: int = 0
+    styles_found: int = 0
     fighters_matched: int = 0
     fighters_unmatched: int = 0
     records_found: int = 0
@@ -74,6 +80,37 @@ def _match_fighters(names: Sequence[str], index: dict[str, list[str]]) -> dict[s
         if len(ids) == 1:
             found[name] = ids[0]
     return found
+
+
+#: Fighter pages are long: small batches, or the API cuts the reply off.
+STYLE_BATCH = 10
+
+
+def _fighter_styles(
+    source: UpcomingSource, events: Sequence[UpcomingEvent]
+) -> dict[str, list[str]]:
+    """Styles by page title: the fighters the cards link to, when the page is an MMA fighter's."""
+    titles = sorted({t for e in events for b in e.bouts for t in (b.a_page, b.b_page) if t})
+    if not titles:
+        return {}
+    pages = source.page_wikitexts(titles, batch_size=STYLE_BATCH)
+    return {
+        title: styles
+        for title, text in pages.items()
+        if is_mma_fighter_page(text) and (styles := parse_styles(text))
+    }
+
+
+def _with_styles(event: UpcomingEvent, styles: dict[str, list[str]]) -> UpcomingEvent:
+    bouts = tuple(
+        replace(
+            b,
+            a_style=tuple(styles.get(b.a_page or "", ())),
+            b_style=tuple(styles.get(b.b_page or "", ())),
+        )
+        for b in event.bouts
+    )
+    return replace(event, bouts=bouts)
 
 
 def run_ingest_upcoming(
@@ -137,6 +174,12 @@ def run_ingest_upcoming(
             )
         )
 
+    styles = _fighter_styles(source, events)
+    events = [_with_styles(e, styles) for e in events]
+    report.styles_found = sum(
+        1 for e in events for b in e.bouts for s in (b.a_style, b.b_style) if s
+    )
+
     index: dict[str, list[str]] = {}
     for fighter_id, name in repo.fighter_names():
         index.setdefault(name_key(name), []).append(fighter_id)
@@ -149,7 +192,7 @@ def run_ingest_upcoming(
     report.bouts = sum(len(e.bouts) for e in events)
     logger.info(
         "ingest-upcoming%s: %d events listed, %d stored (%d without a card yet, %d refused), "
-        "%d bouts, start times for %d, %d of %d fighters known",
+        "%d bouts, start times for %d, styles for %d fighters, %d of %d fighters known",
         " (dry run)" if dry_run else "",
         report.events_listed,
         report.events_stored,
@@ -157,6 +200,7 @@ def run_ingest_upcoming(
         report.events_refused,
         report.bouts,
         report.times_found,
+        report.styles_found,
         report.fighters_matched,
         len(names),
     )

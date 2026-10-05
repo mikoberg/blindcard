@@ -43,15 +43,34 @@ interface BoutRow {
   has_pick: boolean | null;
   fighter_a_record: unknown;
   fighter_b_record: unknown;
+  fighter_a_style: unknown;
+  fighter_b_style: unknown;
   fighter_a: FighterJoin | null;
   fighter_b: FighterJoin | null;
 }
 
 const SEGMENTS: readonly string[] = ["main", "prelim", "early_prelim"];
 
-function fighter(name: string, joined: FighterJoin | null, record: unknown): UpcomingFighter {
+/** At most three plain labels; anything else is dropped. */
+export function mapStyles(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((s): s is string => typeof s === "string" && s.trim() !== "").slice(0, 3);
+}
+
+function fighter(
+  name: string,
+  joined: FighterJoin | null,
+  record: unknown,
+  styles: unknown,
+): UpcomingFighter {
   const slug = joined?.slug && isValidSlug(joined.slug) ? joined.slug : null;
-  return { name, slug, country: joined?.country ?? null, record: record === null ? null : toRecord(record) };
+  return {
+    name,
+    slug,
+    country: joined?.country ?? null,
+    record: record === null ? null : toRecord(record),
+    styles: mapStyles(styles),
+  };
 }
 
 function reasons(value: unknown): PredictionReason[] {
@@ -80,8 +99,8 @@ function bout(row: BoutRow): UpcomingBout {
     segment: row.segment !== null && SEGMENTS.includes(row.segment) ? (row.segment as UpcomingSegment) : null,
     weightClass: row.weight_class,
     isTitleFight: row.is_title_fight,
-    a: fighter(row.fighter_a_name, row.fighter_a, row.fighter_a_record),
-    b: fighter(row.fighter_b_name, row.fighter_b, row.fighter_b_record),
+    a: fighter(row.fighter_a_name, row.fighter_a, row.fighter_a_record, row.fighter_a_style),
+    b: fighter(row.fighter_b_name, row.fighter_b, row.fighter_b_record, row.fighter_b_style),
     prediction: mapPrediction(row),
     hasPick: row.has_pick === true,
   };

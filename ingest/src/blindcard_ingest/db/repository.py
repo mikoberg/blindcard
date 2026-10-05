@@ -900,8 +900,9 @@ class PostgresRepository:
                     cur.execute(
                         "insert into public.upcoming_bouts (event_id, card_position, segment,"
                         " weight_class, is_title_fight, fighter_a_name, fighter_b_name,"
-                        " fighter_a_id, fighter_b_id, fighter_a_record, fighter_b_record)"
-                        " values (%s, %s, %s, %s, %s, %s, %s, %s::uuid, %s::uuid, %s, %s)",
+                        " fighter_a_id, fighter_b_id, fighter_a_record, fighter_b_record,"
+                        " fighter_a_style, fighter_b_style)"
+                        " values (%s, %s, %s, %s, %s, %s, %s, %s::uuid, %s::uuid, %s, %s, %s, %s)",
                         (
                             event_id,
                             bout.position,
@@ -914,6 +915,8 @@ class PostgresRepository:
                             fighter_ids.get(bout.b),
                             _json_or_none(records.get(fighter_ids.get(bout.a, ""))),
                             _json_or_none(records.get(fighter_ids.get(bout.b, ""))),
+                            list(bout.a_style),
+                            list(bout.b_style),
                         ),
                     )
 

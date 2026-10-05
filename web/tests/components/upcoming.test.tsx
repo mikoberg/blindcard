@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { UpcomingCard } from "@/components/UpcomingCard";
 import { UpcomingSection } from "@/components/UpcomingSection";
 import { UpcomingView } from "@/components/UpcomingView";
-import { mapPrediction } from "@/lib/data/upcoming";
+import { mapPrediction, mapStyles } from "@/lib/data/upcoming";
 import { lookOutFor } from "@/lib/upcoming/prediction";
 import type { UpcomingBout, UpcomingEvent } from "@/lib/upcoming/types";
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
@@ -16,8 +16,8 @@ const bout = (patch: Partial<UpcomingBout> = {}): UpcomingBout => ({
   segment: "main",
   weightClass: "Featherweight",
   isTitleFight: true,
-  a: { name: "Alexander Volkanovski", slug: "alexander-volkanovski", country: "au", record: null },
-  b: { name: "Movsar Evloev", slug: null, country: null, record: null },
+  a: { name: "Alexander Volkanovski", slug: "alexander-volkanovski", country: "au", record: null, styles: [] },
+  b: { name: "Movsar Evloev", slug: null, country: null, record: null, styles: [] },
   prediction: null,
   hasPick: false,
   ...patch,
@@ -111,7 +111,7 @@ describe("UpcomingView", () => {
   it("escapes hostile names", () => {
     const html = renderToStaticMarkup(
       <UpcomingView
-        event={event({ bouts: [bout({ a: { name: "<img src=x onerror=alert(1)>", slug: null, country: null, record: null } })] })}
+        event={event({ bouts: [bout({ a: { name: "<img src=x onerror=alert(1)>", slug: null, country: null, record: null, styles: [] } })] })}
         today={TODAY}
       />,
     );
@@ -157,7 +157,7 @@ describe("expected ratings", () => {
   it("points out the most promising bouts on the tile, best first, and only strong ones", () => {
     const bouts = [
       predicted(3.4, { id: "weak", position: 1 }),
-      predicted(4.1, { id: "best", position: 2, a: { name: "Petr Yan", slug: null, country: null, record: null }, b: { name: "Merab Dvalishvili", slug: null, country: null, record: null } }),
+      predicted(4.1, { id: "best", position: 2, a: { name: "Petr Yan", slug: null, country: null, record: null, styles: [] }, b: { name: "Merab Dvalishvili", slug: null, country: null, record: null, styles: [] } }),
       predicted(3.8, { id: "good", position: 3 }),
       predicted(3.6, { id: "third", position: 4 }),
     ];
@@ -210,8 +210,8 @@ describe("records on an upcoming card", () => {
     event({
       bouts: [
         bout({
-          a: { name: "Alexander Volkanovski", slug: null, country: "au", record: a },
-          b: { name: "Movsar Evloev", slug: null, country: null, record: b },
+          a: { name: "Alexander Volkanovski", slug: null, country: "au", record: a, styles: [] },
+          b: { name: "Movsar Evloev", slug: null, country: null, record: b, styles: [] },
         }),
       ],
     });
@@ -235,5 +235,34 @@ describe("records on an upcoming card", () => {
     );
     expect(html).toContain("27-4");
     expect(html.match(/Record going into the fight/g)).toHaveLength(1);
+  });
+});
+
+describe("fighting styles", () => {
+  const styled = (a: string[], b: string[]) =>
+    event({
+      bouts: [
+        bout({
+          a: { name: "Alexander Volkanovski", slug: null, country: "au", record: null, styles: a },
+          b: { name: "Movsar Evloev", slug: null, country: null, record: null, styles: b },
+        }),
+      ],
+    });
+
+  it("shows the styles under the name, comma separated, and nothing when they are not known", () => {
+    const html = renderToStaticMarkup(
+      <UpcomingView event={styled(["Kickboxing", "Brazilian jiu-jitsu"], [])} today={TODAY} />,
+    );
+    expect(html).toContain("Kickboxing, Brazilian jiu-jitsu");
+    expect(html.match(/Kickboxing/g)).toHaveLength(1);
+    const none = renderToStaticMarkup(<UpcomingView event={styled([], [])} today={TODAY} />);
+    expect(none).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
+  });
+
+  it("maps only plain labels from the database and at most three", () => {
+    expect(mapStyles(["Judo", "Wrestling", "Boxing", "Karate"])).toEqual(["Judo", "Wrestling", "Boxing"]);
+    expect(mapStyles(["Judo", "", 3, null])).toEqual(["Judo"]);
+    expect(mapStyles(null)).toEqual([]);
+    expect(mapStyles("Judo")).toEqual([]);
   });
 });
