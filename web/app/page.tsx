@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EventCard } from "@/components/EventCard";
 import { Notice } from "@/components/Notice";
+import { SortToggle } from "@/components/SortToggle";
 import { YearNav } from "@/components/YearNav";
 import { listEventSummaries } from "@/lib/data/overview";
 import { summariesByYear } from "@/lib/overview/summary";
@@ -47,13 +48,17 @@ export default async function HomePage() {
       </section>
 
       <div>
+        <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold">All events</h2>
+        <div className="mt-4 mb-2">
+          <SortToggle active="newest" />
+        </div>
         <YearNav years={years.map((group) => group.year)} />
         {years.map((group) => (
           <section
             key={group.year}
             id={`year-${group.year}`}
             aria-labelledby={`heading-${group.year}`}
-            className="lazy-section scroll-mt-16 pt-8"
+            className="scroll-mt-16 pt-8"
           >
             <h2
               id={`heading-${group.year}`}

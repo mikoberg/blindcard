@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventStats, stripLabel, summariesByYear } from "@/lib/overview/summary";
+import { eventStats, rankByCardRating, stripLabel, summariesByYear } from "@/lib/overview/summary";
 import type { EventSummary } from "@/lib/overview/types";
 
 const event = (patch: Partial<EventSummary> = {}): EventSummary => ({
@@ -49,5 +49,26 @@ describe("summariesByYear", () => {
       ["2026", ["a", "b"]],
       ["2025", ["c"]],
     ]);
+  });
+});
+
+describe("rankByCardRating", () => {
+  const rated = (id: string, eventDate: string, stars: number[]) =>
+    event({ id, eventDate, ratings: stars.map((s, i) => ({ position: i + 1, stars: s })) });
+
+  it("puts the best average first, then more rated fights, then the newer event", () => {
+    const ids = rankByCardRating([
+      rated("low", "2026-01-01", [2, 3]),
+      rated("few", "2026-02-01", [4]),
+      rated("many", "2025-01-01", [4, 4, 4]),
+      rated("newer", "2026-03-01", [4, 4, 4]),
+    ]).map((e) => e.id);
+    expect(ids).toEqual(["newer", "many", "few", "low"]);
+  });
+
+  it("puts events without ratings last and does not change the input", () => {
+    const input = [rated("none", "2026-05-01", []), rated("one", "2020-01-01", [1])];
+    expect(rankByCardRating(input).map((e) => e.id)).toEqual(["one", "none"]);
+    expect(input.map((e) => e.id)).toEqual(["none", "one"]);
   });
 });

@@ -18,6 +18,23 @@ export function stripLabel(event: EventSummary): string {
   return `${ratedCount} ${ratedCount === 1 ? "fight" : "fights"} rated, card rating ${cardRating.toFixed(1)} out of 5`;
 }
 
+/**
+ * Events ranked by card rating, best first. Ties go to the card with more rated fights, then to
+ * the newer event. Events without any rating come last (newest first).
+ */
+export function rankByCardRating(events: readonly EventSummary[]): EventSummary[] {
+  const scored = events.map((event) => ({ event, ...eventStats(event) }));
+  return scored
+    .sort(
+      (a, b) =>
+        (b.cardRating ?? -1) - (a.cardRating ?? -1) ||
+        b.ratedCount - a.ratedCount ||
+        b.event.eventDate.localeCompare(a.event.eventDate) ||
+        a.event.id.localeCompare(b.event.id),
+    )
+    .map((row) => row.event);
+}
+
 export function summariesByYear(
   events: readonly EventSummary[],
 ): { year: string; events: EventSummary[] }[] {
