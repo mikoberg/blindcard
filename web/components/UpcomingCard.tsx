@@ -4,7 +4,9 @@ import { eventLabel, posterNames } from "@/lib/overview/matchup";
 import { formatExpected, lookOutFor } from "@/lib/upcoming/prediction";
 import type { UpcomingEvent } from "@/lib/upcoming/types";
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
+import { startTimes } from "@/lib/upcoming/time";
 import { PlaceChip } from "./PlaceChip";
+import { StartTimes } from "./StartTimes";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 
@@ -56,6 +58,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
         </p>
         {event.location && <p className="mt-1 text-sm text-[var(--muted)]">{event.location}</p>}
         <PlaceChip location={event.location} isoDate={event.eventDate} />
+        <StartTimes times={startTimes(event)} variant="tile" />
         <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span className="font-bold text-[var(--accent)]">{countdownLabel(days)}</span>
           <span className="text-[var(--muted)]">

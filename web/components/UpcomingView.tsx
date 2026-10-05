@@ -12,7 +12,9 @@ import { headliners } from "./UpcomingCard";
 import { UpcomingPick } from "./UpcomingPick";
 import { Monogram } from "./Monogram";
 import { Notice } from "./Notice";
+import { startTimes } from "@/lib/upcoming/time";
 import { PlaceChip } from "./PlaceChip";
+import { StartTimes } from "./StartTimes";
 
 const SEGMENT_ORDER: readonly UpcomingSegment[] = ["main", "prelim", "early_prelim"];
 const SEGMENT_LABELS: Record<UpcomingSegment, string> = {
@@ -175,6 +177,10 @@ export function UpcomingView({ event, today }: { event: UpcomingEvent; today: Da
           <div className="field">
             <p className="display-tight text-lg text-[var(--accent)]">{countdownLabel(days)}</p>
             <span className="field-label">Starts</span>
+          </div>
+          <div className="field sm:col-span-3">
+            <StartTimes times={startTimes(event)} variant="page" />
+            <span className="field-label">Start times, in your time zone</span>
           </div>
           {event.location && (
             <div className="field">

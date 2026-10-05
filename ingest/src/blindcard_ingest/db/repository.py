@@ -799,13 +799,29 @@ class PostgresRepository:
             for event in events:
                 cur.execute(
                     "insert into public.upcoming_events"
-                    " (wiki_title, name, slug, event_date, location)"
-                    " values (%s, %s, %s, %s, %s)"
+                    " (wiki_title, name, slug, event_date, location, main_card_at, prelims_at,"
+                    " early_prelims_at)"
+                    " values (%s, %s, %s, %s, %s, %s, %s, %s)"
                     " on conflict (wiki_title) do update set name = excluded.name,"
                     " slug = excluded.slug, event_date = excluded.event_date,"
-                    " location = excluded.location, updated_at = now()"
+                    " location = excluded.location,"
+                    # a failed read must not erase a time we already know
+                    " main_card_at = coalesce(excluded.main_card_at, upcoming_events.main_card_at),"
+                    " prelims_at = coalesce(excluded.prelims_at, upcoming_events.prelims_at),"
+                    " early_prelims_at = coalesce("
+                    "excluded.early_prelims_at, upcoming_events.early_prelims_at),"
+                    " updated_at = now()"
                     " returning id",
-                    (event.wiki_title, event.name, event.slug, event.event_date, event.location),
+                    (
+                        event.wiki_title,
+                        event.name,
+                        event.slug,
+                        event.event_date,
+                        event.location,
+                        event.main_card_at,
+                        event.prelims_at,
+                        event.early_prelims_at,
+                    ),
                 )
                 event_id = cur.fetchone()["id"]  # type: ignore[index]
                 cur.execute("delete from public.upcoming_bouts where event_id = %s", (event_id,))

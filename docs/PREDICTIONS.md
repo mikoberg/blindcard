@@ -91,3 +91,11 @@ loss improves slightly and consistently (0.6797 to 0.6783 from 2016, 0.6758 to 0
 Example: Yan and Dvalishvili have met twice (one win each, Yan won the latest), and Yan is now the slight
 favourite (58%) where it was a coin flip before. The model still does not see HOW dominant a win was
 beyond finish or decision.
+
+## Fighter style: tried and dropped
+
+Idea: two strikers should make a better fight. Each fighter's style was read from the Wikipedia infobox
+(1534 of 2576 fighters with at least two rated fights; both fighters known in 59% of fights) and added
+as striker / grappler / striker-vs-striker features. Walk-forward result: no gain (Spearman 0.383 without,
+0.382 with; same typical miss). A fighter's earlier ratings already carry what the style would add. Not
+shipped. Private pace and finish data would probably help but are result-derived (see above).

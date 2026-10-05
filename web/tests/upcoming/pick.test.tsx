@@ -68,6 +68,9 @@ describe("the bout card", () => {
     name: "UFC 1: A vs. B",
     eventDate: "2026-10-24",
     location: null,
+    mainCardAt: null,
+    prelimsAt: null,
+    earlyPrelimsAt: null,
     bouts: [
       {
         id: "b1",

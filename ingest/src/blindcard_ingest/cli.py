@@ -37,6 +37,7 @@ from blindcard_ingest.segment_pipeline import run_ingest_segments
 from blindcard_ingest.settings import Settings, SettingsError, load_settings
 from blindcard_ingest.sources.base import FightDataSource
 from blindcard_ingest.sources.sherdog import SherdogClient
+from blindcard_ingest.sources.ufc.event_times import DEFAULT_CRAWL_DELAY, UfcEventTimes
 from blindcard_ingest.sources.ufcstats.dataset import SOURCE_NAME, DatasetError
 from blindcard_ingest.sources.ufcstats.source import UfcStatsCsvSource
 from blindcard_ingest.sources.wikidata import WikidataClient
@@ -242,6 +243,22 @@ def _open_wikipedia(settings: Settings) -> Iterator[BonusSource]:
         yield WikipediaClient(client)
 
 
+@contextmanager
+def _open_event_times(settings: Settings) -> Iterator[UfcEventTimes]:
+    """The official event pages, at the site's own crawl delay. Their raw replies are thrown away:
+    only three timestamps are read from them."""
+    user_agent = settings.require_user_agent()
+    with (
+        tempfile.TemporaryDirectory(prefix="blindcard-times-") as scratch,
+        PoliteClient(
+            user_agent,
+            HtmlCache(Path(scratch)),
+            min_interval_seconds=DEFAULT_CRAWL_DELAY,
+        ) as client,
+    ):
+        yield UfcEventTimes(client, user_agent)
+
+
 def _today() -> dt.date:
     return dt.datetime.now(dt.UTC).date()
 
@@ -356,8 +373,14 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
     if args.command == "ingest-upcoming":
         from blindcard_ingest.upcoming_pipeline import run_ingest_upcoming
 
-        with _open_repository(settings) as repo, _open_wikipedia(settings) as wiki:
-            run_ingest_upcoming(wiki, repo, today=_today(), dry_run=args.dry_run)
+        with (
+            _open_repository(settings) as repo,
+            _open_wikipedia(settings) as wiki,
+            _open_event_times(settings) as times,
+        ):
+            run_ingest_upcoming(
+                wiki, repo, today=_today(), times_source=times, dry_run=args.dry_run
+            )
         return EXIT_OK
 
     if args.command == "ingest-judges":

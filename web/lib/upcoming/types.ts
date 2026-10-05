@@ -47,6 +47,10 @@ export interface UpcomingEvent {
   /** ISO date, e.g. "2026-10-24". */
   eventDate: string;
   location: string | null;
+  /** Start times (ISO, UTC) from the official event page; null = not announced yet. */
+  mainCardAt: string | null;
+  prelimsAt: string | null;
+  earlyPrelimsAt: string | null;
   /** In card order; empty while the card is not announced. */
   bouts: UpcomingBout[];
 }

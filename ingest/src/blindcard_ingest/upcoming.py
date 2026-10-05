@@ -50,6 +50,10 @@ class UpcomingEvent:
     event_date: dt.date
     location: str | None
     bouts: tuple[UpcomingBout, ...]
+    #: Start times (UTC), when the official event page has them. None = not known (yet).
+    main_card_at: dt.datetime | None = None
+    prelims_at: dt.datetime | None = None
+    early_prelims_at: dt.datetime | None = None
 
 
 @dataclass(frozen=True)

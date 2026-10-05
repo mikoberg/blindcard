@@ -29,6 +29,9 @@ const event = (patch: Partial<UpcomingEvent> = {}): UpcomingEvent => ({
   name: "UFC 333: Volkanovski vs. Evloev",
   eventDate: "2026-10-24",
   location: "Etihad Arena, Abu Dhabi, United Arab Emirates",
+  mainCardAt: null,
+  prelimsAt: null,
+  earlyPrelimsAt: null,
   bouts: [
     bout(),
     bout({ id: "b2", position: 2, segment: "prelim", isTitleFight: false, weightClass: "Lightweight" }),

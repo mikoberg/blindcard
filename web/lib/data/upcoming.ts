@@ -17,6 +17,9 @@ interface EventRow {
   slug: string;
   event_date: string;
   location: string | null;
+  main_card_at: string | null;
+  prelims_at: string | null;
+  early_prelims_at: string | null;
 }
 
 interface FighterJoin {
@@ -115,6 +118,9 @@ export async function listUpcomingEvents(now: Date = new Date()): Promise<Upcomi
     name: event.name,
     eventDate: event.event_date,
     location: event.location,
+    mainCardAt: event.main_card_at,
+    prelimsAt: event.prelims_at,
+    earlyPrelimsAt: event.early_prelims_at,
     bouts: bouts.filter((row) => row.event_id === event.id).map(bout),
   }));
 }

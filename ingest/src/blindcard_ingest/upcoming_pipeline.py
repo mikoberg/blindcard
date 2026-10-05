@@ -16,6 +16,11 @@ from typing import Protocol
 
 from blindcard_ingest.db.repository import Repository
 from blindcard_ingest.judges import name_key
+from blindcard_ingest.sources.ufc.event_times import (
+    EventTimes,
+    RobotsRefused,
+    event_url_from_wikitext,
+)
 from blindcard_ingest.sources.wikipedia.events_list import parse_events_list
 from blindcard_ingest.upcoming import (
     UpcomingEvent,
@@ -28,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 #: How far ahead events are listed. Cards further out are rarely announced yet.
 HORIZON_DAYS = 150
+#: Start times are only read for events this close: they are rarely announced earlier.
+TIMES_HORIZON_DAYS = 45
 #: Upcoming cards change daily (bouts are added and swapped), so their pages are re-read often.
 PAGE_MAX_AGE_SECONDS = 6 * 3600
 
@@ -40,6 +47,10 @@ class UpcomingSource(Protocol):
     ) -> dict[str, str]: ...
 
 
+class TimesSource(Protocol):
+    def event_times(self, url: str, *, event_date: dt.date) -> EventTimes | None: ...
+
+
 @dataclass
 class UpcomingReport:
     events_listed: int = 0
@@ -48,6 +59,7 @@ class UpcomingReport:
     events_without_card: int = 0
     events_refused: int = 0  # the article already shows results
     bouts: int = 0
+    times_found: int = 0
     fighters_matched: int = 0
     fighters_unmatched: int = 0
     events: list[UpcomingEvent] = field(default_factory=list)
@@ -69,6 +81,7 @@ def run_ingest_upcoming(
     *,
     today: dt.date,
     horizon_days: int = HORIZON_DAYS,
+    times_source: TimesSource | None = None,
     dry_run: bool = False,
 ) -> UpcomingReport:
     report = UpcomingReport()
@@ -95,6 +108,20 @@ def run_ingest_upcoming(
             continue
         if card is None:
             report.events_without_card += 1
+        times = EventTimes()
+        url = event_url_from_wikitext(text)
+        if (
+            times_source is not None
+            and url is not None
+            and entry.date <= today + dt.timedelta(days=TIMES_HORIZON_DAYS)
+        ):
+            try:
+                times = times_source.event_times(url, event_date=entry.date) or EventTimes()
+            except RobotsRefused:
+                logger.warning("start times: not allowed by robots.txt; none are read")
+                times_source = None
+        if times.known:
+            report.times_found += 1
         events.append(
             UpcomingEvent(
                 wiki_title=entry.title,
@@ -103,6 +130,9 @@ def run_ingest_upcoming(
                 event_date=entry.date,
                 location=parse_location(text),
                 bouts=card.bouts if card is not None else (),
+                main_card_at=times.main_card,
+                prelims_at=times.prelims,
+                early_prelims_at=times.early_prelims,
             )
         )
 
@@ -118,13 +148,14 @@ def run_ingest_upcoming(
     report.bouts = sum(len(e.bouts) for e in events)
     logger.info(
         "ingest-upcoming%s: %d events listed, %d stored (%d without a card yet, %d refused), "
-        "%d bouts, %d of %d fighters known",
+        "%d bouts, start times for %d, %d of %d fighters known",
         " (dry run)" if dry_run else "",
         report.events_listed,
         report.events_stored,
         report.events_without_card,
         report.events_refused,
         report.bouts,
+        report.times_found,
         report.fighters_matched,
         len(names),
     )
