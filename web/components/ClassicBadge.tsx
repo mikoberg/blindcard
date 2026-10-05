@@ -1,8 +1,8 @@
-/** A starburst. Decorative: the label next to it says what it means. */
+/** A five-point star. Decorative: the label next to it says what it means. */
 export function ClassicIcon({ className = "h-3.5 w-3.5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
-      <path d="M12 1.5l2.4 5.3 5.2-2.3-1.6 5.5 5.5 1.6-5.3 2.4 2.3 5.2-5.5-1.6-1.6 5.5-2.4-5.3-5.2 2.3 1.6-5.5-5.5-1.6 5.3-2.4-2.3-5.2 5.5 1.6z" />
+      <path d="M12 1.8l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.6 5.7 21.2l1.5-7.1L1.8 9.2l7.2-.8z" />
     </svg>
   );
 }
@@ -10,15 +10,32 @@ export function ClassicIcon({ className = "h-3.5 w-3.5" }: { className?: string 
 /** The gold foil of a five-star fight. Only the classics get it. */
 export const GOLD_FOIL = "linear-gradient(145deg, var(--gold-hi) 0%, var(--gold-mid) 45%, var(--gold-lo) 100%)";
 
-/** The mark of a five-star fight: gold foil in an ink frame. */
+/** A belt plate: pointed at both ends. */
+const PLATE = "polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%)";
+const PLATE_INNER = "polygon(9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%, 0 50%)";
+
+/**
+ * The mark of a five-star fight: a small gold belt plate, a bright rim around a deeper gold face
+ * with a star and the label engraved in dark. Only the classics get it.
+ */
 export function ClassicBadge({ label = "Classic" }: { label?: string }) {
   return (
-    <span
-      className="inline-flex items-center gap-1 whitespace-nowrap border-2 border-[var(--text)] px-2 py-0.5 text-xs font-extrabold text-[var(--text)]"
-      style={{ backgroundImage: GOLD_FOIL }}
-    >
-      <ClassicIcon />
-      {label}
+    <span className="inline-flex drop-shadow-[0_3px_10px_rgb(242_181_42/0.3)]">
+      <span
+        className="inline-flex p-[1.5px]"
+        style={{ clipPath: PLATE, backgroundImage: GOLD_FOIL }}
+      >
+        <span
+          className="inline-flex items-center gap-1.5 whitespace-nowrap py-[3px] pl-3 pr-3.5 text-xs font-extrabold tracking-[0.01em] text-[var(--ink)]"
+          style={{
+            clipPath: PLATE_INNER,
+            backgroundImage: "linear-gradient(180deg, #f9cf5a 0%, #e0a21b 55%, #c58b0c 100%)",
+          }}
+        >
+          <ClassicIcon className="h-3 w-3" />
+          {label}
+        </span>
+      </span>
     </span>
   );
 }

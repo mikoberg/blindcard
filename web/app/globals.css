@@ -14,6 +14,7 @@
   --accent: #c23314; /* stamp: vermilion */
   --accent-ink: #fff6ee; /* paper on a stamp */
   --focus: #1c4fd6;
+  --ink: #101a2c; /* type on gold */
   --gold-hi: #fff0b8;
   --gold-mid: #f2b52a;
   --gold-lo: #b97a00;
@@ -202,4 +203,9 @@ body {
 .slip:hover {
   transform: translate(-2px, -2px);
   box-shadow: 5px 5px 0 var(--text);
+}
+
+/* Gold foil, for the classics only. */
+.gold-foil {
+  background-image: linear-gradient(145deg, var(--gold-hi) 0%, var(--gold-mid) 45%, var(--gold-lo) 100%);
 }

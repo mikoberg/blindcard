@@ -116,8 +116,17 @@ export function FightCard({
               record={fight.records?.a ?? null}
               career={fight.career?.a}
             />
-            <span className="my-2 flex items-center gap-3 text-sm font-bold text-[var(--accent)]">
-              <span className="w-11 text-center">vs</span>
+            <span className="my-3 flex items-center gap-3">
+              <span className="h-px flex-1 bg-[var(--border)]" />
+              <span className="text-sm font-bold text-[var(--accent)]">vs</span>
+              {fight.weightClass && (
+                <span
+                  aria-hidden="true"
+                  className="display-tight bg-[var(--surface-2)] px-2.5 py-1 text-base leading-none sm:text-lg"
+                >
+                  {fight.weightClass}
+                </span>
+              )}
               <span className="h-px flex-1 bg-[var(--border)]" />
             </span>
             <FighterLine
