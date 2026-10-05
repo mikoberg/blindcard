@@ -61,6 +61,9 @@ NEW_FEATURES: tuple[str, ...] = (
     "expected_finish",  # real_finish x how often the two fighters' earlier fights finished
     "expected_ko",  # KO/TKO x how often the more fragile of the two was stopped by KO/TKO before
     "fragile_ko",  # KO/TKO x how far that share is above the usual one (only above counts)
+    # Strikes landed over a fight that went the distance (or otherwise did not end in a real
+    # finish): sustained action. In a finish the total only says how long it lasted.
+    "volume_nofinish",
     # Bookkeeping, never weighted: the year of the event, for era-relative pace and volume.
     "event_year",
 )
@@ -84,6 +87,7 @@ CAPPED_FEATURES: tuple[str, ...] = (
     "expected_finish",
     "expected_ko",
     "fragile_ko",
+    "volume_nofinish",
 )
 
 
@@ -286,6 +290,7 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "volume": float(total_sig),
         "five_rounds": 1.0 if inp.scheduled_rounds == 5 else 0.0,
         "event_year": float(inp.event_year or 0),
+        "volume_nofinish": 0.0 if real_finish else float(total_sig),
         "cut_short": (1.0 - time_fraction) if cut_short else 0.0,
         "real_finish": 1.0 if real_finish else 0.0,
         "real_early_finish": 1.0 - time_fraction if real_finish else 0.0,

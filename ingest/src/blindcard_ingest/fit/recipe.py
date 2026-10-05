@@ -51,7 +51,7 @@ SCORE_FEATURES: tuple[str, ...] = (
     "main_event",
     "co_main",
     "title_fight",
-    "volume",
+    "volume_nofinish",
     "five_rounds",
     "rematch",
     "streak",
@@ -76,7 +76,7 @@ FIXED_WEIGHTS: dict[str, float] = {
 
 #: Compared with fights of their own era: strikes per minute grew over the years, so a typical
 #: fight of 2013 would otherwise look dull next to one of 2022.
-ERA_FEATURES: tuple[str, ...] = ("pace", "min_pace", "volume")
+ERA_FEATURES: tuple[str, ...] = ("pace", "min_pace", "volume_nofinish")
 
 #: Share of the Performance fit blended into the score, tried in this order.
 BLEND_GRID: tuple[float, ...] = tuple(i / 40 for i in range(25))
@@ -104,7 +104,7 @@ NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(
         "main_event",
         "co_main",
         "title_fight",
-        "volume",
+        "volume_nofinish",
         "five_rounds",
         *CAREER_FEATURES,
     }
@@ -112,10 +112,11 @@ NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(
 
 NEUTRAL_LEAK = 0.5  # AUC(stars -> finished) of a score that says nothing about finishes
 #: How far above neutral AUC(stars -> finished) may rise on the training years. Wider = finishes
-#: count for more. 0.4 (v8-v10) let finishes dominate: 55% of finishes but only 10% of decisions
-#: reached 4 stars, and the held-out Fight of the Night AUC was lower. 0.2 keeps a finish a clear
-#: plus (the stars still tell finishes apart a little) without making it the whole score.
-DEFAULT_FINISH_LEAK = 0.20
+#: count for more. Checked against community fight ratings (mma.social, 184 fights of 27 events,
+#: June 2025 - May 2026): the rank agreement of the stars with the fans was 0.56 at 0.4 and 0.44 at
+#: 0.2 (the paired difference excludes zero), 0.52 at 0.3. The official Fight of the Night bonus
+#: prefers the lower margins, the fans the higher ones; the fans are the independent check.
+DEFAULT_FINISH_LEAK = 0.40
 #: Slack between the training years and the refit on all years before the report warns.
 LEAK_SLACK = 0.05
 
@@ -137,6 +138,7 @@ FEATURE_NOTES: dict[str, str] = {
     "co_main": "the co-main event",
     "title_fight": "a championship bout",
     "volume": "significant strikes landed over the whole fight, both fighters",
+    "volume_nofinish": "significant strikes landed over a fight that did not end in a finish",
     "five_rounds": "scheduled for five rounds",
     "rematch": "the two fighters have met before",
     "streak": "the two fighters' current win streaks, added",

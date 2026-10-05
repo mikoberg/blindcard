@@ -1,0 +1,61 @@
+# Excitement score v13: one score, weights fitted to the Fight / Performance
+# of the Night bonuses (regenerate with `blindcard-ingest fit-scoring`; do not edit).
+# Fitted on events before 2024, checked on the rest; shipped weights
+# are refitted on all labelled fights. Held-out numbers for this fit:
+#   Fight of the Night AUC 0.811, in the top 3 of its card 66%, Performance of the Night AUC 0.732
+#   AUC of the stars for 'was finished' 0.763 (0.5 = no information)
+#   shipped weights, all labelled fights: AUC for 'finished' 0.769
+# The score is 55.0% Fight of the Night fit and 45.0%
+# Performance of the Night fit: the largest share of the second that keeps
+# AUC(stars -> finished) within 0.3 of neutral on the training years.
+# A finish adds to a fight's score and never subtracts from it.
+# Set by hand, not fitted: cut_short -0.6, fragile_ko -0.5.
+
+version = 13
+description = "Fitted to the Fight/Performance of the Night bonuses: one score."
+
+[normalisation]
+cap_quantile = 0.99
+min_pool_size = 100
+# Compared with fights of their own era (strikes per minute grew over the years):
+era_adjusted = ["pace", "min_pace", "volume"]
+
+# composite = sum(weight * normalised_feature). Negative weights penalise.
+[weights]
+pace                    = 0.271   # combined significant strikes landed per minute
+knockdowns              = 0.446   # total knockdowns
+sub_attempts            = 0.236   # total submission attempts
+reversals               = 0.293   # total reversals
+swings                  = 0.236   # round-to-round lead changes
+competitiveness         = 0.065   # 1 - |A - B| / (A + B) on significant strikes landed
+real_finish             = 0.471   # ended by KO/TKO or submission, not by an injury (adds, never subtracts)
+control_share_nofinish  = -0.207  # share of the fight under control, when it did not end in a finish
+knockdowns_both         = 0.16    # both fighters scored a knockdown
+min_pace                = 0.402   # significant strikes per minute of the less active fighter
+takedown_rate           = 0.108   # takedowns landed per minute, both fighters
+real_early_finish       = 0.171   # how early a real finish came (1 - share of the scheduled time used)
+main_event              = 0.2     # the main event of the card
+co_main                 = 0.2     # the co-main event
+volume                  = 1.0     # significant strikes landed over the whole fight, both fighters
+five_rounds             = 0.073   # scheduled for five rounds
+rematch                 = 0.025   # the two fighters have met before
+streak                  = 0.188   # the two fighters' current win streaks, added
+star_power              = 0.062   # their earlier main events and title fights, added
+unbeaten_fighter        = 0.116   # at least one of them has no UFC loss
+experience              = 0.035   # UFC fights of the less experienced of the two
+cut_short               = -0.6    # share of the scheduled time not fought, if an injury or CNC ended it
+fragile_ko              = -0.5    # KO/TKO, times how far the more fragile fighter's KO losses exceed the usual
+
+# Percentile (0-100) -> stars, same curve as v1.
+[stars]
+thresholds = [
+    [0, 1.0],
+    [8, 1.5],
+    [16, 2.0],
+    [28, 2.5],
+    [40, 3.0],
+    [55, 3.5],
+    [70, 4.0],
+    [85, 4.5],
+    [97, 5.0],
+]
