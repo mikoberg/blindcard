@@ -1,3 +1,4 @@
+import "server-only"; // a client component that imports this fails the build
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export class MissingEnvError extends Error {

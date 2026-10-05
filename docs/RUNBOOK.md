@@ -49,7 +49,8 @@ Notes:
 - `migrate` runs each file in its own transaction and refuses a file that changed after it was
   applied. `migrate --dry-run` lists what would run. `--baseline-through N` is only for a database
   that was set up by hand before the ledger existed (empty ledger only).
-- Always run `migrate` **before** deploying a web build that depends on a new migration.
+- Always run `migrate` **before** deploying a web build that depends on a new migration (0019: `upcoming_pick`
+  date guard; 0020: the fighter search column, without which `/api/fighters` returns 503).
 - Use `ingest-fighters --from 2001 --styles-only` to refresh only the fighting styles.
 - `ingest-ufc-styles --limit 40` drips fighting styles from the official athlete pages (15 s per page,
   the crawl delay); the daily job does this on its own.
@@ -86,7 +87,20 @@ two blocks, and the RLS test when the `TEST_DATABASE_URL` secret exists.
   `upcoming_picks`) are included in any dump: store dumps as private data.
 - Freshness: if the `ingest` job is red two days in a row, look at the Actions log first (sources change their layout without warning).
 
-## 6. Rolling back
+## 6. Abuse and rate limits
+
+The app has no rate limiting of its own (it is stateless on purpose). The routes that reach the
+database per call are `/api/reveal/*`, `/api/upcoming/*/pick`, `/api/judges/*/disputes` and
+`/api/fighters`. Before launch set limits at the host: on Vercel a WAF rate-limit rule on `/api/*`
+(for example 60 requests per minute per IP, and a stricter one on `/api/reveal/*`), or Cloudflare in
+front. The reveal functions return one row per call and never a list, so scraping all results costs
+one request per fight; a limit makes that slow, it cannot make it impossible.
+
+Security headers and a static Content-Security-Policy are set in `web/next.config.ts` (the policy
+only in production builds). If a page ever needs an outside script, image or font, the policy must
+be changed on purpose.
+
+## 7. Rolling back
 
 - Web: redeploy the previous build from the host.
 - Database: migrations are forward-only. Fix forward with a new numbered migration; never edit an

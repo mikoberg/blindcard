@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { FighterLeaderboard } from "@/components/FighterLeaderboard";
 import { FighterSearch } from "@/components/FighterSearch";
 import { Notice } from "@/components/Notice";
@@ -7,10 +8,12 @@ import { MIN_FIGHTS, rankFighters } from "@/lib/leaderboard/rank";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: { absolute: "Blindcard – Fighter leaderboard" },
-  alternates: { canonical: "/fighters" },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Fighter leaderboard",
+  description: "Fighters ranked by the average rating of their fights, with no results.",
+  path: "/fighters",
+  root: true,
+});
 
 const SHOWN = 100;
 

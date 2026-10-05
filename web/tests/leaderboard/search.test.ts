@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanSearchTerm, containsPattern } from "@/lib/leaderboard/search";
+import { cleanSearchTerm, containsPattern, foldName } from "@/lib/leaderboard/search";
 import { toSearchResults } from "@/lib/leaderboard/rank";
 
 describe("cleanSearchTerm", () => {
@@ -21,6 +21,36 @@ describe("pattern characters", () => {
     expect(cleanSearchTerm("*")).toBeNull();
     expect(cleanSearchTerm("cu%b")).toBe("cu b");
     expect(containsPattern(cleanSearchTerm("c_ub\\")!)).toBe("%c ub%");
+  });
+});
+
+describe("foldName (the same rule as public.fold_name in migration 0020)", () => {
+  // These pairs are asserted on the SQL side too, in supabase/tests/rls.sql.
+  it("ignores case, every kind of apostrophe and accents", () => {
+    expect(foldName("Sean O'Malley")).toBe("sean omalley");
+    expect(foldName("Sean O’Malley")).toBe("sean omalley");
+    expect(foldName("Jiří Procházka")).toBe("jiri prochazka");
+    expect(foldName("  Jean-Claude   VAN Damme ")).toBe("jean claude van damme");
+  });
+
+  it("folds the letters that have no accent to strip", () => {
+    expect(foldName("Straße æ œ ø ł đ")).toBe("strasse ae oe o l d");
+  });
+
+  it("keeps letters of other scripts rather than erasing the name", () => {
+    expect(foldName("Алекс")).toBe("алекс");
+  });
+});
+
+describe("search patterns", () => {
+  it("find a name typed with a curly apostrophe or without accents", () => {
+    expect(containsPattern("O’Malley")).toBe("%omalley%");
+    expect(containsPattern("prochazka")).toBe("%prochazka%");
+  });
+
+  it("are null when nothing is left to search for after folding", () => {
+    expect(containsPattern("''")).toBeNull();
+    expect(containsPattern("’’")).toBeNull();
   });
 });
 

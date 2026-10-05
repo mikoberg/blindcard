@@ -47,7 +47,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
         <h3 className="display-tight break-words text-xl leading-tight group-hover:text-[var(--accent)] sm:text-2xl">
           {names ? (
             <>
-              {names[0]} <span className="text-base font-bold text-[var(--accent)]">vs</span> {names[1]}
+              {names[0]} <span className="text-base font-bold text-[var(--accent-text)]">vs</span> {names[1]}
             </>
           ) : (
             event.name

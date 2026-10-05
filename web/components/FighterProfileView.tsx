@@ -20,9 +20,10 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         All fighters
       </Link>
 
-      <section aria-labelledby="fighter" className="flex items-center gap-4">
+      {/* Narrow screens: flag and rating share the first row, the name gets the full width below. */}
+      <section aria-labelledby="fighter" className="flex flex-wrap items-center gap-4">
         <Monogram name={profile.name} country={profile.country} size="lg" />
-        <div className="min-w-0 flex-1">
+        <div className="order-last min-w-0 basis-full sm:order-none sm:basis-0 sm:flex-1">
           <h1
             id="fighter"
             className="page-title break-words"
@@ -36,7 +37,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         <p
           role="img"
           aria-label={`Average rating ${formatRating(profile.average)} out of 5`}
-          className={`scorebox h-20 w-24 shrink-0 text-5xl ${isHighRating(profile.average) ? "scorebox-hot" : ""}`}
+          className={`scorebox ml-auto h-20 w-24 shrink-0 text-5xl sm:ml-0 ${isHighRating(profile.average) ? "scorebox-hot" : ""}`}
         >
           <span aria-hidden="true">{formatRating(profile.average)}</span>
         </p>

@@ -7,13 +7,28 @@ import { mapEvent, type EventRow } from "./map";
 
 export { isValidSlug };
 
+const PAGE = 500; // at most this many rows per request (the server may send fewer)
+
+/** Every event, newest first. Read in pages: the server caps the rows of one request. */
 export async function listEvents(): Promise<CardEvent[]> {
-  const result = await getSupabase()
-    .from("events")
-    .select(EVENT_COLUMNS)
-    .order("event_date", { ascending: false })
-    .order("id");
-  return ensure<EventRow[]>(result, "list events").map(mapEvent);
+  const db = getSupabase();
+  const rows: EventRow[] = [];
+  // Advance by what actually came back: only an empty page means everything has been read.
+  for (let from = 0; ; ) {
+    const page = ensure<EventRow[]>(
+      await db
+        .from("events")
+        .select(EVENT_COLUMNS)
+        .order("event_date", { ascending: false })
+        .order("id")
+        .range(from, from + PAGE - 1),
+      "list events",
+    );
+    if (page.length === 0) break;
+    rows.push(...page);
+    from += page.length;
+  }
+  return rows.map(mapEvent);
 }
 
 export async function getEventBySlug(slug: string): Promise<CardEvent | null> {

@@ -57,7 +57,9 @@ describe("UpcomingPick (before the click)", () => {
     expect(html).toContain("Show the model lean");
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain("stays closed until you open it");
-    expect(html).not.toMatch(/Alan A|Ben B|%/);
+    // Both names appear in the accessible name, in the card's own order; no side is singled out.
+    expect(html).toContain('aria-label="Show the model lean: Alan A versus Ben B"');
+    expect(html).not.toMatch(/%|favour|lean to/);
   });
 });
 

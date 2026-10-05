@@ -47,16 +47,17 @@ export async function getFighterProfile(slug: string): Promise<FighterProfile | 
 
 const SEARCH_LIMIT = 20;
 
-/** Fighters whose name contains `raw`, most rated fights first. Not limited to the ranked ones. */
+/** Fighters whose name contains `raw` (ignoring case, accents and apostrophes), most rated fights first. */
 export async function searchFighters(raw: string): Promise<FighterRatingRow[]> {
   const term = cleanSearchTerm(raw);
   if (term === null) return [];
   const pattern = containsPattern(term);
+  if (pattern === null) return [];
   return ensure<FighterRatingRow[]>(
     await getSupabase()
       .from("fighter_ratings")
       .select(FIGHTER_RATING_COLUMNS)
-      .ilike("name", pattern)
+      .ilike("search_name", pattern) // the folded name (migration 0020): case, accents, apostrophes
       .order("rated_fights", { ascending: false })
       .order("name")
       .limit(SEARCH_LIMIT),

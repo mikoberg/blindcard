@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { ClassicSeal } from "@/components/ClassicSeal";
 import { ClassicsList } from "@/components/ClassicsList";
 import { Notice } from "@/components/Notice";
@@ -7,10 +8,12 @@ import { listClassicRows, listFightVideos } from "@/lib/data/classics";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: { absolute: "Blindcard – The classics" },
-  alternates: { canonical: "/classics" },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "The classics",
+  description: "Every five-star fight: the rare fights rated in the top one percent, with no results.",
+  path: "/classics",
+  root: true,
+});
 
 export default async function ClassicsPage() {
   const [rows, videos] = await Promise.all([listClassicRows(), listFightVideos()]);
@@ -18,7 +21,7 @@ export default async function ClassicsPage() {
   if (classics.length === 0) return <Notice>No five-star fights yet. Check back soon.</Notice>;
   return (
     <div className="space-y-2">
-      <section aria-labelledby="classics" className="flex items-start justify-between gap-6">
+      <section aria-labelledby="classics" className="flex flex-wrap items-start justify-between gap-6">
         <div>
           <h1
             id="classics"

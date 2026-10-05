@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { ExternalLink, InfoPage, InfoSection } from "@/components/InfoPage";
 import { getContactEmail, ISSUES_URL } from "@/lib/contact";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Contact and corrections",
   description: "Report a mistake, ask for a correction or a removal, or get in touch about Blindcard.",
-  alternates: { canonical: "/contact" },
-};
+  path: "/contact",
+  root: true,
+});
 
 export default function ContactPage() {
   const email = getContactEmail();

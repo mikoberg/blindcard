@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FighterProfileView } from "@/components/FighterProfileView";
+import { pageMetadata } from "@/lib/seo";
 import { isValidSlug } from "@/lib/data/events";
 import { getFighterProfile } from "@/lib/data/leaderboard";
 
@@ -17,10 +18,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const profile = isValidSlug(slug) ? await getFighterProfile(slug) : null;
   if (!profile) return { title: "Fighter not found" };
-  return {
+  return pageMetadata({
     title: profile.name,
-    alternates: { canonical: `/fighters/${profile.slug}` },
-  };
+    description: `${profile.name}: the average rating of their fights and every rated fight, with no results.`,
+    path: `/fighters/${profile.slug}`,
+  });
 }
 
 export default async function FighterPage({ params }: Props) {

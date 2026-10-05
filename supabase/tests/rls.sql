@@ -224,7 +224,7 @@ begin
   select count(*) into n
   from information_schema.columns
   where table_schema = 'public' and table_name = 'fighter_ratings'
-    and column_name not in ('id', 'name', 'country', 'rated_fights', 'avg_stars', 'slug');
+    and column_name not in ('id', 'name', 'country', 'rated_fights', 'avg_stars', 'slug', 'search_name');
   if n <> 0 then raise exception 'FAIL: fighter_ratings has unexpected columns'; end if;
   raise notice 'PASS fighter_ratings is public, active version only';
 end $$;
@@ -507,6 +507,21 @@ begin
 end $$;
 
 reset role;
+
+-- Name folding for search: case, accents and every kind of apostrophe are ignored.
+do $$
+begin
+  assert public.fold_name('Sean O' || chr(39) || 'Malley') = 'sean omalley', 'fold: straight apostrophe';
+  assert public.fold_name('Sean O' || chr(8217) || 'Malley') = 'sean omalley', 'fold: curly apostrophe';
+  assert public.fold_name('Jiri Prochazka') = public.fold_name('Ji' || chr(345) || chr(237) || ' Proch' || chr(225) || 'zka'),
+    'fold: accents';
+  assert public.fold_name('  Jean-Claude   VAN Damme ') = 'jean claude van damme', 'fold: case, hyphen, spaces';
+  assert public.fold_name('Cub Swanson') like '%swan%', 'fold: contains';
+  raise notice 'PASS fold_name ignores case, accents and apostrophes';
+  assert (select search_name from public.fighter_ratings where slug = 'fighter-a') = 'fighter a',
+    'the view carries the folded name';
+  raise notice 'PASS fighter_ratings carries search_name';
+end $$;
 
 rollback;
 

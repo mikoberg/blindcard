@@ -122,7 +122,7 @@ export function FightCard({
             <span className="-ml-[5.25rem] my-3 flex items-center gap-3">
               <span className="h-px flex-1 bg-[var(--border)]" />
               <span className="display-tight flex items-baseline gap-2 bg-[var(--surface-2)] px-3 py-1 text-base leading-none sm:text-lg">
-                <span className="text-sm font-bold text-[var(--accent)]">vs</span>
+                <span className="text-sm font-bold text-[var(--accent-text)]">vs</span>
                 {fight.weightClass && <span aria-hidden="true">{fight.weightClass}</span>}
               </span>
               <span className="h-px flex-1 bg-[var(--border)]" />

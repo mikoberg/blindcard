@@ -22,6 +22,7 @@ vi.mock("next/font/google", () => ({
 import { generateMetadata as eventMetadata } from "@/app/events/[slug]/page";
 import { metadata as layoutMetadata } from "@/app/layout";
 import { metadata as homeMetadata } from "@/app/page";
+import { HTML_LEAK_PATTERNS, findLeaks } from "./../spoiler/leaks";
 
 const event: CardEvent = {
   id: "e1",
@@ -46,7 +47,8 @@ describe("home metadata", () => {
   it("is static: an absolute 'Blindcard – All events' title (the layout template skips the same segment)", () => {
     expect(homeMetadata.title).toEqual({ absolute: "Blindcard – All events" });
     expect(homeMetadata.alternates?.canonical).toBe("/");
-    expect(homeMetadata).not.toHaveProperty("description");
+    expect(homeMetadata.openGraph).toMatchObject({ type: "website", url: "/", title: "Blindcard – All events" });
+    expect(findLeaks(String(homeMetadata.description), HTML_LEAK_PATTERNS)).toEqual([]);
   });
 });
 
@@ -56,7 +58,12 @@ describe("event page metadata", () => {
     const meta = await eventMetadata({ params: Promise.resolve({ slug: event.slug }) });
     expect(meta.title).toBe(event.name);
     expect(meta.alternates?.canonical).toBe(`/events/${event.slug}`);
-    expect(meta).not.toHaveProperty("description");
+    expect(meta.openGraph).toMatchObject({ type: "website", url: `/events/${event.slug}` });
+    // The description names the event and its date and nothing about any fight.
+    expect(meta.description).toBe(
+      "Which fights on UFC Fight Night: Alpha vs. Beta (Sat 26 Sep 2026) are worth watching? A rating for every fight, and no results.",
+    );
+    expect(findLeaks(String(meta.description), HTML_LEAK_PATTERNS)).toEqual([]);
   });
 
   it("says 'Event not found' for an unknown slug", async () => {

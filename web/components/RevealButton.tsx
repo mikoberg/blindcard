@@ -52,10 +52,13 @@ export function RevealButton({ fightId, fighterA, fighterB }: Props) {
         disabled={state.status === "loading"}
         aria-expanded={shown}
         aria-controls={panelId}
-        className={`flex min-h-12 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors disabled:opacity-70 sm:px-5 ${
+        // Many identical buttons on a card: the name says which fight this one is for.
+        aria-label={`${label}: ${fighterA.name} versus ${fighterB.name}`}
+        // The ring sits inside the button: the card clips anything drawn outside its edge.
+        className={`flex min-h-12 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors focus-visible:outline-offset-[-5px] disabled:opacity-70 sm:px-5 ${
           shown
             ? "bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--border)]"
-            : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+            : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] focus-visible:outline-[var(--accent-ink)]"
         }`}
       >
         <span>{label}</span>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { JudgeProfileView } from "@/components/JudgeProfileView";
 import { getBaseline, getJudge, listComparableJudges } from "@/lib/data/judges";
+import { pageMetadata } from "@/lib/seo";
 import { isValidSlug } from "@/lib/slug";
 
 export const revalidate = 300;
@@ -18,11 +19,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const judge = isValidSlug(slug) ? await getJudge(slug) : null;
   if (!judge) return { title: "Judge not found" };
   // Statistics about a named person: reachable by link, kept out of search results.
-  return {
+  return pageMetadata({
     title: `${judge.name}, judge`,
-    alternates: { canonical: `/judges/${judge.slug}` },
-    robots: { index: false, follow: true },
-  };
+    description: `Scorecard statistics of ${judge.name}: a summary of public scorecards, not a rating of the judge.`,
+    path: `/judges/${judge.slug}`,
+    noindex: true,
+  });
 }
 
 export default async function JudgePage({ params }: Props) {

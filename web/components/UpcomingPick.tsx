@@ -36,10 +36,12 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
         disabled={state.status === "loading"}
         aria-expanded={shown}
         aria-controls={panelId}
-        className={`flex min-h-11 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors disabled:opacity-70 ${
+        // Many identical buttons on a card: the name says which bout this one is for.
+        aria-label={`${state.status === "loading" ? "Loading…" : shown ? "Hide the model lean" : state.status === "error" ? "Try again" : "Show the model lean"}: ${nameA} versus ${nameB}`}
+        className={`flex min-h-11 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors focus-visible:outline-offset-[-5px] disabled:opacity-70 ${
           shown
             ? "border-2 border-[var(--text)] hover:bg-[var(--surface-2)]"
-            : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+            : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] focus-visible:outline-[var(--accent-ink)]"
         }`}
       >
         <span>

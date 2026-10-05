@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink, InfoPage, InfoSection } from "@/components/InfoPage";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "About and method",
   description:
     "How Blindcard rates fights without spoiling them: what the stars mean, what stays hidden, how the expected ratings and model leans work, and where the data comes from.",
-  alternates: { canonical: "/about" },
-};
+  path: "/about",
+  root: true,
+});
 
 const LINK = "font-semibold underline underline-offset-4";
 

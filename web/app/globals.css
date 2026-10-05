@@ -12,6 +12,7 @@
   --text: #101a2c; /* blue-black pen ink */
   --muted: #566073; /* pencil */
   --accent: #c23314; /* stamp: vermilion */
+  --accent-text: #a82a0e; /* the stamp colour for small text: 5.8 to 6.4 on paper and slips */
   --accent-ink: #fff6ee; /* paper on a stamp */
   --focus: #1c4fd6;
   --ink: #101a2c; /* type on gold */

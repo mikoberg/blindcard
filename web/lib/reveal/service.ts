@@ -1,3 +1,4 @@
+import "server-only"; // a client component that imports this fails the build
 import { getSupabase } from "@/lib/supabase/server";
 import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
 import { rowToPick, type PickRow, type UpcomingPick } from "@/lib/upcoming/pick";

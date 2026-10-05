@@ -161,6 +161,14 @@ describe("YearNav", () => {
     expect(html).toContain('href="#year-2025"');
     expect(html).toContain('aria-label="Years"');
   });
+
+  it("links every year to its own page and marks the current one", () => {
+    const html = renderToStaticMarkup(<YearNav years={["2026", "2025"]} base="/events/year" current="2025" />);
+    expect(html).toContain('href="/events/year/2026"');
+    expect(html).toContain('href="/events/year/2025"');
+    expect(html.match(/aria-current="page"/g)).toHaveLength(1);
+    expect(html).not.toContain("#year-");
+  });
 });
 
 describe("Monogram with a flag", () => {

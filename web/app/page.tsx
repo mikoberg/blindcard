@@ -4,20 +4,24 @@ import { Notice } from "@/components/Notice";
 import { SortToggle } from "@/components/SortToggle";
 import { UpcomingSection } from "@/components/UpcomingSection";
 import { YearNav } from "@/components/YearNav";
+import { formatEventDate } from "@/lib/format";
 import { listEventSummaries } from "@/lib/data/overview";
 import { listUpcomingEvents } from "@/lib/data/upcoming";
 import { summariesByYear } from "@/lib/overview/summary";
+import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  // A layout title.template does not apply to the page in the same (root) segment.
-  title: { absolute: "Blindcard – All events" },
-  alternates: { canonical: "/" },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "All events",
+  description:
+    "Which fights are worth watching? A rating for every fight on every card, newest first, with the announced cards ahead. Results stay sealed until you reveal them.",
+  path: "/",
+  root: true,
+});
 
 /** Events shown under the featured one, before the full list. */
-const LATEST = 6;
+const LATEST = 12;
 
 export default async function HomePage() {
   const now = new Date();
@@ -52,6 +56,10 @@ export default async function HomePage() {
         <h2 id="latest" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
           Latest events
         </h2>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          The newest card here took place on {formatEventDate(newest.eventDate)}. New cards appear the day after an
+          event.
+        </p>
         <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {rest.slice(0, LATEST).map((event) => (
             <li key={event.id}>
@@ -61,36 +69,14 @@ export default async function HomePage() {
         </ul>
       </section>
 
-      <div>
-        <h2 className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">All events</h2>
-        <div className="mt-4 mb-2">
-          <SortToggle active="newest" />
-        </div>
-        <YearNav years={years.map((group) => group.year)} />
-        {years.map((group) => (
-          <section
-            key={group.year}
-            id={`year-${group.year}`}
-            aria-labelledby={`heading-${group.year}`}
-            className="scroll-mt-16 pt-10"
-          >
-            <h2
-              id={`heading-${group.year}`}
-              className="display flex items-center gap-4 text-5xl leading-none sm:text-6xl"
-            >
-              {group.year}
-              <span aria-hidden="true" className="h-[3px] flex-1 bg-[var(--text)]" />
-            </h2>
-            <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {group.events.map((event) => (
-                <li key={event.id}>
-                  <EventCard event={event} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+      <section aria-labelledby="browse" className="space-y-4">
+        <h2 id="browse" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
+          All events
+        </h2>
+        <p className="max-w-xl text-[var(--muted)]">Pick a year, or see which cards rate best.</p>
+        <SortToggle active="newest" />
+        <YearNav years={years.map((group) => group.year)} base="/events/year" sticky={false} />
+      </section>
     </div>
   );
 }

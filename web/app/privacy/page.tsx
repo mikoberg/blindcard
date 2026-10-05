@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { InfoPage, InfoSection } from "@/components/InfoPage";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy",
   description: "Blindcard has no accounts, no cookies and no analytics. What the server sees, and what we do not keep.",
-  alternates: { canonical: "/privacy" },
-};
+  path: "/privacy",
+  root: true,
+});
 
 const LINK = "font-semibold underline underline-offset-4";
 
