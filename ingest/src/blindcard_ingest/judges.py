@@ -29,6 +29,8 @@ class JudgeCard:
     name: str
     #: second - first: positive = agreed with the result, negative = scored the loser ahead.
     margin: int
+    #: The scores as written, e.g. "29 - 28".
+    scores: str = ""
 
 
 def clean_name(raw: str) -> str | None:
@@ -46,7 +48,11 @@ def parse_card(text: str) -> JudgeCard | None:
     name = clean_name(match.group(1))
     if name is None:
         return None
-    return JudgeCard(name=name, margin=int(match.group(3)) - int(match.group(2)))
+    return JudgeCard(
+        name=name,
+        margin=int(match.group(3)) - int(match.group(2)),
+        scores=f"{match.group(2)} - {match.group(3)}",
+    )
 
 
 def _ascii(text: str) -> str:
@@ -110,35 +116,51 @@ class Baseline:
     judges_with_enough: int = 0
 
 
+@dataclass(frozen=True)
+class Dispute:
+    """One scorecard that went against the result. Private: it names a fight."""
+
+    judge_slug: str
+    fight_id: str
+    judge_card: str  # "Ron McCarthy 29 - 28", the name cleaned
+    margin: int
+    lone: bool  # both colleagues agreed with the result
+    severity: float  # how far the card is from the colleagues' average margin
+
+
 @dataclass
 class JudgeReport:
     judges: list[JudgeStats] = field(default_factory=list)
+    #: Only for judges with enough cards to have a page. Never public: see the private table.
+    disputes: list[Dispute] = field(default_factory=list)
     baseline: Baseline = field(default_factory=Baseline)
     decisions: int = 0
     skipped: int = 0
 
 
-def compute_judge_stats(decisions: Iterable[tuple[int, Sequence[str]]]) -> JudgeReport:
-    """`decisions`: (event year, the three scorecard texts) of decisions with a winner."""
+def compute_judge_stats(
+    decisions: Iterable[tuple[str, int, Sequence[str]]],
+) -> JudgeReport:
+    """`decisions`: (fight id, event year, the three scorecard texts) of decisions with a winner."""
     forms: dict[str, Counter[str]] = defaultdict(Counter)
-    parsed_rows: list[tuple[int, list[JudgeCard]]] = []
+    parsed_rows: list[tuple[str, int, list[JudgeCard]]] = []
     report = JudgeReport()
-    for year, texts in decisions:
+    for fight_id, year, texts in decisions:
         cards = [parse_card(t) for t in texts]
         if len(cards) != 3 or any(c is None for c in cards):
             report.skipped += 1
             continue
-        parsed_rows.append((year, [c for c in cards if c is not None]))
+        parsed_rows.append((fight_id, year, [c for c in cards if c is not None]))
         report.decisions += 1
-    resolved = resolve_glued(Counter(c.name for _, cards in parsed_rows for c in cards))
-    rows: list[tuple[int, list[tuple[str, int]]]] = []
-    for year, parsed in parsed_rows:
+    resolved = resolve_glued(Counter(c.name for _, _, cards in parsed_rows for c in cards))
+    rows: list[tuple[str, int, list[tuple[str, int, str]]]] = []
+    for fight_id, year, parsed in parsed_rows:
         keys = []
         for c in parsed:
             name = resolved[c.name]
-            keys.append((name_key(name), c.margin))
+            keys.append((name_key(name), c.margin, f"{name} {c.scores}"))
             forms[name_key(name)][name] += 1
-        rows.append((year, keys))
+        rows.append((fight_id, year, keys))
 
     stats: dict[str, JudgeStats] = {}
     for key, counter in forms.items():
@@ -148,10 +170,16 @@ def compute_judge_stats(decisions: Iterable[tuple[int, Sequence[str]]]) -> Judge
             name=name,
             slugs=sorted({slugify(n) for n in counter}),
         )
-    for year, keys in rows:
-        for index, (key, margin) in enumerate(keys):
-            others = [m for i, (_, m) in enumerate(keys) if i != index]
+    candidates: list[tuple[str, Dispute]] = []
+    for fight_id, year, keys in rows:
+        for index, (key, margin, text) in enumerate(keys):
+            others = [m for i, (_, m, _) in enumerate(keys) if i != index]
             j = stats[key]
+            if margin < 0:
+                lone = all(m > 0 for m in others)
+                candidates.append(
+                    (key, Dispute(j.slug, fight_id, text, margin, lone, sum(others) / 2 - margin))
+                )
             j.cards += 1
             j.dissent += margin < 0
             j.lone_dissent += margin < 0 and all(m > 0 for m in others)
@@ -168,7 +196,9 @@ def compute_judge_stats(decisions: Iterable[tuple[int, Sequence[str]]]) -> Judge
         base.judges_with_enough += j.cards >= MIN_CARDS
     # A small count says too much about one bout: judges below the minimum are stored by name
     # only (all numbers zero), so the site can link them but shows nothing about them. The totals
-    # of all judges above were taken before this.
+    # of all judges above were taken before this. Disputed scorecards are kept for the others.
+    kept = {key for key, j in stats.items() if j.cards >= MIN_CARDS}
+    report.disputes = [d for key, d in candidates if key in kept]
     for j in stats.values():
         if j.cards < MIN_CARDS:
             j.cards = j.dissent = j.lone_dissent = j.abs_sum = j.abs_sumsq = 0

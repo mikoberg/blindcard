@@ -169,8 +169,8 @@ class Repository(Protocol):
         """
         ...
 
-    def decision_scorecards(self) -> list[tuple[int, list[str]]]:
-        """(event year, scorecard texts) of every decision that has a winner and three cards."""
+    def decision_scorecards(self) -> list[tuple[str, int, list[str]]]:
+        """(fight id, event year, scorecard texts) of every decision with a winner and 3 cards."""
         ...
 
     def replace_judge_stats(self, report: JudgeReport) -> int:
@@ -612,9 +612,10 @@ class PostgresRepository:
                 changed += cur.rowcount
         return changed
 
-    def decision_scorecards(self) -> list[tuple[int, list[str]]]:
+    def decision_scorecards(self) -> list[tuple[str, int, list[str]]]:
         query = """
-            select extract(year from e.event_date)::int as year, r.scorecards
+            select f.id::text as fight_id, extract(year from e.event_date)::int as year,
+                   r.scorecards
             from public.fight_results r
             join public.fights f on f.id = r.fight_id
             join public.events e on e.id = f.event_id
@@ -624,11 +625,21 @@ class PostgresRepository:
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute(query)
             rows = cur.fetchall()
-        return [(row["year"], [str(card) for card in row["scorecards"]]) for row in rows]
+        return [
+            (row["fight_id"], row["year"], [str(card) for card in row["scorecards"]])
+            for row in rows
+        ]
 
     def replace_judge_stats(self, report: JudgeReport) -> int:
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute("delete from public.judge_stats")
+            cur.execute("delete from public.judge_disputes")
+            for d in report.disputes:
+                cur.execute(
+                    "insert into public.judge_disputes (judge_slug, fight_id, judge_card, margin,"
+                    " lone, severity) values (%s, %s::uuid, %s, %s, %s, %s)",
+                    (d.judge_slug, d.fight_id, d.judge_card, d.margin, d.lone, d.severity),
+                )
             for j in report.judges:
                 cur.execute(
                     "insert into public.judge_stats (slug, name, slugs, cards, dissent,"

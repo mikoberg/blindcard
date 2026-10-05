@@ -103,6 +103,8 @@ values ('test-judge', 'Test Judge', '{test-judge}', 40, 3, 1, 80, 170, 2015, 202
 insert into public.judge_baseline (id, cards, dissent, abs_sum, abs_sumsq, judges_with_enough)
 values (1, 100, 7, 205, 450, 2)
 on conflict (id) do nothing;
+insert into public.judge_disputes (judge_slug, fight_id, judge_card, margin, lone, severity)
+values ('test-judge', '00000000-0000-0000-0000-0000000000f1', 'Test Judge 29 - 28', -1, true, 3);
 
 ------------------------------------------------------------------------------
 -- anon
@@ -294,6 +296,33 @@ begin
     and column_name ~ '(fight|event|fighter|winner|method|score)';
   if n <> 0 then raise exception 'FAIL: judge tables have a per-bout column'; end if;
   raise notice 'PASS judge statistics are public aggregates';
+end $$;
+
+-- Disputed scorecards name a fight, so they are private: no direct read, only the function
+-- (one judge, at most 10 rows, and only for judges that have a page).
+do $$
+declare
+  n integer;
+begin
+  begin
+    perform count(*) from public.judge_disputes;
+    raise exception 'FAIL: anon could read judge_disputes';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot read judge_disputes';
+  end;
+  begin
+    insert into public.judge_disputes (judge_slug, fight_id, judge_card, margin, lone, severity)
+      values ('x', '00000000-0000-0000-0000-0000000000f1', 'x', -1, true, 1);
+    raise exception 'FAIL: anon could write judge_disputes';
+  exception when insufficient_privilege then null;
+  end;
+  select count(*) into n from public.judge_disputed_cards('test-judge');
+  if n <> 1 then raise exception 'FAIL: judge_disputed_cards should return the seeded card, got %', n; end if;
+  select count(*) into n from public.judge_disputed_cards('test-judge', 1000);
+  if n > 10 then raise exception 'FAIL: judge_disputed_cards returned more than 10 rows'; end if;
+  select count(*) into n from public.judge_disputed_cards('nobody');
+  if n <> 0 then raise exception 'FAIL: judge_disputed_cards leaked rows for an unknown judge'; end if;
+  raise notice 'PASS judge_disputed_cards is the only way to read disputed scorecards';
 end $$;
 
 -- Card segments are a public, pre-fight fact: readable, but only the three known values.

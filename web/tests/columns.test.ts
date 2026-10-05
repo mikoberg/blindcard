@@ -150,7 +150,7 @@ describe("data access guards", () => {
     expect(violations(findResultTableStrings)).toEqual([]);
   });
 
-  it("the reveal_fight RPC is called from exactly one file", () => {
+  it("the reveal RPCs (reveal_fight, reveal_score, judge_disputed_cards) are called from exactly one file", () => {
     const callers = tree.filter((path) => /\.rpc\(/.test(read(path))).map(rel);
     expect(callers).toEqual(["lib/reveal/service.ts"]);
   });

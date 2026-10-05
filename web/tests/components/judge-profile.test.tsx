@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { DisputeItem } from "@/components/JudgeDisputes";
 import { JudgeProfileView } from "@/components/JudgeProfileView";
+import type { DisputedCard } from "@/lib/judges/disputes";
 import { ScorecardLine } from "@/components/ScorecardLine";
 import type { BaselineRow, JudgeRow } from "@/lib/judges/types";
 
@@ -85,6 +87,28 @@ describe("JudgeProfileView", () => {
     );
   });
 
+  it("offers the disputed scorecards behind a button, with a warning, and names no fight", () => {
+    const html = renderToStaticMarkup(
+      <JudgeProfileView judge={row()} baseline={baseline} comparable={others} />,
+    );
+    expect(html).toContain("Show their most disputed scorecards");
+    expect(html).toContain("Open it only if you have seen these fights");
+    expect(html).toContain('aria-expanded="false"');
+    // nothing about any fight is in the page before the click
+    expect(html).not.toMatch(/ vs |Official result|\/events\//);
+  });
+
+  it("has no list to open for a judge who never scored against the result", () => {
+    const html = renderToStaticMarkup(
+      <JudgeProfileView
+        judge={row({ dissent: 0, lone_dissent: 0 })}
+        baseline={baseline}
+        comparable={others}
+      />,
+    );
+    expect(html).not.toContain("Show their most disputed scorecards");
+  });
+
   it("escapes hostile names", () => {
     const html = renderToStaticMarkup(
       <JudgeProfileView
@@ -111,5 +135,59 @@ describe("ScorecardLine", () => {
     expect(renderToStaticMarkup(<ScorecardLine text="odd text" />)).toBe(
       "odd text",
     );
+  });
+});
+
+describe("DisputeItem", () => {
+  const card: DisputedCard = {
+    fightId: "f1",
+    eventName: "Test Event",
+    eventSlug: "test-event",
+    eventDate: "2024-05-04",
+    fighterA: { name: "Alan A", slug: "alan-a" },
+    fighterB: { name: "Ben B", slug: "ben-b" },
+    winnerName: "Ben B",
+    method: "Decision - Split",
+    scorecards: ["Ann One 29 - 28", "Bea Two 28 - 29", "Cid Three 28 - 29"],
+    judgeCard: "Ann One 29 - 28",
+    margin: -1,
+    lone: true,
+  };
+
+  it("names the fight, the official result and the fighter the judge had ahead", () => {
+    const html = renderToStaticMarkup(
+      <DisputeItem card={card} name="Ann One" slugs={["ann-one"]} />,
+    );
+    expect(html).toContain('href="/events/test-event"');
+    expect(html).toContain('href="/fighters/alan-a"');
+    expect(html).toContain("Official result: Ben B, split decision");
+    expect(html).toContain("Ann One had Alan A ahead, against both other judges.");
+  });
+
+  it("marks the judge's own card and links the others", () => {
+    const html = renderToStaticMarkup(
+      <DisputeItem card={card} name="Ann One" slugs={["ann-one"]} />,
+    );
+    expect(html).toContain("(this judge)");
+    expect(html).toContain('href="/judges/bea-two"');
+    expect(html).not.toContain('href="/judges/ann-one"');
+  });
+
+  it("does not claim the judge was alone when a colleague also differed", () => {
+    const html = renderToStaticMarkup(
+      <DisputeItem card={{ ...card, lone: false }} name="Ann One" slugs={["ann-one"]} />,
+    );
+    expect(html).not.toContain("against both other judges");
+  });
+
+  it("escapes hostile names", () => {
+    const html = renderToStaticMarkup(
+      <DisputeItem
+        card={{ ...card, eventName: "<img src=x onerror=alert(1)>" }}
+        name="Ann One"
+        slugs={["ann-one"]}
+      />,
+    );
+    expect(html).not.toContain("<img src=x");
   });
 });

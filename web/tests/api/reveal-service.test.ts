@@ -4,7 +4,7 @@ import { RevealUnavailableError } from "@/lib/reveal/errors";
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ getSupabase: () => ({ rpc }) }));
 
-import { revealFight } from "@/lib/reveal/service";
+import { revealFight, revealJudgeDisputes } from "@/lib/reveal/service";
 
 const scoreRow = {
   fight_id: "f1",
@@ -92,5 +92,40 @@ describe("revealFight", () => {
   it("refuses a non-array answer", async () => {
     rpc.mockResolvedValue({ data: { weird: true }, error: null });
     await expect(revealFight("f1")).rejects.toBeInstanceOf(RevealUnavailableError);
+  });
+});
+
+describe("revealJudgeDisputes", () => {
+  const disputeRow = {
+    fight_id: "f1",
+    event_name: "Test Event",
+    event_slug: "test-event",
+    event_date: "2024-05-04",
+    fighter_a_name: "Alan A",
+    fighter_a_slug: "alan-a",
+    fighter_b_name: "Ben B",
+    fighter_b_slug: "ben-b",
+    winner_name: "Ben B",
+    method: "Decision - Split",
+    scorecards: ["Ann One 29 - 28", "Bea Two 28 - 29", "Cid Three 28 - 29"],
+    judge_card: "Ann One 29 - 28",
+    margin: -1,
+    lone: true,
+  };
+
+  beforeEach(() => rpc.mockReset());
+
+  it("asks for one judge and at most ten cards", async () => {
+    rpc.mockResolvedValue({ data: [disputeRow], error: null });
+    const cards = await revealJudgeDisputes("ann-one");
+    expect(rpc).toHaveBeenCalledWith("judge_disputed_cards", { p_slug: "ann-one", p_limit: 10 });
+    expect(cards).toHaveLength(1);
+  });
+
+  it("fails with a code only when the database errors or answers oddly", async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: "42501", message: "secret detail" } });
+    await expect(revealJudgeDisputes("ann-one")).rejects.toBeInstanceOf(RevealUnavailableError);
+    rpc.mockResolvedValue({ data: { not: "a list" }, error: null });
+    await expect(revealJudgeDisputes("ann-one")).rejects.toBeInstanceOf(RevealUnavailableError);
   });
 });

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import itertools
+
 from fakes import FakeRepository
 
 from blindcard_ingest.judges import (
@@ -44,8 +46,11 @@ def test_slugs_drop_accents_and_apostrophes_and_names_in_either_order_are_one_ju
     assert name_key("William Mattingly") == name_key("Mattingly William")
 
 
-def _decision(*cards: str, year: int = 2020) -> tuple[int, list[str]]:
-    return (year, list(cards))
+_ids = itertools.count(1)
+
+
+def _decision(*cards: str, year: int = 2020) -> tuple[str, int, list[str]]:
+    return (f"fight-{next(_ids)}", year, list(cards))
 
 
 def test_dissent_lone_dissent_and_width_are_counted_per_judge() -> None:
@@ -137,3 +142,39 @@ def test_a_note_stuck_to_a_known_name_is_merged_into_that_judge() -> None:
     assert names["Eric Colon"] == 0  # 11 cards, below the minimum: stored by name only
     assert "Eye PokeEric Colon" not in names
     assert report.baseline.cards == 33  # but all of them are in the totals
+
+
+def test_a_card_keeps_its_scores_as_written() -> None:
+    card = parse_card("Ron McCarthy 29-28")
+    assert card is not None and card.scores == "29 - 28"
+
+
+def test_disputed_cards_are_kept_for_judges_with_enough_cards_only() -> None:
+    agree = [
+        _decision("Ann One 28 - 29", "Bea Two 28 - 29", "Cid Three 28 - 29")
+        for _ in range(MIN_CARDS)
+    ]
+    lone = _decision("Ann One 29 - 28", "Bea Two 28 - 30", "Cid Three 28 - 30")
+    both = _decision("Ann One 29 - 28", "Bea Two 29 - 28", "Cid Three 28 - 29")
+    report = compute_judge_stats([*agree, lone, both])
+    ann = [d for d in report.disputes if d.judge_slug == "ann-one"]
+    assert {d.fight_id for d in ann} == {lone[0], both[0]}
+    by_fight = {d.fight_id: d for d in ann}
+    assert by_fight[lone[0]].lone is True
+    assert by_fight[lone[0]].judge_card == "Ann One 29 - 28"
+    assert by_fight[lone[0]].margin == -1
+    assert by_fight[both[0]].lone is False
+    # the further from the colleagues, the more severe
+    assert by_fight[lone[0]].severity > by_fight[both[0]].severity
+    # Bea and Cid have enough cards too, and only Bea dissented (once, in the second fight).
+    assert [d.judge_slug for d in report.disputes if d.fight_id == both[0]] == [
+        "ann-one",
+        "bea-two",
+    ]
+
+
+def test_no_disputes_for_a_judge_below_the_minimum() -> None:
+    report = compute_judge_stats(
+        [_decision("Ann One 29 - 28", "Bea Two 28 - 29", "Cid Three 28 - 30")]
+    )
+    assert report.disputes == []

@@ -10,6 +10,8 @@ const CLIENT_SIDE = [
   "components/RevealButton.tsx",
   "components/ScoreBreakdown.tsx",
   "components/FightCard.tsx",
+  "components/JudgeDisputes.tsx",
+  "lib/judges/disputes.ts",
   "lib/reveal/client.ts",
   "lib/reveal/format.ts",
   "lib/reveal/response.ts",

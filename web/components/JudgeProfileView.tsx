@@ -7,6 +7,7 @@ import {
 } from "@/lib/judges/stats";
 import type { BaselineRow, JudgeRow } from "@/lib/judges/types";
 import { isNotable, rateSentence, widthSentence } from "@/lib/judges/words";
+import { JudgeDisputes } from "./JudgeDisputes";
 import { JudgeDotPlot } from "./JudgeDotPlot";
 
 function Section({
@@ -63,8 +64,9 @@ function Bar({
 }
 
 /**
- * One judge, as totals over all their scorecards: no fight is named. The page says what the
- * numbers allow: most judges look alike, and only a difference too big to be luck gets a verdict.
+ * One judge, as totals over all their scorecards: no fight is named until the visitor opens the
+ * disputed-scorecards list. The page says what the numbers allow: most judges look alike, and
+ * only a difference too big to be luck gets a verdict.
  */
 export function JudgeProfileView({
   judge,
@@ -171,11 +173,26 @@ export function JudgeProfileView({
         </p>
       </Section>
 
+      {judge.dissent > 0 && (
+        <Section id="disputed" title="Where it comes from">
+          <p className="mt-3 max-w-xl text-[var(--muted)]">
+            The scorecards where {judge.name} scored against the official
+            result, with the other two judges&apos; cards next to them.
+          </p>
+          <JudgeDisputes
+            slug={judge.slug}
+            name={judge.name}
+            slugs={judge.slugs}
+          />
+        </Section>
+      )}
+
       <p className="max-w-xl border-t border-[var(--accent)]/30 pt-6 text-sm text-[var(--muted)]">
         Based on the {judge.cards} scorecards we have of this judge (fights that
-        went to the judges with a clear result; draws are left out). Totals
-        only: no fight is listed. With a few hundred scorecards, gaps of a point
-        or two in a hundred are within chance.
+        went to the judges with a clear result; draws are left out). The
+        numbers above are totals: no fight is named until you open the list
+        above. With a few hundred scorecards, gaps of a point or two in a
+        hundred are within chance.
       </p>
     </div>
   );

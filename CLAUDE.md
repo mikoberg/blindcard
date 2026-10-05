@@ -12,6 +12,7 @@ Spoiler-free fight rating site. Fans see which fights on a card are worth watchi
 Public card views must never expose, directly or indirectly: winner, method, round, finish time, fight duration, bonuses (Fight/Performance of the Night), scorecards, or post-fight records.
 - Result data lives in `fight_results`, separated by RLS. It's only served through the explicit reveal path.
 - This also covers page titles, meta/OG tags, URL slugs, alt text, blurbs, API responses, logs shipped to the client, and sort orders other than rating.
+- Explicit exception (judge pages): a judge's most disputed scorecards (max 10, any date) name fights, official results and all three cards. They sit in the private `judge_disputes` table, are served only by `judge_disputed_cards` through a POST-only route, and load only after a click on a button with a warning next to it. They are never part of a page render, and judge pages otherwise show totals only.
 - Run the `spoiler-check` skill before finishing any user-facing change.
 
 ## Legal guardrails

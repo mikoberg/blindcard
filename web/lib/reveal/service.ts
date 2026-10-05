@@ -1,4 +1,5 @@
 import { getSupabase } from "@/lib/supabase/server";
+import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
 import { RevealUnavailableError } from "./errors";
 import { buildScoreBreakdown } from "./breakdown";
 import { rowToResponse } from "./response";
@@ -23,4 +24,19 @@ async function revealScore(fightId: string): Promise<RevealScore | null> {
   const { data, error } = await getSupabase().rpc("reveal_score", { p_fight_id: fightId });
   if (error || !Array.isArray(data) || data.length !== 1) return null;
   return buildScoreBreakdown(data[0] as ScoreRow);
+}
+
+/**
+ * The scorecards one judge scored against the official result, most disputed first, at most
+ * MAX_DISPUTES. Same rule as `reveal_fight`: it names fights, so it is only called from a POST
+ * route after an explicit click, and the database function (not this code) enforces the limit.
+ */
+export async function revealJudgeDisputes(judgeSlug: string): Promise<DisputedCard[]> {
+  const { data, error } = await getSupabase().rpc("judge_disputed_cards", {
+    p_slug: judgeSlug,
+    p_limit: MAX_DISPUTES,
+  });
+  if (error) throw new RevealUnavailableError(error.code ?? "unknown");
+  if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
+  return rowsToCards(data as DisputeRow[]);
 }

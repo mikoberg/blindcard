@@ -120,7 +120,7 @@ class FakeRepository:
     rated: list[RatedFight] = field(default_factory=list)
     videos: dict[str, str] = field(default_factory=dict)
     video_channel: str | None = None
-    scorecards: list[tuple[int, list[str]]] = field(default_factory=list)
+    scorecards: list[tuple[str, int, list[str]]] = field(default_factory=list)
     judge_report: JudgeReport | None = None
     upserts: int = 0
 
@@ -265,7 +265,7 @@ class FakeRepository:
                 changed += 1
         return changed
 
-    def decision_scorecards(self) -> list[tuple[int, list[str]]]:
+    def decision_scorecards(self) -> list[tuple[str, int, list[str]]]:
         return list(self.scorecards)
 
     def replace_judge_stats(self, report: JudgeReport) -> int:
