@@ -9,6 +9,7 @@ import type { CardFight, CardFighter, FighterCareer, FighterRecord } from "@/lib
 import { ClassicBadge, ClassicIcon } from "./ClassicBadge";
 import { Monogram } from "./Monogram";
 import { RevealButton } from "./RevealButton";
+import { WatchButton } from "./WatchButton";
 import { StarRating } from "./StarRating";
 
 /** The big number: filled amber from 4.5, outlined amber from 4, quiet below. */
@@ -88,8 +89,11 @@ function FighterLine({
 export function FightCard({
   fight,
   showSegment = false,
+  eventYear,
 }: {
   fight: CardFight;
+  /** The year of the event: with it, a classic offers a link to watch the fight. */
+  eventYear?: string;
   /** Label the card with its part of the card (used when the list is not grouped). */
   showSegment?: boolean;
 }) {
@@ -161,6 +165,9 @@ export function FightCard({
           <div className="mt-3">
             <StarRating stars={fight.rating?.stars ?? null} showNumber={false} />
           </div>
+          {isClassic(fight.rating?.stars) && eventYear && (
+            <WatchButton fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} year={eventYear} />
+          )}
         </div>
       </div>
       <RevealButton fightId={fight.id} fighterA={fight.fighterA} fighterB={fight.fighterB} />

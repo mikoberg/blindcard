@@ -3,6 +3,7 @@ import { formatEventDate } from "@/lib/format";
 import { isValidSlug } from "@/lib/slug";
 import type { ClassicYear } from "@/lib/classics/types";
 import { ClassicBadge } from "./ClassicBadge";
+import { WatchButton } from "./WatchButton";
 import { YearNav } from "./YearNav";
 
 /** The five-star fights, grouped by year, each linking to its card. */
@@ -45,10 +46,12 @@ export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
                   <ClassicBadge label="5.0" />
                 </>
               );
-              const className =
-                "flex items-start gap-3 rounded-lg border border-[var(--accent)]/60 bg-[var(--surface)] p-4 hover:border-[var(--accent)]";
+              const className = "flex min-w-0 flex-1 items-start gap-3 p-4";
               return (
-                <li key={fight.id}>
+                <li
+                  key={fight.id}
+                  className="flex items-center rounded-lg border border-[var(--accent)]/60 bg-[var(--surface)] hover:border-[var(--accent)]"
+                >
                   {isValidSlug(fight.eventSlug) ? (
                     <Link href={`/events/${fight.eventSlug}#fight-${fight.id}`} className={className}>
                       {body}
@@ -56,6 +59,14 @@ export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
                   ) : (
                     <div className={className}>{body}</div>
                   )}
+                  <span className="pr-2">
+                    <WatchButton
+                      compact
+                      fighterA={fight.fighterA}
+                      fighterB={fight.fighterB}
+                      year={fight.eventDate.slice(0, 4)}
+                    />
+                  </span>
                 </li>
               );
             })}

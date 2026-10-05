@@ -150,3 +150,19 @@ describe("FightCard: five stars are the classics", () => {
     expect(html).not.toContain("linear-gradient(145deg");
   });
 });
+
+describe("FightCard: watch the classics", () => {
+  it("offers a YouTube link on a five-star fight when the year is known, opening a new tab safely", () => {
+    const html = renderToStaticMarkup(<FightCard fight={makeFight(2, 5)} eventYear="2024" />);
+    expect(html).toContain("Watch the fight");
+    expect(html).toContain("https://www.youtube.com/results?search_query=");
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain("can reveal the result");
+  });
+
+  it("offers nothing on other fights, or without a year", () => {
+    expect(renderToStaticMarkup(<FightCard fight={makeFight(2, 4.5)} eventYear="2024" />)).not.toContain("Watch the fight");
+    expect(renderToStaticMarkup(<FightCard fight={makeFight(2, 5)} />)).not.toContain("Watch the fight");
+  });
+});

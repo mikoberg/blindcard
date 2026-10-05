@@ -31,6 +31,13 @@ describe("ClassicsList", () => {
     expect(html).toContain('href="#year-2025"');
   });
 
+  it("has a play link per fight that opens a YouTube search in a new tab", () => {
+    const html = renderToStaticMarkup(<ClassicsList years={years} />);
+    expect(html).toContain("https://www.youtube.com/results?search_query=Ann%20One%20vs");
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain("full%20fight%202025");
+  });
+
   it("escapes hostile names", () => {
     expect(renderToStaticMarkup(<ClassicsList years={years} />)).not.toContain("<img src=x");
   });

@@ -16,7 +16,13 @@ const MODES: { mode: SortMode; label: string }[] = [
  * fights sit under their part of the card (main card, prelims, early prelims) when the event
  * has that information; sorted by rating each card carries its part as a label instead.
  */
-export function FightList({ fights }: { fights: readonly CardFight[] }) {
+export function FightList({
+  fights,
+  eventYear,
+}: {
+  fights: readonly CardFight[];
+  eventYear?: string;
+}) {
   const [mode, setMode] = useState<SortMode>("card");
   const groups = groupBySegment(fights);
   return (
@@ -47,7 +53,7 @@ export function FightList({ fights }: { fights: readonly CardFight[] }) {
             </h3>
             <ol className="mt-3 space-y-3">
               {group.fights.map((fight) => (
-                <FightCard key={fight.id} fight={fight} />
+                <FightCard key={fight.id} fight={fight} eventYear={eventYear} />
               ))}
             </ol>
           </div>
@@ -55,7 +61,7 @@ export function FightList({ fights }: { fights: readonly CardFight[] }) {
       ) : (
         <ol className="mt-4 space-y-3">
           {sortFights(fights, mode).map((fight) => (
-            <FightCard key={fight.id} fight={fight} showSegment={mode === "rating"} />
+            <FightCard key={fight.id} fight={fight} showSegment={mode === "rating"} eventYear={eventYear} />
           ))}
         </ol>
       )}

@@ -15,7 +15,7 @@ export function CardView({ event, fights }: { event: CardEvent; fights: readonly
       {status === "empty" && <Notice>The card for this event isn&apos;t available yet.</Notice>}
       {status === "pending" && <Notice>Ratings are on their way.</Notice>}
       {status === "rated" && <WatchThese fights={watchThese(fights)} />}
-      {status !== "empty" && <FightList fights={fights} />}
+      {status !== "empty" && <FightList fights={fights} eventYear={event.eventDate.slice(0, 4)} />}
     </div>
   );
 }
