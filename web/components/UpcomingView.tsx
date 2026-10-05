@@ -12,6 +12,7 @@ import { headliners } from "./UpcomingCard";
 import { UpcomingPick } from "./UpcomingPick";
 import { Monogram } from "./Monogram";
 import { Notice } from "./Notice";
+import { PlaceChip } from "./PlaceChip";
 
 const SEGMENT_ORDER: readonly UpcomingSegment[] = ["main", "prelim", "early_prelim"];
 const SEGMENT_LABELS: Record<UpcomingSegment, string> = {
@@ -178,6 +179,7 @@ export function UpcomingView({ event, today }: { event: UpcomingEvent; today: Da
           {event.location && (
             <div className="field">
               <p className="display-tight text-lg">{event.location}</p>
+              <PlaceChip location={event.location} isoDate={event.eventDate} />
               <span className="field-label">Venue</span>
             </div>
           )}
