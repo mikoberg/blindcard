@@ -2,11 +2,14 @@ import Link from "next/link";
 import { formatEventDate } from "@/lib/format";
 import { isValidSlug } from "@/lib/slug";
 import type { ClassicYear } from "@/lib/classics/types";
-import { ClassicBadge } from "./ClassicBadge";
 import { WatchButton } from "./WatchButton";
 import { YearNav } from "./YearNav";
 
-/** The five-star fights, grouped by year, each linking to its card. */
+/**
+ * The five-star fights as a ledger: a year column, then one line of type per fight, separated by
+ * hairlines. Every fight here is a 5.0, so the number is not repeated on each row; the names carry
+ * the weight. The whole row opens the card; the watch link sits above it.
+ */
 export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
   return (
     <div>
@@ -16,58 +19,95 @@ export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
           key={group.year}
           id={`year-${group.year}`}
           aria-labelledby={`heading-${group.year}`}
-          className="scroll-mt-16 pt-8"
+          className="scroll-mt-16 pt-10 sm:grid sm:grid-cols-[7.5rem_1fr] sm:gap-8"
         >
           <h2
             id={`heading-${group.year}`}
-            className="font-[family-name:var(--font-display)] text-4xl font-bold text-[var(--accent)]"
+            className="font-[family-name:var(--font-display)] text-5xl font-bold leading-none text-[var(--accent)] sm:sticky sm:top-20 sm:self-start sm:text-6xl"
           >
             {group.year}
           </h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ul className="mt-4 border-t border-[var(--accent)]/30 sm:mt-0">
             {group.fights.map((fight) => {
-              const body = (
+              const meta = [
+                fight.weightClass,
+                fight.isTitleFight ? "Title fight" : null,
+              ].filter(Boolean);
+              const open = isValidSlug(fight.eventSlug)
+                ? `/events/${fight.eventSlug}#fight-${fight.id}`
+                : null;
+              const names = (
                 <>
-                  <span className="min-w-0 flex-1">
-                    <span className="block break-words font-[family-name:var(--font-display)] text-xl font-bold leading-tight">
-                      {fight.fighterA} <span className="text-[var(--muted)]">vs</span> {fight.fighterB}
-                    </span>
-                    <span className="block break-words text-sm text-[var(--muted)]">
-                      {fight.eventName}, {formatEventDate(fight.eventDate)}
-                    </span>
-                    {(fight.weightClass || fight.isTitleFight) && (
-                      <span className="block text-sm text-[var(--muted)]">
-                        {[fight.weightClass, fight.isTitleFight ? "Title fight" : null]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    )}
+                  <span className="block break-words font-[family-name:var(--font-display)] text-[1.65rem] font-bold leading-[1.05] sm:text-3xl">
+                    {fight.fighterA}
                   </span>
-                  <ClassicBadge label="5.0" />
+                  <span className="block break-words font-[family-name:var(--font-display)] text-[1.65rem] font-bold leading-[1.05] sm:text-3xl">
+                    <span className="mr-2 text-base font-semibold text-[var(--accent)] sm:text-lg">
+                      vs
+                    </span>
+                    {fight.fighterB}
+                  </span>
                 </>
               );
-              const className = "flex min-w-0 flex-1 items-start gap-3 p-4";
               return (
                 <li
                   key={fight.id}
-                  className="flex items-center rounded-lg border border-[var(--accent)]/60 bg-[var(--surface)] hover:border-[var(--accent)]"
+                  className="group relative flex items-start gap-4 border-b border-[var(--accent)]/30 py-5 pr-1 transition-colors hover:bg-[var(--accent)]/[0.05]"
                 >
-                  {isValidSlug(fight.eventSlug) ? (
-                    <Link href={`/events/${fight.eventSlug}#fight-${fight.id}`} className={className}>
-                      {body}
-                    </Link>
-                  ) : (
-                    <div className={className}>{body}</div>
-                  )}
+                  <div className="min-w-0 flex-1 md:grid md:grid-cols-[minmax(0,1fr)_17rem] md:items-center md:gap-8">
+                    {open ? (
+                      <Link
+                        href={open}
+                        className="block after:absolute after:inset-0 after:content-[''] group-hover:text-[var(--accent)]"
+                      >
+                        {names}
+                      </Link>
+                    ) : (
+                      <div>{names}</div>
+                    )}
+                    <div className="mt-2 md:mt-0">
+                      <p className="break-words text-sm text-[var(--muted)]">
+                        {fight.eventName}{" "}
+                        <span aria-hidden="true">&middot;</span>{" "}
+                        {formatEventDate(fight.eventDate)}
+                      </p>
+                      {meta.length > 0 && (
+                        <p className="text-sm text-[var(--muted)]">
+                          {meta.map((part, index) => (
+                            <span key={part}>
+                              {index > 0 && (
+                                <span aria-hidden="true"> &middot; </span>
+                              )}
+                              <span
+                                className={
+                                  part === "Title fight"
+                                    ? "font-semibold text-[var(--accent)]"
+                                    : ""
+                                }
+                              >
+                                {part}
+                              </span>
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                   {fight.videoId && (
-                    <span className="pr-2">
+                    <div className="relative z-10 shrink-0 pt-0.5">
                       <WatchButton
                         compact
                         fighterA={fight.fighterA}
                         fighterB={fight.fighterB}
                         videoId={fight.videoId}
                       />
-                    </span>
+                    </div>
+                  )}
+                  {!fight.videoId && (
+                    <div
+                      aria-hidden="true"
+                      className="hidden w-11 shrink-0 md:block"
+                    />
                   )}
                 </li>
               );

@@ -22,13 +22,14 @@ describe("ClassicsList", () => {
     },
   ];
 
-  it("lists each fight with its card link, event and the 5.0 mark", () => {
+  it("lists each fight with its card link, event and meta line", () => {
     const html = renderToStaticMarkup(<ClassicsList years={years} />);
     expect(html).toContain('href="/events/event-one#fight-f1"');
     expect(html).toContain("Ann One");
     expect(html).toContain("Event One");
-    expect(html).toContain("Lightweight, Title fight");
-    expect(html).toContain("5.0");
+    expect(html).toContain("Lightweight");
+    expect(html).toContain("Title fight");
+    expect(html).not.toContain("5.0"); // every fight here is a 5.0: the number is stated once, in the page header
     expect(html).toContain('href="#year-2025"');
   });
 

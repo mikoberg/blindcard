@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClassicSeal } from "@/components/ClassicSeal";
 import { ClassicsList } from "@/components/ClassicsList";
 import { Notice } from "@/components/Notice";
 import { classicsByYear, toClassics } from "@/lib/classics/group";
@@ -17,17 +18,20 @@ export default async function ClassicsPage() {
   if (classics.length === 0) return <Notice>No five-star fights yet. Check back soon.</Notice>;
   return (
     <div className="space-y-2">
-      <section aria-labelledby="classics">
-        <h1
-          id="classics"
-          className="font-[family-name:var(--font-display)] text-5xl font-bold leading-[0.95] sm:text-7xl"
-        >
-          The classics
-        </h1>
-        <p className="mt-4 max-w-xl text-lg text-[var(--muted)]">
-          Every fight rated 5.0, the top 1.5% of all fights. {classics.length} so far, newest first. Results
-          stay hidden until you reveal them on the card.
-        </p>
+      <section aria-labelledby="classics" className="flex items-start justify-between gap-6">
+        <div>
+          <h1
+            id="classics"
+            className="font-[family-name:var(--font-display)] text-5xl font-bold leading-[0.95] sm:text-7xl"
+          >
+            The classics
+          </h1>
+          <p className="mt-4 max-w-xl text-lg text-[var(--muted)]">
+            Every fight rated 5.0: the top 1.5% of all fights, {classics.length} so far, newest first.
+            Results stay hidden until you reveal them on the card.
+          </p>
+        </div>
+        <ClassicSeal size="lg" />
       </section>
       <ClassicsList years={classicsByYear(classics)} />
     </div>
