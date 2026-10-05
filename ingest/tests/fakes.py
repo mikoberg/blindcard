@@ -249,8 +249,12 @@ class FakeRepository:
         return changed
 
     def set_fight_records(self, source: str, records: Mapping[str, Mapping[str, Any]]) -> int:
-        changed = sum(1 for k, v in records.items() if self.records.get(k) != dict(v))
-        self.records.update({k: dict(v) for k, v in records.items()})
+        changed = 0
+        for key, payload in records.items():
+            merged = {**self.records.get(key, {}), **dict(payload)}
+            if self.records.get(key) != merged:
+                self.records[key] = merged
+                changed += 1
         return changed
 
     def refresh_career_context(self, source: str) -> int:

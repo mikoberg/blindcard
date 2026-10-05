@@ -555,9 +555,11 @@ class PostgresRepository:
         changed = 0
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             for fight_source_id, payload in records.items():
+                # Merge by side: a payload with one fighter's record must not erase the other's.
                 cur.execute(
-                    "update public.fights set records = %s"
-                    " where source = %s and source_id = %s and records is distinct from %s::jsonb",
+                    "update public.fights set records = coalesce(records, '{}'::jsonb) || %s::jsonb"
+                    " where source = %s and source_id = %s"
+                    " and records is distinct from coalesce(records, '{}'::jsonb) || %s::jsonb",
                     (Jsonb(dict(payload)), source, fight_source_id, Jsonb(dict(payload))),
                 )
                 changed += cur.rowcount

@@ -276,3 +276,46 @@ def test_only_missing_asks_for_fighters_that_have_no_record_yet() -> None:
         use_wikipedia=False,
     )
     assert sherdog.asked == ["Cat Three"]
+
+
+def test_a_new_record_for_one_side_never_erases_the_other_sides_record() -> None:
+    repo, wiki = setup()
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015)
+    ann_side = "a" if "id-ann-one" < "id-cat-three" else "b"
+    cat_side = "b" if ann_side == "a" else "a"
+    before = dict(repo.records["f2"])
+    assert set(before) == {ann_side}  # Ann has her record, Cat has none yet
+
+    sherdog = FakeSherdog(
+        {
+            "Cat Three": [
+                sherdog_page("pl", [(DAY2, "Ann One", "loss"), (dt.date(2019, 1, 1), "B", "win")])
+            ]
+        }
+    )
+    run_ingest_fighters(
+        wiki, repo, source_name=SOURCE, from_year=2015, sherdog=sherdog, only_missing=True
+    )
+    assert repo.records["f2"][ann_side] == before[ann_side]  # still there
+    assert repo.records["f2"][cat_side] == {"w": 1, "l": 0, "d": 0, "nc": 0}
+
+
+def test_only_missing_looks_up_a_fighters_missing_bouts_even_if_other_bouts_have_a_record() -> None:
+    repo, wiki = setup()
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015)
+    # Wipe Ann's record for f2 only: she still has one for f1, so she is not "without records".
+    ann_side = "a" if "id-ann-one" < "id-cat-three" else "b"
+    repo.records["f2"].pop(ann_side)
+    sherdog = FakeSherdog(
+        {"Ann One": [sherdog_page("br", [(DAY2, "Cat Three", "win"), (DAY1, "Bea Two", "win")])]}
+    )
+    run_ingest_fighters(
+        wiki,
+        repo,
+        source_name=SOURCE,
+        from_year=2015,
+        sherdog=sherdog,
+        only_missing=True,
+        use_wikipedia=False,
+    )
+    assert repo.records["f2"][ann_side] == {"w": 1, "l": 0, "d": 0, "nc": 0}

@@ -101,17 +101,25 @@ def run_ingest_fighters(
     fights = repo.fights_with_sides(source_name, from_year)
     names: dict[str, str] = {}
     appearances: dict[str, list[_Appearance]] = defaultdict(list)
-    has_record: set[str] = set()
+    stored: set[tuple[str, str]] = set()  # (fight, side) that already has a record
     for fight in fights:
         names[fight.a_source_id] = fight.a_name
         names[fight.b_source_id] = fight.b_name
         _add(appearances, fight, "a", fight.a_source_id, fight.b_name)
         _add(appearances, fight, "b", fight.b_source_id, fight.a_name)
-        for side, fighter_id in (("a", fight.a_source_id), ("b", fight.b_source_id)):
+        for side in ("a", "b"):
             if (fight.stored_records or {}).get(side):
-                has_record.add(fighter_id)
-    if only_missing:  # fighters nobody has found a record for yet
-        names = {fighter: name for fighter, name in names.items() if fighter not in has_record}
+                stored.add((fight.fight_source_id, side))
+    if only_missing:
+        # Only the bouts that still lack a record are looked up (and written): what is stored stays.
+        appearances = defaultdict(
+            list,
+            {
+                fighter: [a for a in found if (a.fight_source_id, a.side) not in stored]
+                for fighter, found in appearances.items()
+            },
+        )
+        names = {fighter: name for fighter, name in names.items() if appearances[fighter]}
 
     report = FighterReport(fighters=len(names), fights_considered=len(fights))
     countries: dict[str, str] = {}

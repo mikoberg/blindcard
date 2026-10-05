@@ -106,6 +106,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     fighters.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
     fighters.add_argument(
+        "--only-missing",
+        action="store_true",
+        help="only look up the bouts that still have no record, and leave stored records alone",
+    )
+    fighters.add_argument(
         "--sherdog-only",
         action="store_true",
         help="only look up fighters that still have no record, on Sherdog (no Wikipedia pass)",
@@ -279,7 +284,7 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 from_year=args.from_year,
                 countries_source=None if args.sherdog_only else wikidata,
                 sherdog=sherdog,
-                only_missing=args.sherdog_only,
+                only_missing=args.sherdog_only or args.only_missing,
                 use_wikipedia=not args.sherdog_only,
                 dry_run=args.dry_run,
             )
