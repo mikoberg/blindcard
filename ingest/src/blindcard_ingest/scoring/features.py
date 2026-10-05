@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from blindcard_ingest.models import SECONDS_PER_ROUND, ParsedFight, ParsedRound
-from blindcard_ingest.scoring.career import CareerContext
+from blindcard_ingest.scoring.career import KO_PRONE_USUAL, CareerContext
 
 #: The ten features of score v1. v1's config weights exactly these; they must keep their meaning.
 V1_FEATURES: tuple[str, ...] = (
@@ -60,6 +60,7 @@ NEW_FEATURES: tuple[str, ...] = (
     # Finishes the fighters' own history made likely (pre-fight facts, the same for both sides).
     "expected_finish",  # real_finish x how often the two fighters' earlier fights finished
     "expected_ko",  # KO/TKO x how often the more fragile of the two was stopped by KO/TKO before
+    "fragile_ko",  # KO/TKO x how far that share is above the usual one (only above counts)
 )
 
 FEATURE_NAMES: tuple[str, ...] = V1_FEATURES + NEW_FEATURES
@@ -80,6 +81,7 @@ CAPPED_FEATURES: tuple[str, ...] = (
     "experience",
     "expected_finish",
     "expected_ko",
+    "fragile_ko",
 )
 
 
@@ -284,6 +286,11 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "real_early_finish": 1.0 - time_fraction if real_finish else 0.0,
         "expected_finish": career["finish_prone"] if real_finish else 0.0,
         "expected_ko": career["ko_prone"] if real_finish and kind is MethodKind.KO_TKO else 0.0,
+        "fragile_ko": (
+            max(0.0, career["ko_prone"] - KO_PRONE_USUAL)
+            if real_finish and kind is MethodKind.KO_TKO
+            else 0.0
+        ),
         **{name: value for name, value in career.items() if name in _CAREER_FEATURE_NAMES},
     }
 

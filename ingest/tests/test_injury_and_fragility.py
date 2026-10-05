@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import datetime as dt
 
+import pytest
+
 from blindcard_ingest.fit.recipe import FIXED_WEIGHTS, SCORE_FEATURES
-from blindcard_ingest.scoring.career import HistoryBout, career_contexts
+from blindcard_ingest.scoring.career import KO_PRONE_USUAL, HistoryBout, career_contexts
 from blindcard_ingest.scoring.features import (
     compute_raw_features,
     is_injury_stoppage,
@@ -80,11 +82,28 @@ def test_expected_ko_only_for_real_ko_and_is_symmetric() -> None:
     )["new"]
     assert context.ko_prone == swapped.ko_prone > 0
     inp = scoring_input(_rounds(), method="KO/TKO", end_round=1, end_time=100, context=context)
-    assert compute_raw_features(inp)["expected_ko"] == context.ko_prone
+    raw = compute_raw_features(inp)
+    assert raw["expected_ko"] == context.ko_prone  # v9 keeps its meaning
+    assert raw["fragile_ko"] == pytest.approx(context.ko_prone - KO_PRONE_USUAL)
     decision = scoring_input(three_round_decision_rounds(), context=context)
     assert compute_raw_features(decision)["expected_ko"] == 0.0
+    assert compute_raw_features(decision)["fragile_ko"] == 0.0
 
 
 def test_recipe_has_the_editorial_weights_and_leaves_out_the_split_decision() -> None:
-    assert FIXED_WEIGHTS["cut_short"] < 0 and FIXED_WEIGHTS["expected_ko"] < 0
+    assert FIXED_WEIGHTS["cut_short"] < 0 and FIXED_WEIGHTS["fragile_ko"] < 0
     assert "cut_short" in SCORE_FEATURES and "close_decision" not in SCORE_FEATURES
+
+
+def test_a_ko_loss_history_at_or_below_the_usual_costs_nothing() -> None:
+    bouts = [
+        HistoryBout(f"h{i}", dt.date(2010 + i, 1, 1), 3, False, "a", f"x{i}", "a", ended_by="other")
+        for i in range(9)
+    ] + [
+        HistoryBout("ko", dt.date(2020, 1, 1), 3, False, "a", "x", "x", ended_by="ko"),
+        HistoryBout("new", dt.date(2021, 1, 1), 3, False, "a", "b", "a", ended_by="ko"),
+    ]
+    context = career_contexts(bouts)["new"]
+    assert context.ko_prone == pytest.approx(1 / 14)  # 1 KO loss in 10 fights, shrunk
+    inp = scoring_input(_rounds(), method="KO/TKO", end_round=1, end_time=100, context=context)
+    assert compute_raw_features(inp)["fragile_ko"] == 0.0

@@ -84,6 +84,9 @@ class CareerContext:
 UNBEATEN_MIN_FIGHTS = 5
 #: Pseudo-fights that pull a rate of earlier bouts towards 0 for fighters with little history.
 PRONE_PRIOR = 4
+#: A KO-loss share (of earlier fights, shrunk as above) that is nothing out of the ordinary: about
+#: the 60th percentile of all fights. Only the part above it counts as being stopped often.
+KO_PRONE_USUAL = 0.10
 #: Our history starts in 2001. Someone whose first stored bout is earlier than this much later
 #: may have fought (and lost) before it, so "unbeaten" is only claimed for later debuts.
 UNBEATEN_RELIABLE_FROM = dt.date(2003, 1, 1)

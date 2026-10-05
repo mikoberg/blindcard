@@ -30,7 +30,11 @@ const LABELS: Record<string, FeatureLabel> = {
   real_finish: { label: "Ended in a finish", format: yesNo },
   real_early_finish: { label: "How early the finish came", format: percent },
   cut_short: { label: "Fight cut short by an injury", format: percent },
-  expected_ko: { label: "Stoppage of a fighter who is often stopped", format: percent },
+  expected_ko: { label: "Earlier KO losses of the fighters", format: percent },
+  fragile_ko: {
+    label: "KO of a fighter who has been KO'd more often than usual",
+    format: (raw) => `${Math.round(raw * 100)}% above the usual`,
+  },
   time_fraction: { label: "Share of the scheduled time used", format: percent },
   control_share: { label: "Time spent under control", format: percent },
   volume: { label: "Strikes landed over the whole fight", format: count },

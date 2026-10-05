@@ -1,4 +1,4 @@
-"""The recipe behind score v9: one score, fitted to the night bonuses, written as TOML.
+"""The recipe behind score v10: one score, fitted to the night bonuses, written as TOML.
 
 The score blends two fits of the same features:
   * Fight of the Night: how worth watching a fight is (two-way action, pace, swings);
@@ -58,7 +58,7 @@ SCORE_FEATURES: tuple[str, ...] = (
     "unbeaten_fighter",
     "experience",
     "cut_short",
-    "expected_ko",
+    "fragile_ko",
 )
 
 #: Editorial weights, set by hand instead of fitted (relative to the largest fitted weight, 1.0).
@@ -68,8 +68,9 @@ SCORE_FEATURES: tuple[str, ...] = (
 FIXED_WEIGHTS: dict[str, float] = {
     # A fight stopped early by an injury (or "could not continue") did not get to happen.
     "cut_short": -0.6,
-    # Stopping a fighter who is rarely stopped is worth more than stopping one who often is.
-    "expected_ko": -0.3,
+    # Stopping a fighter who is rarely stopped is worth more than stopping one who often is:
+    # only a KO-loss history clearly above the usual counts.
+    "fragile_ko": -0.5,
 }
 
 #: Share of the Performance fit blended into the score, tried in this order.
@@ -136,7 +137,7 @@ FEATURE_NOTES: dict[str, str] = {
     "unbeaten_fighter": "at least one of them has no UFC loss",
     "experience": "UFC fights of the less experienced of the two",
     "cut_short": "share of the scheduled time not fought, if an injury or CNC ended it",
-    "expected_ko": "KO/TKO, times how often the more fragile of the two was stopped by one before",
+    "fragile_ko": "KO/TKO, times how far the more fragile fighter's KO losses exceed the usual",
 }
 
 
