@@ -66,7 +66,7 @@ export function EventPoster({
       <div className={`relative flex flex-1 flex-col justify-end gap-2 px-4 pt-4 sm:px-5 sm:pt-5 ${STRIP_SPACE[size]}`}>
         {main && (
           <p
-            className="poster-label mb-auto max-w-[70%]"
+            className="poster-label mb-auto max-w-[70%] pb-5"
             style={{ fontSize: `${labelFontSize(label, LABEL_CQW[size], LABEL_EM)}cqw` }}
             aria-hidden="true"
           >

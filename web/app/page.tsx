@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EventCard } from "@/components/EventCard";
 import { Notice } from "@/components/Notice";
+import { SiteSearch } from "@/components/SiteSearch";
 import { SortToggle } from "@/components/SortToggle";
 import { UpcomingSection } from "@/components/UpcomingSection";
 import { YearNav } from "@/components/YearNav";
@@ -42,6 +43,9 @@ export default async function HomePage() {
           <p className="mt-6 max-w-md text-lg leading-snug">
             Every fight gets a rating. Results stay sealed until you reveal them yourself.
           </p>
+          <div className="mt-8">
+            <SiteSearch />
+          </div>
         </div>
         {newest && (
           <div>

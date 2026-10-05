@@ -4,7 +4,7 @@ import type { UpcomingEvent } from "@/lib/upcoming/types";
 import { UpcomingCard } from "./UpcomingCard";
 
 /** Cards shown in full on the home page; later events are listed under them. */
-const SHOWN = 4;
+const SHOWN = 2;
 
 /** The coming events, soonest first. Renders nothing when none is announced. */
 export function UpcomingSection({ events, today }: { events: readonly UpcomingEvent[]; today: Date }) {

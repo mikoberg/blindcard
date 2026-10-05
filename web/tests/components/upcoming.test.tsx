@@ -70,13 +70,13 @@ describe("UpcomingCard", () => {
 });
 
 describe("UpcomingSection", () => {
-  it("renders nothing without events and lists later events under the first four", () => {
+  it("renders nothing without events and lists later events under the first two", () => {
     expect(renderToStaticMarkup(<UpcomingSection events={[]} today={TODAY} />)).toBe("");
     const many = Array.from({ length: 6 }, (_, i) =>
       event({ id: `e${i}`, slug: `event-${i}`, name: `UFC ${i}: A vs. B` }),
     );
     const html = renderToStaticMarkup(<UpcomingSection events={many} today={TODAY} />);
-    expect(html.match(/bouts announced/g)).toHaveLength(4);
+    expect(html.match(/bouts announced/g)).toHaveLength(2);
     expect(html).toContain('href="/upcoming/event-5"');
   });
 });

@@ -9,6 +9,7 @@ import type { CardFight, CardFighter, FighterCareer, FighterRecord } from "@/lib
 import { ClassicBadge, GOLD_FOIL } from "./ClassicBadge";
 import { ClassicSeal } from "./ClassicSeal";
 import { Monogram } from "./Monogram";
+import { ShareFightButton } from "./ShareFightButton";
 import { RevealButton } from "./RevealButton";
 import { WatchButton } from "./WatchButton";
 import { StarRating } from "./StarRating";
@@ -136,6 +137,9 @@ export function FightCard({
           <p className="mt-3 text-sm text-[var(--muted)]">{fightBlurb(fight)}</p>
           <div className="mt-3">
             <StarRating stars={fight.rating?.stars ?? null} showNumber={false} />
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-4">
+            <ShareFightButton fightId={fight.id} fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} />
           </div>
           {fight.videoId && (
             <WatchButton
