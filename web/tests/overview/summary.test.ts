@@ -19,11 +19,18 @@ const event = (patch: Partial<EventSummary> = {}): EventSummary => ({
 
 describe("eventStats", () => {
   it("counts rated fights, averages the ratings and finds the hidden gems (early card, 4+ stars)", () => {
-    expect(eventStats(event())).toEqual({ ratedCount: 3, cardRating: 3.7, hiddenGems: 1 });
+    expect(eventStats(event())).toEqual({ ratedCount: 3, cardRating: 3.7, classics: 0, hiddenGems: 1 });
   });
 
   it("has no card rating and no gems when nothing is rated", () => {
-    expect(eventStats(event({ ratings: [] }))).toEqual({ ratedCount: 0, cardRating: null, hiddenGems: 0 });
+    expect(eventStats(event({ ratings: [] }))).toEqual({ ratedCount: 0, cardRating: null, classics: 0, hiddenGems: 0 });
+  });
+});
+
+describe("classics", () => {
+  it("counts the five-star fights of an event", () => {
+    const ratings = [{ position: 1, stars: 5 }, { position: 3, stars: 4.5 }, { position: 8, stars: 5 }];
+    expect(eventStats(event({ ratings })).classics).toBe(2);
   });
 });
 

@@ -2,11 +2,12 @@ import Link from "next/link";
 import { formatEventDate } from "@/lib/format";
 import { eventStats } from "@/lib/overview/summary";
 import type { EventSummary } from "@/lib/overview/types";
+import { ClassicBadge } from "./ClassicBadge";
 import { EventPoster } from "./EventPoster";
 
 /** One event in the overview: poster, name, date, and the card rating (average of its fight ratings). */
 export function EventCard({ event, featured = false }: { event: EventSummary; featured?: boolean }) {
-  const { cardRating, hiddenGems } = eventStats(event);
+  const { cardRating, classics, hiddenGems } = eventStats(event);
   return (
     <Link
       href={`/events/${event.slug}`}
@@ -29,6 +30,11 @@ export function EventCard({ event, featured = false }: { event: EventSummary; fe
           <p className="mt-1 text-sm text-[var(--muted)]">{formatEventDate(event.eventDate)}</p>
           {event.location && <p className="text-sm text-[var(--muted)]">{event.location}</p>}
           {cardRating === null && <p className="mt-2 text-sm text-[var(--muted)]">Ratings are on their way</p>}
+          {classics > 0 && (
+            <p className="mt-2 mr-2 inline-block">
+              <ClassicBadge label={classics === 1 ? "1 classic" : `${classics} classics`} />
+            </p>
+          )}
           {hiddenGems > 0 && (
             <p className="mt-2 inline-block rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent-ink)]">
               {hiddenGems === 1 ? "1 hidden gem" : `${hiddenGems} hidden gems`}

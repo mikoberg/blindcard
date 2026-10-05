@@ -1,3 +1,4 @@
+import { isClassic } from "@/lib/card/classic";
 import { isHiddenGemRating } from "@/lib/card/hiddenGem";
 import type { CardEvent, CardFight } from "@/lib/card/types";
 import type { EventStats, EventSummary, MainEvent } from "./types";
@@ -7,6 +8,7 @@ export function eventStats(event: EventSummary): EventStats {
   return {
     ratedCount: stars.length,
     cardRating: stars.length === 0 ? null : Math.round((stars.reduce((sum, s) => sum + s, 0) / stars.length) * 10) / 10,
+    classics: event.ratings.filter((slot) => isClassic(slot.stars)).length,
     hiddenGems: event.ratings.filter((slot) => isHiddenGemRating(slot.stars, slot.position)).length,
   };
 }

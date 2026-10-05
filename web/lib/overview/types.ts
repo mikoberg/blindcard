@@ -29,5 +29,7 @@ export interface EventStats {
   ratedCount: number;
   /** Average of all the fight ratings on the card, one decimal; null when nothing is rated. */
   cardRating: number | null;
+  /** Fights rated five stars. */
+  classics: number;
   hiddenGems: number;
 }

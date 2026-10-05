@@ -1,10 +1,12 @@
 import { fightBlurb } from "@/lib/card/blurb";
+import { isClassic } from "@/lib/card/classic";
 import { isHiddenGem } from "@/lib/card/hiddenGem";
 import { recordParts } from "@/lib/card/record";
 import { SEGMENT_LABELS } from "@/lib/card/segments";
 import { formatStars } from "@/lib/card/stars";
 import { fighterNote, pairingLabel } from "@/lib/card/story";
 import type { CardFight, CardFighter, FighterCareer, FighterRecord } from "@/lib/card/types";
+import { ClassicBadge } from "./ClassicBadge";
 import { Monogram } from "./Monogram";
 import { RevealButton } from "./RevealButton";
 import { StarRating } from "./StarRating";
@@ -14,7 +16,9 @@ function RatingPlate({ stars }: { stars: number | null }) {
   const tone =
     stars === null
       ? "border-[var(--border)] text-[var(--muted)]"
-      : stars >= 4.5
+      : isClassic(stars)
+        ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)] ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--surface)] shadow-[0_0_16px_rgb(255_176_32/0.5)]"
+        : stars >= 4.5
         ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
         : stars >= 4
           ? "border-[var(--accent)] text-[var(--accent)]"
@@ -92,6 +96,7 @@ export function FightCard({
                 {SEGMENT_LABELS[fight.cardSegment]}
               </span>
             )}
+            {isClassic(fight.rating?.stars) && <ClassicBadge />}
             {fight.isTitleFight && (
               <span className="rounded-full border border-[var(--accent)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">
                 Title fight

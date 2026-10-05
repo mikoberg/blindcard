@@ -135,3 +135,18 @@ describe("FightCard: no guessed records", () => {
     expect(html).not.toContain("0-0");
   });
 });
+
+describe("FightCard: five stars are the classics", () => {
+  it("marks a five-star fight with the classic badge and a glowing plate", () => {
+    const html = render(makeFight(2, 5));
+    expect(html).toContain("Classic");
+    expect(html).toContain("<svg");
+    expect(html).toContain("ring-offset-2");
+  });
+
+  it("does not mark 4.5 stars", () => {
+    const html = render(makeFight(2, 4.5));
+    expect(html).not.toContain("Classic");
+    expect(html).not.toContain("ring-offset-2");
+  });
+});

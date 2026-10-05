@@ -1,5 +1,7 @@
+import { isClassic } from "@/lib/card/classic";
 import { isHiddenGem } from "@/lib/card/hiddenGem";
 import type { CardFight } from "@/lib/card/types";
+import { ClassicBadge } from "./ClassicBadge";
 import { StarRating } from "./StarRating";
 
 export function WatchThese({ fights }: { fights: readonly CardFight[] }) {
@@ -20,6 +22,11 @@ export function WatchThese({ fights }: { fights: readonly CardFight[] }) {
               >
                 <span className="break-words font-semibold">
                   {fight.fighterA.name} <span className="text-[var(--muted)]">vs</span> {fight.fighterB.name}
+                  {isClassic(fight.rating?.stars) && (
+                    <span className="ml-2 inline-block align-middle">
+                      <ClassicBadge />
+                    </span>
+                  )}
                   {isHiddenGem(fight) && (
                     <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-[var(--accent)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-ink)]">
                       Hidden gem

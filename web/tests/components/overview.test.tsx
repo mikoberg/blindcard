@@ -186,3 +186,15 @@ describe("Monogram", () => {
     expect(renderToStaticMarkup(<Monogram name="Arman Tsarukyan" />)).toBe(a);
   });
 });
+
+describe("EventCard: classics", () => {
+  it("says how many five-star fights the card has, and nothing when it has none", () => {
+    const two = renderToStaticMarkup(
+      <EventCard event={event({ ratings: [{ position: 1, stars: 5 }, { position: 2, stars: 5 }, { position: 3, stars: 3 }] })} />,
+    );
+    expect(two).toContain("2 classics");
+    const one = renderToStaticMarkup(<EventCard event={event({ ratings: [{ position: 1, stars: 5 }] })} />);
+    expect(one).toContain("1 classic");
+    expect(renderToStaticMarkup(<EventCard event={event()} />)).not.toContain("classic");
+  });
+});
