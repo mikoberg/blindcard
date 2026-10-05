@@ -112,11 +112,12 @@ NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(
 
 NEUTRAL_LEAK = 0.5  # AUC(stars -> finished) of a score that says nothing about finishes
 #: How far above neutral AUC(stars -> finished) may rise on the training years. Wider = finishes
-#: count for more. Checked against community fight ratings (mma.social, 184 fights of 27 events,
-#: June 2025 - May 2026): the rank agreement of the stars with the fans was 0.56 at 0.4 and 0.44 at
-#: 0.2 (the paired difference excludes zero), 0.52 at 0.3. The official Fight of the Night bonus
-#: prefers the lower margins, the fans the higher ones; the fans are the independent check.
-DEFAULT_FINISH_LEAK = 0.40
+#: count for more. Three independent checks disagree on how much a finish should count, so 0.3 is
+#: the middle: the held-out Fight of the Night bonus prefers 0.2 or lower (AUC 0.84 at 0.2, 0.75 at
+#: 0.4); community ratings of 184 recent fights (mma.social) prefer 0.4 (rank agreement 0.56 at 0.4,
+#: 0.52 at 0.3, 0.44 at 0.2); blind ratings read from match reports of 31 random fights of all years
+#: prefer 0.3 (Spearman 0.62, against 0.54 for the 0.4 version of v8).
+DEFAULT_FINISH_LEAK = 0.30
 #: Slack between the training years and the refit on all years before the report warns.
 LEAK_SLACK = 0.05
 
