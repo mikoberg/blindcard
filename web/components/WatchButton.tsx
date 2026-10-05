@@ -1,4 +1,4 @@
-import { watchUrl } from "@/lib/card/watch";
+import { videoUrl } from "@/lib/card/watch";
 
 function PlayIcon() {
   return (
@@ -9,21 +9,22 @@ function PlayIcon() {
 }
 
 /**
- * "Watch the fight": a link to a YouTube search, opened in a new tab. Nothing from YouTube is
- * shown here, so no title or thumbnail can give away the result; the note says what to expect there.
+ * "Watch the fight": a link to the fight's official video on YouTube, opened in a new tab. We
+ * redirect and show nothing of the video here, so no title or thumbnail can give away the result;
+ * the note says what to expect there.
  */
 export function WatchButton({
   fighterA,
   fighterB,
-  year,
+  videoId,
   compact = false,
 }: {
   fighterA: string;
   fighterB: string;
-  year: string | number;
+  videoId: string | null | undefined;
   compact?: boolean;
 }) {
-  const href = watchUrl(fighterA, fighterB, year);
+  const href = videoUrl(videoId);
   if (href === null) return null;
   const label = `Watch ${fighterA} versus ${fighterB} on YouTube (opens in a new tab)`;
   const circle =
@@ -35,7 +36,7 @@ export function WatchButton({
         target="_blank"
         rel="noopener noreferrer"
         aria-label={label}
-        title="Watch on YouTube. The title and comments there can reveal the result."
+        title="Official video on YouTube. The title and comments there can reveal the result."
         className="group inline-flex min-h-11 min-w-11 items-center justify-center"
       >
         <span className={`${circle} h-9 w-9`}>
@@ -59,7 +60,7 @@ export function WatchButton({
         Watch the fight
       </a>
       <p className="mt-1.5 text-xs text-[var(--muted)]">
-        Opens YouTube. The title and comments there can reveal the result.
+        Official video on YouTube. The title and comments there can reveal the result.
       </p>
     </div>
   );

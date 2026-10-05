@@ -97,6 +97,17 @@ class FightSides:
 
 
 @dataclass(frozen=True)
+class RatedFight:
+    """A rated fight with its two fighters and event (pre-fight facts and the public rating)."""
+
+    fight_id: str
+    fighter_a: str
+    fighter_b: str
+    event_name: str
+    stars: float
+
+
+@dataclass(frozen=True)
 class StoredScoringVersion:
     config: ScoringConfig
     reference: Reference
@@ -155,6 +166,14 @@ class Repository(Protocol):
 
         Built from the fighters' history before each bout. Returns how many rows changed.
         """
+        ...
+
+    def rated_fights(self, min_stars: float) -> list[RatedFight]:
+        """Fights rated `min_stars` or more by the active score version."""
+        ...
+
+    def set_fight_videos(self, videos_by_fight: Mapping[str, str], *, channel: str) -> int:
+        """Store the official video id of fights (fight id -> YouTube video id). Returns changes."""
         ...
 
     def set_card_segments(self, source: str, segments_by_fight: Mapping[str, str]) -> int:
@@ -580,6 +599,50 @@ class PostgresRepository:
                     "update public.fights set career = %s"
                     " where id = %s::uuid and career is distinct from %s::jsonb",
                     (Jsonb(career_json(context)), fight_id, Jsonb(career_json(context))),
+                )
+                changed += cur.rowcount
+        return changed
+
+    def rated_fights(self, min_stars: float) -> list[RatedFight]:
+        query = """
+            select f.id::text as fight_id, a.name as a_name, b.name as b_name,
+                   e.name as event_name, s.stars
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fighters a on a.id = f.fighter_a_id
+            join public.fighters b on b.id = f.fighter_b_id
+            join public.excitement_scores s
+              on s.fight_id = f.id
+             and s.version = (select v.version from public.scoring_versions v where v.is_active)
+            where s.stars >= %s
+            order by e.event_date, f.card_position
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (min_stars,))
+            rows = cur.fetchall()
+        return [
+            RatedFight(
+                fight_id=row["fight_id"],
+                fighter_a=row["a_name"],
+                fighter_b=row["b_name"],
+                event_name=row["event_name"],
+                stars=float(row["stars"]),
+            )
+            for row in rows
+        ]
+
+    def set_fight_videos(self, videos_by_fight: Mapping[str, str], *, channel: str) -> int:
+        changed = 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            for fight_id, video_id in videos_by_fight.items():
+                cur.execute(
+                    "insert into public.fight_videos (fight_id, youtube_id, channel)"
+                    " values (%s::uuid, %s, %s)"
+                    " on conflict (fight_id) do update"
+                    "   set youtube_id = excluded.youtube_id, channel = excluded.channel"
+                    " where public.fight_videos.youtube_id is distinct from excluded.youtube_id"
+                    "    or public.fight_videos.channel is distinct from excluded.channel",
+                    (fight_id, video_id, channel),
                 )
                 changed += cur.rowcount
         return changed

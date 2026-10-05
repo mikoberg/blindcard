@@ -14,6 +14,7 @@ from blindcard_ingest.db.repository import (
     FightScoringInput,
     FightSides,
     LabeledFight,
+    RatedFight,
     StoredScoringVersion,
 )
 from blindcard_ingest.models import EventBundle, ParsedEvent, ParsedFight
@@ -115,6 +116,9 @@ class FakeRepository:
     career: dict[str, dict] = field(default_factory=dict)
     countries: dict[str, str] = field(default_factory=dict)
     records: dict[str, dict] = field(default_factory=dict)
+    rated: list[RatedFight] = field(default_factory=list)
+    videos: dict[str, str] = field(default_factory=dict)
+    video_channel: str | None = None
     upserts: int = 0
 
     def complete_event_source_ids(self, source: str) -> set[str]:
@@ -256,6 +260,15 @@ class FakeRepository:
             if self.records.get(key) != merged:
                 self.records[key] = merged
                 changed += 1
+        return changed
+
+    def rated_fights(self, min_stars: float) -> list[RatedFight]:
+        return [fight for fight in self.rated if fight.stars >= min_stars]
+
+    def set_fight_videos(self, videos_by_fight: Mapping[str, str], *, channel: str) -> int:
+        changed = sum(1 for k, v in videos_by_fight.items() if self.videos.get(k) != v)
+        self.videos.update(videos_by_fight)
+        self.video_channel = channel
         return changed
 
     def refresh_career_context(self, source: str) -> int:

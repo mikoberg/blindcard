@@ -1,5 +1,6 @@
 import { flagCode } from "@/lib/card/country";
 import { isValidStars } from "@/lib/card/stars";
+import { isVideoId } from "@/lib/card/watch";
 import type {
   CardEvent,
   CardFight,
@@ -121,14 +122,24 @@ function toSegment(fight: FightRow): CardSegment | null {
   return null;
 }
 
+export interface VideoRow {
+  fight_id: string;
+  youtube_id: string;
+}
+
 export function buildCard(
   fights: readonly FightRow[],
   fighters: readonly FighterRow[],
   scores: readonly ScoreRow[],
+  videos: readonly VideoRow[] = [],
 ): CardFight[] {
   const fighterById = new Map(
     fighters.map((row) => [row.id, { id: row.id, name: row.name, country: flagCode(row.country) }]),
   );
+  const videoByFight = new Map<string, string>();
+  for (const row of videos) {
+    if (isVideoId(row.youtube_id)) videoByFight.set(row.fight_id, row.youtube_id);
+  }
   const scoreByFight = new Map<string, ScoreRow>();
   for (const score of scores) {
     if (!scoreByFight.has(score.fight_id)) scoreByFight.set(score.fight_id, score);
@@ -151,6 +162,7 @@ export function buildCard(
         fighterA,
         fighterB,
         rating: toRating(scoreByFight.get(fight.id)),
+        videoId: videoByFight.get(fight.id) ?? null,
       };
     })
     .sort((a, b) => a.cardPosition - b.cardPosition);

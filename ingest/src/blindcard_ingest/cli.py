@@ -93,6 +93,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     segments.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
 
+    videos = commands.add_parser(
+        "ingest-videos",
+        parents=[common],
+        help="link five-star fights to their official full-fight video on the UFC YouTube channel",
+    )
+    videos.add_argument("--min-stars", type=float, default=5.0, metavar="STARS")
+    videos.add_argument("--handle", default="UFC", help="channel handle (default UFC)")
+
     commands.add_parser(
         "ingest-context",
         parents=[common],
@@ -286,6 +294,20 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
                 sherdog=sherdog,
                 only_missing=args.sherdog_only or args.only_missing,
                 use_wikipedia=not args.sherdog_only,
+                dry_run=args.dry_run,
+            )
+        return EXIT_OK
+
+    if args.command == "ingest-videos":
+        from blindcard_ingest.sources.youtube import YouTubeClient
+        from blindcard_ingest.videos_pipeline import run_ingest_videos
+
+        with _open_repository(settings) as repo:
+            run_ingest_videos(
+                YouTubeClient(settings.require_youtube_api_key()),
+                repo,
+                handle=args.handle,
+                min_stars=args.min_stars,
                 dry_run=args.dry_run,
             )
         return EXIT_OK

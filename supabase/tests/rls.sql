@@ -95,6 +95,9 @@ begin
   raise notice 'PASS fighter order guard rejects reversed order';
 end $$;
 
+insert into public.fight_videos (fight_id, youtube_id, channel)
+values ('00000000-0000-0000-0000-0000000000f1', 'dQw4w9WgXcQ', 'Test channel');
+
 ------------------------------------------------------------------------------
 -- anon
 ------------------------------------------------------------------------------
@@ -241,6 +244,27 @@ begin
                             'fighter_b_name', 'weight_class', 'is_title_fight', 'stars');
   if n <> 0 then raise exception 'FAIL: fight_ratings has unexpected columns'; end if;
   raise notice 'PASS fight_ratings is public, active version only';
+end $$;
+
+-- Official video ids: public to read, never writable by anon, and nothing but the id and channel.
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from public.fight_videos;
+  if n <> 1 then raise exception 'FAIL: anon should read the one seeded fight video, saw %', n; end if;
+  begin
+    insert into public.fight_videos (fight_id, youtube_id, channel)
+      select id, 'AAAAAAAAAAA', 'x' from public.fights limit 1;
+    raise exception 'FAIL: anon could write a fight video';
+  exception when insufficient_privilege then null;
+  end;
+  select count(*) into n
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'fight_videos'
+    and column_name not in ('fight_id', 'youtube_id', 'channel', 'created_at');
+  if n <> 0 then raise exception 'FAIL: fight_videos has unexpected columns (a title would spoil)'; end if;
+  raise notice 'PASS fight_videos is public read, no title, no writes';
 end $$;
 
 -- Card segments are a public, pre-fight fact: readable, but only the three known values.

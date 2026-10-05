@@ -1,8 +1,14 @@
 import type { CardFight } from "@/lib/card/types";
 import { getSupabase } from "@/lib/supabase/server";
-import { FIGHTER_COLUMNS, FIGHT_COLUMNS, SCORE_COLUMNS, VERSION_COLUMNS } from "./columns";
+import {
+  FIGHTER_COLUMNS,
+  FIGHT_COLUMNS,
+  FIGHT_VIDEO_COLUMNS,
+  SCORE_COLUMNS,
+  VERSION_COLUMNS,
+} from "./columns";
 import { ensure, ensureOptional } from "./ensure";
-import { buildCard, type FightRow, type FighterRow, type ScoreRow } from "./map";
+import { buildCard, type FightRow, type FighterRow, type ScoreRow, type VideoRow } from "./map";
 
 /** The card of one event: fights, fighters and the active score version's ratings. */
 export async function getCard(eventId: string): Promise<CardFight[]> {
@@ -35,5 +41,16 @@ export async function getCard(eventId: string): Promise<CardFight[]> {
       )
     : [];
 
-  return buildCard(fights, fighters, scores);
+  const videos = ensure<VideoRow[]>(
+    await db
+      .from("fight_videos")
+      .select(FIGHT_VIDEO_COLUMNS)
+      .in(
+        "fight_id",
+        fights.map((fight) => fight.id),
+      ),
+    "load fight videos",
+  );
+
+  return buildCard(fights, fighters, scores, videos);
 }

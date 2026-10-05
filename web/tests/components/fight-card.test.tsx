@@ -151,18 +151,18 @@ describe("FightCard: five stars are the classics", () => {
   });
 });
 
-describe("FightCard: watch the classics", () => {
-  it("offers a YouTube link on a five-star fight when the year is known, opening a new tab safely", () => {
-    const html = renderToStaticMarkup(<FightCard fight={makeFight(2, 5)} eventYear="2024" />);
+describe("FightCard: the official video", () => {
+  it("links to the official video when we have one, opening a new tab safely", () => {
+    const html = renderToStaticMarkup(<FightCard fight={makeFight(2, 5, { videoId: "dQw4w9WgXcQ" })} />);
     expect(html).toContain("Watch the fight");
-    expect(html).toContain("https://www.youtube.com/results?search_query=");
+    expect(html).toContain('href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"');
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
     expect(html).toContain("can reveal the result");
   });
 
-  it("offers nothing on other fights, or without a year", () => {
-    expect(renderToStaticMarkup(<FightCard fight={makeFight(2, 4.5)} eventYear="2024" />)).not.toContain("Watch the fight");
+  it("offers nothing without a video (no search link as a stand-in), and ignores a bad id", () => {
     expect(renderToStaticMarkup(<FightCard fight={makeFight(2, 5)} />)).not.toContain("Watch the fight");
+    expect(renderToStaticMarkup(<FightCard fight={makeFight(2, 5, { videoId: "x" })} />)).not.toContain("youtube.com");
   });
 });

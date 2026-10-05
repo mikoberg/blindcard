@@ -89,11 +89,8 @@ function FighterLine({
 export function FightCard({
   fight,
   showSegment = false,
-  eventYear,
 }: {
   fight: CardFight;
-  /** The year of the event: with it, a classic offers a link to watch the fight. */
-  eventYear?: string;
   /** Label the card with its part of the card (used when the list is not grouped). */
   showSegment?: boolean;
 }) {
@@ -165,8 +162,12 @@ export function FightCard({
           <div className="mt-3">
             <StarRating stars={fight.rating?.stars ?? null} showNumber={false} />
           </div>
-          {isClassic(fight.rating?.stars) && eventYear && (
-            <WatchButton fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} year={eventYear} />
+          {fight.videoId && (
+            <WatchButton
+              fighterA={fight.fighterA.name}
+              fighterB={fight.fighterB.name}
+              videoId={fight.videoId}
+            />
           )}
         </div>
       </div>

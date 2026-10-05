@@ -39,6 +39,7 @@ def parse_dotenv(text: str) -> dict[str, str]:
 class Settings:
     database_url: str | None = field(default=None, repr=False)
     scraper_contact: str | None = None
+    youtube_api_key: str | None = field(default=None, repr=False)
     cache_dir: Path = DEFAULT_CACHE_DIR
     request_interval_seconds: float = 1.0
     log_level: str = "INFO"
@@ -48,6 +49,11 @@ class Settings:
         if not self.database_url:
             raise SettingsError("DATABASE_URL is not set (see .env.example).")
         return self.database_url
+
+    def require_youtube_api_key(self) -> str:
+        if not self.youtube_api_key:
+            raise SettingsError("YOUTUBE_API_KEY is not set (see .env.example).")
+        return self.youtube_api_key
 
     def require_user_agent(self) -> str:
         """The scraper identifies itself; refuse to fetch anything without a contact."""
@@ -88,6 +94,7 @@ def load_settings(
     return Settings(
         database_url=merged.get("DATABASE_URL") or None,
         scraper_contact=merged.get("SCRAPER_CONTACT") or None,
+        youtube_api_key=merged.get("YOUTUBE_API_KEY") or None,
         cache_dir=cache_dir,
         request_interval_seconds=interval,
         log_level=merged.get("LOG_LEVEL", "INFO").upper(),

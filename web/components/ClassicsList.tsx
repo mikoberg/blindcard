@@ -59,14 +59,16 @@ export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
                   ) : (
                     <div className={className}>{body}</div>
                   )}
-                  <span className="pr-2">
-                    <WatchButton
-                      compact
-                      fighterA={fight.fighterA}
-                      fighterB={fight.fighterB}
-                      year={fight.eventDate.slice(0, 4)}
-                    />
-                  </span>
+                  {fight.videoId && (
+                    <span className="pr-2">
+                      <WatchButton
+                        compact
+                        fighterA={fight.fighterA}
+                        fighterB={fight.fighterB}
+                        videoId={fight.videoId}
+                      />
+                    </span>
+                  )}
                 </li>
               );
             })}

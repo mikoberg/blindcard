@@ -16,6 +16,7 @@ describe("ClassicsList", () => {
           fighterB: "<img src=x onerror=alert(1)>",
           weightClass: "Lightweight",
           isTitleFight: true,
+          videoId: "dQw4w9WgXcQ",
         },
       ],
     },
@@ -31,11 +32,12 @@ describe("ClassicsList", () => {
     expect(html).toContain('href="#year-2025"');
   });
 
-  it("has a play link per fight that opens a YouTube search in a new tab", () => {
+  it("has a play link to the official video, only for fights that have one", () => {
     const html = renderToStaticMarkup(<ClassicsList years={years} />);
-    expect(html).toContain("https://www.youtube.com/results?search_query=Ann%20One%20vs");
+    expect(html).toContain('href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"');
     expect(html).toContain('target="_blank"');
-    expect(html).toContain("full%20fight%202025");
+    const none = [{ year: "2025", fights: [{ ...years[0]!.fights[0]!, videoId: null }] }];
+    expect(renderToStaticMarkup(<ClassicsList years={none} />)).not.toContain("youtube.com");
   });
 
   it("escapes hostile names", () => {

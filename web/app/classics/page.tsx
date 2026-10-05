@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ClassicsList } from "@/components/ClassicsList";
 import { Notice } from "@/components/Notice";
 import { classicsByYear, toClassics } from "@/lib/classics/group";
-import { listClassicRows } from "@/lib/data/classics";
+import { listClassicRows, listFightVideos } from "@/lib/data/classics";
 
 export const revalidate = 300;
 
@@ -12,7 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ClassicsPage() {
-  const classics = toClassics(await listClassicRows());
+  const [rows, videos] = await Promise.all([listClassicRows(), listFightVideos()]);
+  const classics = toClassics(rows, videos);
   if (classics.length === 0) return <Notice>No five-star fights yet. Check back soon.</Notice>;
   return (
     <div className="space-y-2">

@@ -11,6 +11,12 @@ export interface FightRatingRow {
   stars: number | string;
 }
 
+/** One row of the `fight_videos` table. */
+export interface FightVideoRow {
+  fight_id: string;
+  youtube_id: string;
+}
+
 export interface ClassicFight {
   id: string;
   eventSlug: string;
@@ -20,6 +26,8 @@ export interface ClassicFight {
   fighterB: string;
   weightClass: string | null;
   isTitleFight: boolean;
+  /** The official video, when we have one. */
+  videoId: string | null;
 }
 
 export interface ClassicYear {

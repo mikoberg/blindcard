@@ -25,6 +25,20 @@ describe("toClassics", () => {
   });
 });
 
+describe("videos on the classics", () => {
+  it("attaches a valid video id to its fight and ignores a bad one", () => {
+    const out = toClassics(
+      [row("a", "2024-01-01", 5), row("b", "2025-01-01", 5)],
+      [
+        { fight_id: "a", youtube_id: "dQw4w9WgXcQ" },
+        { fight_id: "b", youtube_id: "nope" },
+      ],
+    );
+    expect(out.find((f) => f.id === "a")?.videoId).toBe("dQw4w9WgXcQ");
+    expect(out.find((f) => f.id === "b")?.videoId).toBeNull();
+  });
+});
+
 describe("classicsByYear", () => {
   it("groups by year, keeping the newest-first order", () => {
     const groups = classicsByYear(

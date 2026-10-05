@@ -63,6 +63,8 @@ export interface CardFight {
   weightClass: string | null;
   isTitleFight: boolean;
   scheduledRounds: number | null;
+  /** The official full-fight video (an 11-character YouTube id): a link only, no title or image. */
+  videoId?: string | null;
   fighterA: CardFighter;
   fighterB: CardFighter;
   /** null means "Not rated yet" (unprocessed and unscorable fights look identical). */
