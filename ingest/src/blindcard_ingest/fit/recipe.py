@@ -107,8 +107,10 @@ NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(
 
 NEUTRAL_LEAK = 0.5  # AUC(stars -> finished) of a score that says nothing about finishes
 #: How far above neutral AUC(stars -> finished) may rise on the training years. Wider = finishes
-#: count for more. 0.4 gives a first-round KO in a co-main and a five-round war their due.
-DEFAULT_FINISH_LEAK = 0.40
+#: count for more. 0.4 (v8-v10) let finishes dominate: 55% of finishes but only 10% of decisions
+#: reached 4 stars, and the held-out Fight of the Night AUC was lower. 0.2 keeps a finish a clear
+#: plus (the stars still tell finishes apart a little) without making it the whole score.
+DEFAULT_FINISH_LEAK = 0.20
 #: Slack between the training years and the refit on all years before the report warns.
 LEAK_SLACK = 0.05
 
