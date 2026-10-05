@@ -87,6 +87,8 @@ class FightSides:
     a_name: str
     b_source_id: str
     b_name: str
+    #: `fights.records` as stored now (None = nothing yet).
+    stored_records: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -505,7 +507,7 @@ class PostgresRepository:
 
     def fights_with_sides(self, source: str, from_year: int) -> list[FightSides]:
         query = """
-            select f.source_id as fight_source_id, e.event_date,
+            select f.source_id as fight_source_id, e.event_date, f.records,
                    a.source_id as a_id, a.name as a_name, b.source_id as b_id, b.name as b_name
             from public.fights f
             join public.events e on e.id = f.event_id
@@ -525,6 +527,7 @@ class PostgresRepository:
                 a_name=row["a_name"],
                 b_source_id=row["b_id"],
                 b_name=row["b_name"],
+                stored_records=row["records"],
             )
             for row in rows
         ]

@@ -235,6 +235,7 @@ class FakeRepository:
                 a_name=fight.fighter_a.name,
                 b_source_id=fight.fighter_b.source_id,
                 b_name=fight.fighter_b.name,
+                stored_records=self.records.get(fight.source_id),
             )
             for (src, _), bundle in self.events.items()
             if src == source and bundle.event.event_date.year >= from_year

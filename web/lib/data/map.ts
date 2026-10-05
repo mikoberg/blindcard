@@ -81,7 +81,7 @@ function toFighterCareer(value: unknown): FighterCareer | null {
   const o = (value ?? {}) as { streak?: unknown; unbeaten?: unknown };
   if (typeof o.streak !== "number" || !Number.isInteger(o.streak) || o.streak < 0) return null;
   if (typeof o.unbeaten !== "boolean") return null;
-  return { streak: o.streak, unbeaten: o.unbeaten };
+  return { streak: o.streak, unbeaten: o.unbeaten, record: toRecord(value) };
 }
 
 /** Anything that does not have the expected shape is treated as "no context", never guessed. */

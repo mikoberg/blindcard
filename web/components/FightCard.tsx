@@ -1,10 +1,10 @@
 import { fightBlurb } from "@/lib/card/blurb";
 import { isHiddenGem } from "@/lib/card/hiddenGem";
+import { recordParts } from "@/lib/card/record";
 import { SEGMENT_LABELS } from "@/lib/card/segments";
-import { recordLabels } from "@/lib/card/record";
-import { storyLabels } from "@/lib/card/story";
 import { formatStars } from "@/lib/card/stars";
-import type { CardFight } from "@/lib/card/types";
+import { displayRecord, fighterNote, pairingLabel } from "@/lib/card/story";
+import type { CardFight, CardFighter, FighterCareer, FighterRecord } from "@/lib/card/types";
 import { Monogram } from "./Monogram";
 import { RevealButton } from "./RevealButton";
 import { StarRating } from "./StarRating";
@@ -24,14 +24,49 @@ function RatingPlate({ stars }: { stars: number | null }) {
       aria-hidden="true"
       className={`flex h-16 w-14 shrink-0 items-center justify-center rounded-md border font-[family-name:var(--font-display)] text-3xl font-bold tabular-nums ${tone}`}
     >
-      {stars === null ? "–" : formatStars(stars)}
+      {stars === null ? "\u2013" : formatStars(stars)}
     </div>
   );
 }
 
-/** What was known before the fight: both records, then the storylines. */
-function before(fight: CardFight): string[] {
-  return [...recordLabels(fight), ...storyLabels(fight)];
+/** One fighter: flag, name, what was known before (unbeaten, streak) and the record going in. */
+function FighterLine({
+  fighter,
+  record,
+  career,
+}: {
+  fighter: CardFighter;
+  record: FighterRecord | null;
+  career: FighterCareer | null | undefined;
+}) {
+  const note = fighterNote(career);
+  const shown = displayRecord(record, career);
+  const parts = shown ? recordParts(shown.record) : null;
+  const caption = [parts?.extra, shown?.inPromotion ? "in the promotion" : null].filter(Boolean).join(" ");
+  return (
+    <span className="flex items-center gap-3">
+      <Monogram name={fighter.name} country={fighter.country} size="lg" />
+      <span className="min-w-0 flex-1">
+        <span className="block break-words text-2xl font-bold leading-tight">{fighter.name}</span>
+        {note && <span className="block text-xs font-normal text-[var(--muted)]">{note}</span>}
+      </span>
+      {parts && (
+        <span
+          className="shrink-0 text-right leading-none"
+          aria-label={`Record before the fight: ${parts.main}${caption ? ` ${caption}` : ""}`}
+        >
+          <span aria-hidden="true" className="block text-3xl font-bold tabular-nums">
+            {parts.main}
+          </span>
+          {caption && (
+            <span aria-hidden="true" className="mt-1 block text-xs font-normal text-[var(--muted)]">
+              {caption}
+            </span>
+          )}
+        </span>
+      )}
+    </span>
+  );
 }
 
 export function FightCard({
@@ -42,6 +77,7 @@ export function FightCard({
   /** Label the card with its part of the card (used when the list is not grouped). */
   showSegment?: boolean;
 }) {
+  const pairing = pairingLabel(fight);
   return (
     <li
       id={`fight-${fight.id}`}
@@ -67,31 +103,29 @@ export function FightCard({
                 Hidden gem
               </span>
             )}
-          </div>
-          <h3 className="mt-2 flex items-center gap-3 font-[family-name:var(--font-display)] text-2xl font-bold leading-tight">
-            <span className="flex shrink-0">
-              <Monogram name={fight.fighterA.name} country={fight.fighterA.country} />
-              <span className="-ml-1.5 flex">
-                <Monogram name={fight.fighterB.name} country={fight.fighterB.country} />
+            {pairing && (
+              <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text)]/90">
+                {pairing}
               </span>
+            )}
+          </div>
+          <h3 className="mt-3 font-[family-name:var(--font-display)]">
+            <FighterLine
+              fighter={fight.fighterA}
+              record={fight.records?.a ?? null}
+              career={fight.career?.a}
+            />
+            <span className="my-1.5 flex items-center gap-3 text-sm font-semibold text-[var(--muted)]">
+              <span className="w-11 text-center">vs</span>
+              <span className="h-px flex-1 bg-[var(--border)]" />
             </span>
-            <span className="min-w-0 break-words">
-              {fight.fighterA.name} <span className="text-[var(--muted)]">vs</span> {fight.fighterB.name}
-            </span>
+            <FighterLine
+              fighter={fight.fighterB}
+              record={fight.records?.b ?? null}
+              career={fight.career?.b}
+            />
           </h3>
-          <p className="mt-1 text-sm text-[var(--muted)]">{fightBlurb(fight)}</p>
-          {before(fight).length > 0 && (
-            <ul aria-label="Before the fight" className="mt-2 flex flex-wrap gap-1.5">
-              {before(fight).map((label) => (
-                <li
-                  key={label}
-                  className="rounded-md bg-[var(--surface-2)] px-2 py-1 text-xs font-medium text-[var(--text)]/90"
-                >
-                  {label}
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="mt-3 text-sm text-[var(--muted)]">{fightBlurb(fight)}</p>
           <div className="mt-3">
             <StarRating stars={fight.rating?.stars ?? null} showNumber={false} />
           </div>

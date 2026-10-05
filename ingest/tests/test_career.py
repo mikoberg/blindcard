@@ -170,3 +170,51 @@ def test_unbeaten_is_only_claimed_for_debuts_after_our_history_is_reliable() -> 
         for i in range(UNBEATEN_MIN_FIGHTS + 1)
     ]
     assert career_contexts(newcomer)[f"n{UNBEATEN_MIN_FIGHTS}"].unbeaten == (True, False)
+
+
+def test_the_record_so_far_counts_wins_losses_draws_and_no_contests() -> None:
+    contexts = career_contexts(
+        [
+            bout("f1", 0, "ann", "x1", "ann"),
+            bout("f2", 10, "ann", "x2", "x2"),
+            bout("f3", 20, "ann", "x3", None, outcome="draw"),
+            bout("f4", 30, "ann", "x4", None, outcome="no_contest"),
+            bout("f5", 40, "ann", "x5", "ann"),
+            bout("f6", 50, "ann", "x6", "ann"),
+        ]
+    )
+    assert contexts["f1"].prior_records[0] == (0, 0, 0, 0)
+    assert contexts["f6"].prior_records[0] == (2, 1, 1, 1)
+    assert contexts["f6"].prior_records[1] == (0, 0, 0, 0)  # the newcomer
+
+
+def test_the_record_never_includes_the_bout_itself() -> None:
+    contexts = career_contexts([bout("f1", 0, "ann", "bea", "ann")])
+    assert contexts["f1"].prior_records == ((0, 0, 0, 0), (0, 0, 0, 0))
+
+
+def test_the_record_so_far_is_only_vouched_for_when_the_whole_career_is_in_our_history() -> None:
+    old = dt.date(2001, 6, 1)
+    veteran = [
+        HistoryBout(f"v{i}", old + dt.timedelta(days=60 * i), 5, False, "vet", f"o{i}", "vet")
+        for i in range(3)
+    ]
+    assert career_contexts(veteran)["v2"].complete_history == (False, False)
+
+    newcomer = [
+        HistoryBout(
+            f"n{i}",
+            dt.date(2010, 1, 1) + dt.timedelta(days=60 * i),
+            5,
+            False,
+            "new",
+            f"o{i}",
+            "new",
+        )
+        for i in range(3)
+    ]
+    context = career_contexts(newcomer)["n2"]
+    assert context.complete_history == (True, True)  # the opponents debuted in our data too
+
+    debut = career_contexts([bout("d1", 0, "ann", "bea", "ann")])["d1"]
+    assert debut.complete_history == (True, True) and debut.prior_records == ((0, 0, 0, 0),) * 2

@@ -56,44 +56,82 @@ describe("FightCard", () => {
   });
 });
 
-
-describe("FightCard storylines", () => {
-  const withCareer = makeFight(2, 4, {
-    fighterA: { id: "a", name: "Ann One" },
-    fighterB: { id: "b", name: "Bea Two" },
-    career: { meetings: 1, a: { streak: 5, unbeaten: false }, b: { streak: 0, unbeaten: true } },
-  });
-
-  it("shows what was known before the fight", () => {
-    const html = render(withCareer);
-    expect(html).toContain('aria-label="Before the fight"');
-    expect(html).toContain("Rematch");
-    expect(html).toContain("Ann One has won 5 in a row");
-    expect(html).toContain("Bea Two is unbeaten in the promotion");
-  });
-
-  it("shows no list at all when there is no storyline", () => {
-    expect(render(makeFight(2, 4))).not.toContain("Before the fight");
-  });
-});
-
-
-describe("FightCard records and flags", () => {
+describe("FightCard fighters, records and storylines", () => {
   const fight = makeFight(2, 4, {
     fighterA: { id: "a", name: "Ann One", country: "br" },
     fighterB: { id: "b", name: "Bea Two", country: "se" },
-    records: { a: { w: 23, l: 3, d: 0, nc: 0 }, b: { w: 14, l: 2, d: 0, nc: 0 } },
+    records: { a: { w: 23, l: 3, d: 0, nc: 0 }, b: { w: 14, l: 2, d: 0, nc: 1 } },
+    career: { meetings: 1, a: { streak: 5, unbeaten: false }, b: { streak: 0, unbeaten: true } },
   });
 
-  it("shows the records going in, before the storylines, and the flags", () => {
+  it("puts each fighter on a line of their own: flag, name, note and the record going in", () => {
     const html = render(fight);
-    expect(html).toContain("Ann One 23-3");
-    expect(html).toContain("Bea Two 14-2");
+    const a = html.indexOf("Ann One");
+    const b = html.indexOf("Bea Two");
+    expect(a).toBeGreaterThan(-1);
+    expect(b).toBeGreaterThan(a);
+    // each record sits with its own fighter (between their name and the next fighter)
+    expect(html.slice(a, b)).toContain("23-3");
+    expect(html.slice(a, b)).not.toContain("14-2");
+    expect(html.slice(b)).toContain("14-2");
+    expect(html).toContain("(1 NC)");
     expect(html).toContain("url(/flags/br.svg)");
     expect(html).toContain("url(/flags/se.svg)");
   });
 
-  it("shows no records list for a fight without records", () => {
-    expect(render(makeFight(2, 4))).not.toContain("Before the fight");
+  it("describes the record for assistive tech", () => {
+    expect(render(fight)).toContain('aria-label="Record before the fight: 23-3"');
+    expect(render(fight)).toContain('aria-label="Record before the fight: 14-2 (1 NC)"');
+  });
+
+  it("notes an unbeaten fighter or a win streak under their name, and the rematch as a badge", () => {
+    const html = render(fight);
+    expect(html).toContain("Won 5 in a row");
+    expect(html).toContain("Unbeaten in the promotion");
+    expect(html).toContain("Rematch");
+    expect(html.indexOf("Won 5 in a row")).toBeLessThan(html.indexOf("Bea Two"));
+    expect(html.indexOf("Unbeaten in the promotion")).toBeGreaterThan(html.indexOf("Bea Two"));
+  });
+
+  it("shows a fighter without a known record as just their name", () => {
+    const html = render(makeFight(2, 4, { records: { a: null, b: { w: 1, l: 0, d: 0, nc: 0 } } }));
+    expect(html.match(/Record before the fight/g)).toHaveLength(1);
+  });
+
+  it("shows nothing extra for a fight without records or storylines", () => {
+    const html = render(makeFight(2, 4));
+    expect(html).not.toContain("Record before the fight");
+    expect(html).not.toContain("Rematch");
+  });
+});
+
+
+describe("FightCard: the record in the promotion as a fallback", () => {
+  const own = { w: 6, l: 4, d: 0, nc: 0 };
+
+  it("shows the record in the promotion, labelled, when there is no professional record", () => {
+    const html = render(
+      makeFight(2, 4, {
+        fighterA: { id: "a", name: "Ann One" },
+        career: { meetings: 0, a: { streak: 0, unbeaten: false, record: own }, b: { streak: 0, unbeaten: false } },
+      }),
+    );
+    expect(html).toContain("6-4");
+    expect(html).toContain("in the promotion");
+    expect(html).toContain('aria-label="Record before the fight: 6-4 in the promotion"');
+  });
+
+  it("notes a promotion debut instead of a 0-0 record", () => {
+    const html = render(
+      makeFight(2, 4, {
+        career: {
+          meetings: 0,
+          a: { streak: 0, unbeaten: false, record: { w: 0, l: 0, d: 0, nc: 0 } },
+          b: { streak: 0, unbeaten: false },
+        },
+      }),
+    );
+    expect(html).toContain("Promotion debut");
+    expect(html).not.toContain("0-0");
   });
 });

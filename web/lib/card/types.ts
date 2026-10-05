@@ -30,8 +30,13 @@ export interface Rating {
 export interface FighterCareer {
   /** Wins in a row going into the bout. */
   streak: number;
-  /** No UFC loss, after at least a few fights. */
+  /** No loss in the promotion, after at least a few fights. */
   unbeaten: boolean;
+  /**
+   * The fighter's record in the promotion before the bout. Only present when their whole
+   * career there is in our history; 0-0 then means a debut. null = not known.
+   */
+  record?: FighterRecord | null;
 }
 
 /** What was known about the two fighters before the bout: a pre-fight fact. */

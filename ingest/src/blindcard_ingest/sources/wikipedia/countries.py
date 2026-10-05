@@ -396,17 +396,19 @@ def _infobox(wikitext: str) -> str:
     return wikitext[start.start() : start.start() + 4000]
 
 
-def _from_short_description(wikitext: str) -> str | None:
+def country_from_phrase(phrase: str) -> str | None:
     """ "Georgian-American mixed martial artist (born 1988)" -> the first nationality, ge."""
-    match = re.search(r"\{\{\s*short description\s*\|\s*([^}|]+)", wikitext, re.I)
-    if not match:
-        return None
-    words = match.group(1).replace("-", " ").lower().split()
+    words = phrase.replace("-", " ").lower().split()
     for length in (2, 1):  # "south korean", "puerto rican", "new zealander" before "south"
-        phrase = " ".join(words[:length])
-        if len(words) >= length and phrase in DEMONYMS:
-            return DEMONYMS[phrase]
+        head = " ".join(words[:length])
+        if len(words) >= length and head in DEMONYMS:
+            return DEMONYMS[head]
     return None
+
+
+def _from_short_description(wikitext: str) -> str | None:
+    match = re.search(r"\{\{\s*short description\s*\|\s*([^}|]+)", wikitext, re.I)
+    return country_from_phrase(match.group(1)) if match else None
 
 
 def _flatten_lists(text: str) -> str:

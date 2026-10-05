@@ -13,6 +13,7 @@ from blindcard_ingest.models import (
     ParsedFighter,
     order_fighters,
 )
+from blindcard_ingest.sources.sherdog import SherdogBout, SherdogPage
 
 SOURCE = "fakesource"
 DAY1, DAY2 = dt.date(2019, 3, 2), dt.date(2021, 5, 8)
@@ -49,10 +50,16 @@ def page(country: str, rows: list[tuple[str, str, dt.date, str]]) -> str:
 
 
 class FakeWiki:
-    def __init__(self, pages: dict[str, str]) -> None:
+    def __init__(self, pages: dict[str, str], search: dict[str, list[str]] | None = None) -> None:
         self._pages = pages
+        self._search = search or {}
+        self.searched: list[str] = []
         self.asked: list[list[str]] = []
         self.batch_sizes: list[int] = []
+
+    def search_titles(self, query: str, *, limit: int = 3) -> list[str]:
+        self.searched.append(query)
+        return list(self._search.get(query, []))[:limit]
 
     def page_wikitexts(self, titles: Sequence[str], *, batch_size: int) -> dict[str, str]:
         self.asked.append(list(titles))
@@ -160,3 +167,112 @@ def test_only_counts_are_logged(caplog) -> None:  # type: ignore[no-untyped-def]
 def test_the_cli_knows_ingest_fighters() -> None:
     args = cli.build_parser().parse_args(["ingest-fighters", "--from", "2010"])
     assert (args.command, args.from_year) == ("ingest-fighters", 2010)
+
+
+def test_a_page_with_accents_in_its_title_is_found_by_search() -> None:
+    """Our source drops accents: "Bea Two" is "Béa Two" on Wikipedia."""
+    repo, wiki = setup()
+    pages = dict(wiki._pages)
+    pages["Béa Two"] = pages.pop("Bea Two")
+    found = FakeWiki(pages, search={"Bea Two mixed martial artist": ["Béa Two", "Other Bea"]})
+    run_ingest_fighters(found, repo, source_name=SOURCE, from_year=2015)
+    assert repo.countries["id-bea-two"] == "se"
+    assert "Bea Two mixed martial artist" in found.searched
+    assert "Ann One mixed martial artist" not in found.searched  # already found by name
+
+
+def test_a_search_hit_that_is_not_the_fighter_is_ignored() -> None:
+    repo, wiki = setup()
+    pages = dict(wiki._pages)
+    pages.pop("Bea Two")
+    pages["Somebody Else"] = page("Chinese", [("Win", "9-0", dt.date(2010, 1, 1), "Somebody")])
+    found = FakeWiki(pages, search={"Bea Two mixed martial artist": ["Somebody Else"]})
+    run_ingest_fighters(found, repo, source_name=SOURCE, from_year=2015)
+    assert "id-bea-two" not in repo.countries
+
+
+class FakeCountries:
+    def __init__(self, mapping: dict[str, str]) -> None:
+        self._mapping = mapping
+        self.asked: list[str] = []
+
+    def country_for_fighter(self, name: str) -> str | None:
+        self.asked.append(name)
+        return self._mapping.get(name)
+
+
+def test_wikidata_gives_a_country_to_fighters_without_a_page() -> None:
+    repo, wiki = setup()
+    countries = FakeCountries({"Cat Three": "pl"})
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015, countries_source=countries)
+    assert repo.countries["id-cat-three"] == "pl"
+    assert repo.countries["id-ann-one"] == "br"  # from the page: not overridden
+    assert set(countries.asked) == {"Cat Three"}  # only the fighter still without a country
+
+
+class FakeSherdog:
+    def __init__(self, pages: dict[str, list[SherdogPage]]) -> None:
+        self._pages = pages
+        self.asked: list[str] = []
+
+    def pages_for(self, name: str) -> list[SherdogPage]:
+        self.asked.append(name)
+        return self._pages.get(name, [])
+
+
+def sherdog_page(country: str | None, bouts: list[tuple[dt.date, str, str]]) -> SherdogPage:
+    return SherdogPage(
+        url="/fighter/x",
+        country=country,
+        bouts=tuple(SherdogBout(d, opp, res) for d, opp, res in bouts),
+    )
+
+
+def test_sherdog_gives_records_and_country_to_fighters_without_a_wikipedia_page() -> None:
+    repo, wiki = setup()
+    # Cat Three has no Wikipedia page; Sherdog knows two earlier wins before the bout on DAY2.
+    sherdog = FakeSherdog(
+        {
+            "Cat Three": [
+                sherdog_page(
+                    "pl",
+                    [
+                        (DAY2, "Ann One", "loss"),
+                        (dt.date(2020, 1, 1), "A", "win"),
+                        (dt.date(2019, 1, 1), "B", "win"),
+                    ],
+                )
+            ]
+        }
+    )
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015, sherdog=sherdog)
+    assert repo.countries["id-cat-three"] == "pl"
+    f2 = repo.records["f2"]
+    cat_side = "b" if "id-ann-one" < "id-cat-three" else "a"
+    assert f2[cat_side] == {"w": 2, "l": 0, "d": 0, "nc": 0}  # the bout's own loss is not counted
+    assert "Ann One" not in sherdog.asked  # found on Wikipedia already
+
+
+def test_a_sherdog_page_of_someone_else_is_ignored() -> None:
+    repo, wiki = setup()
+    sherdog = FakeSherdog(
+        {"Cat Three": [sherdog_page("pl", [(dt.date(2010, 1, 1), "Nobody", "win")])]}
+    )
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015, sherdog=sherdog)
+    assert "id-cat-three" not in repo.countries
+
+
+def test_only_missing_asks_for_fighters_that_have_no_record_yet() -> None:
+    repo, wiki = setup()
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015)  # Cat still has none
+    sherdog = FakeSherdog({})
+    run_ingest_fighters(
+        wiki,
+        repo,
+        source_name=SOURCE,
+        from_year=2015,
+        sherdog=sherdog,
+        only_missing=True,
+        use_wikipedia=False,
+    )
+    assert sherdog.asked == ["Cat Three"]

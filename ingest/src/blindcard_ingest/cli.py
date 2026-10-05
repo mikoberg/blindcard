@@ -36,8 +36,10 @@ from blindcard_ingest.scoring.scorer import ScoringError
 from blindcard_ingest.segment_pipeline import run_ingest_segments
 from blindcard_ingest.settings import Settings, SettingsError, load_settings
 from blindcard_ingest.sources.base import FightDataSource
+from blindcard_ingest.sources.sherdog import SherdogClient
 from blindcard_ingest.sources.ufcstats.dataset import SOURCE_NAME, DatasetError
 from blindcard_ingest.sources.ufcstats.source import UfcStatsCsvSource
+from blindcard_ingest.sources.wikidata import WikidataClient
 from blindcard_ingest.sources.wikipedia.client import WikipediaClient, WikipediaError
 
 logger = logging.getLogger("blindcard_ingest.cli")
@@ -103,6 +105,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="store each fighter's country and the records going into every bout (Wikipedia)",
     )
     fighters.add_argument("--from", dest="from_year", type=int, default=2015, metavar="YEAR")
+    fighters.add_argument(
+        "--sherdog-only",
+        action="store_true",
+        help="only look up fighters that still have no record, on Sherdog (no Wikipedia pass)",
+    )
 
     fit = commands.add_parser(
         "fit-scoring",
@@ -165,9 +172,11 @@ def _open_source(settings: Settings) -> Iterator[FightDataSource]:
 
 
 @contextmanager
-def _open_wikipedia_scratch(settings: Settings) -> Iterator[WikipediaClient]:
-    """A Wikipedia client whose raw replies are thrown away afterwards: fighter pages are long
-    and only the few facts read from them are kept."""
+def _open_fighter_sources(
+    settings: Settings,
+) -> Iterator[tuple[WikipediaClient, WikidataClient, SherdogClient]]:
+    """Clients for the fighter pages. Their raw replies are thrown away afterwards: the pages are
+    long and only the few facts read from them are kept."""
     with (
         tempfile.TemporaryDirectory(prefix="blindcard-wiki-") as scratch,
         PoliteClient(
@@ -176,7 +185,7 @@ def _open_wikipedia_scratch(settings: Settings) -> Iterator[WikipediaClient]:
             min_interval_seconds=settings.request_interval_seconds,
         ) as client,
     ):
-        yield WikipediaClient(client)
+        yield WikipediaClient(client), WikidataClient(client), SherdogClient(client)
 
 
 @contextmanager
@@ -255,12 +264,23 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
         return EXIT_OK
 
     if args.command == "ingest-fighters":
-        with _open_repository(settings) as repo, _open_wikipedia_scratch(settings) as wiki:
+        with (
+            _open_repository(settings) as repo,
+            _open_fighter_sources(settings) as (
+                wiki,
+                wikidata,
+                sherdog,
+            ),
+        ):
             run_ingest_fighters(
                 wiki,
                 repo,
                 source_name=SOURCE_NAME,
                 from_year=args.from_year,
+                countries_source=None if args.sherdog_only else wikidata,
+                sherdog=sherdog,
+                only_missing=args.sherdog_only,
+                use_wikipedia=not args.sherdog_only,
                 dry_run=args.dry_run,
             )
         return EXIT_OK

@@ -44,6 +44,15 @@ class CareerContext:
     prior_headliners: tuple[int, int]
     #: Fights without a loss in the UFC, with at least `UNBEATEN_MIN_FIGHTS` of them.
     unbeaten: tuple[bool, bool]
+    #: Each fighter's record in our history before the bout: (wins, losses, draws, no contests).
+    #: Only bouts of the promotion count, so a fighter's earlier career elsewhere is missing.
+    prior_records: tuple[tuple[int, int, int, int], tuple[int, int, int, int]] = (
+        (0, 0, 0, 0),
+        (0, 0, 0, 0),
+    )
+    #: True when the fighter's WHOLE promotion career is in our history (they debuted after
+    #: UNBEATEN_RELIABLE_FROM), so the record above is complete and a "debut" is a real debut.
+    complete_history: tuple[bool, bool] = (False, False)
 
 
 UNBEATEN_MIN_FIGHTS = 5
@@ -60,13 +69,27 @@ def career_json(context: CareerContext) -> dict[str, Any]:
     """
     return {
         "meetings": context.prior_meetings,
-        "a": {"streak": context.win_streaks[0], "unbeaten": context.unbeaten[0]},
-        "b": {"streak": context.win_streaks[1], "unbeaten": context.unbeaten[1]},
+        "a": _side(context, 0),
+        "b": _side(context, 1),
     }
+
+
+def _side(context: CareerContext, index: int) -> dict[str, Any]:
+    side: dict[str, Any] = {
+        "streak": context.win_streaks[index],
+        "unbeaten": context.unbeaten[index],
+    }
+    if context.complete_history[index]:  # only a record we can stand behind
+        wins, losses, draws, no_contests = context.prior_records[index]
+        side.update({"w": wins, "l": losses, "d": draws, "nc": no_contests})
+    return side
 
 
 @dataclass
 class _Record:
+    wins: int = 0
+    draws: int = 0
+    no_contests: int = 0
     fights: int = 0
     losses: int = 0
     streak: int = 0
@@ -95,6 +118,8 @@ def career_contexts(bouts: Sequence[HistoryBout]) -> dict[str, CareerContext]:
                 prior_fights=(a.fights, b.fights),
                 prior_headliners=(a.headliners, b.headliners),
                 unbeaten=(_unbeaten(a), _unbeaten(b)),
+                prior_records=(_tuple(a), _tuple(b)),
+                complete_history=(_complete(a, day), _complete(b, day)),
             )
         # ... then let them count for later days.
         for bout in todays:
@@ -102,6 +127,17 @@ def career_contexts(bouts: Sequence[HistoryBout]) -> dict[str, CareerContext]:
                 continue
             _apply(bout, records, meetings)
     return contexts
+
+
+def _complete(record: _Record, day: dt.date) -> bool:
+    """Our history holds this fighter's whole career in the promotion up to `day`."""
+    if day < UNBEATEN_RELIABLE_FROM:
+        return False
+    return record.first_seen is None or record.first_seen >= UNBEATEN_RELIABLE_FROM
+
+
+def _tuple(record: _Record) -> tuple[int, int, int, int]:
+    return (record.wins, record.losses, record.draws, record.no_contests)
 
 
 def _unbeaten(record: _Record) -> bool:
@@ -128,10 +164,14 @@ def _apply(
         record.fights += 1
         record.headliners += headliner
         if bout.outcome == "no_contest":
+            record.no_contests += 1
             continue
         if bout.winner == fighter:
             record.streak += 1
+            record.wins += 1
         else:
             record.streak = 0
             if bout.winner is not None:  # a loss, not a draw
                 record.losses += 1
+            else:
+                record.draws += 1

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { flagCode } from "@/lib/card/country";
-import { formatRecord, recordLabels } from "@/lib/card/record";
-import { makeFight } from "./helpers";
+import { formatRecord, recordParts } from "@/lib/card/record";
 
 describe("formatRecord", () => {
   it.each([
@@ -15,23 +14,10 @@ describe("formatRecord", () => {
   });
 });
 
-describe("recordLabels", () => {
-  it("names each fighter with the record going into the bout, in the order of the pairing", () => {
-    const fight = makeFight(1, 4, {
-      fighterA: { id: "a", name: "Ann One" },
-      fighterB: { id: "b", name: "Bea Two" },
-      records: { a: { w: 23, l: 3, d: 0, nc: 0 }, b: { w: 14, l: 2, d: 0, nc: 0 } },
-    });
-    expect(recordLabels(fight)).toEqual(["Ann One 23-3", "Bea Two 14-2"]);
-  });
-
-  it("leaves out a side it does not know, and everything without records", () => {
-    const one = makeFight(1, 4, {
-      fighterA: { id: "a", name: "Ann One" },
-      records: { a: null, b: { w: 1, l: 0, d: 0, nc: 0 } },
-    });
-    expect(recordLabels(one)).toEqual([`${one.fighterB.name} 1-0`]);
-    expect(recordLabels(makeFight(1, 4))).toEqual([]);
+describe("recordParts", () => {
+  it("splits the big part from a small no-contest note", () => {
+    expect(recordParts({ w: 36, l: 17, d: 1, nc: 1 })).toEqual({ main: "36-17-1", extra: "(1 NC)" });
+    expect(recordParts({ w: 10, l: 1, d: 0, nc: 0 })).toEqual({ main: "10-1", extra: null });
   });
 });
 

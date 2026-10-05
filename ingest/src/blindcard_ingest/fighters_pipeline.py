@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from blindcard_ingest.db.repository import FightSides, Repository
+from blindcard_ingest.sources.sherdog import SherdogPage, record_before_bout
 from blindcard_ingest.sources.wikipedia.countries import country_code
 from blindcard_ingest.sources.wikipedia.fighter_record import (
     Record,
@@ -34,8 +35,18 @@ TITLE_SUFFIXES = ("", " (fighter)")
 DEFAULT_BATCH_SIZE = 10
 
 
+class CountrySource(Protocol):
+    def country_for_fighter(self, name: str) -> str | None: ...
+
+
+class SherdogSource(Protocol):
+    def pages_for(self, name: str) -> list[SherdogPage]: ...
+
+
 class PageSource(Protocol):
     def page_wikitexts(self, titles: Sequence[str], *, batch_size: int) -> dict[str, str]: ...
+
+    def search_titles(self, query: str, *, limit: int = 3) -> list[str]: ...
 
 
 @dataclass
@@ -43,6 +54,7 @@ class FighterReport:
     fighters: int = 0
     fighters_resolved: int = 0
     fighters_with_country: int = 0
+    fighters_via_sherdog: int = 0
     fights_considered: int = 0
     fights_with_both_records: int = 0
     fights_with_one_record: int = 0
@@ -50,7 +62,8 @@ class FighterReport:
     def summary(self) -> str:
         return (
             f"fighters={self.fighters} resolved={self.fighters_resolved} "
-            f"country={self.fighters_with_country} | fights={self.fights_considered} "
+            f"country={self.fighters_with_country} sherdog={self.fighters_via_sherdog} | "
+            f"fights={self.fights_considered} "
             f"records: both={self.fights_with_both_records} one={self.fights_with_one_record}"
         )
 
@@ -79,43 +92,96 @@ def run_ingest_fighters(
     source_name: str,
     from_year: int,
     batch_size: int = DEFAULT_BATCH_SIZE,
+    countries_source: CountrySource | None = None,
+    sherdog: SherdogSource | None = None,
+    only_missing: bool = False,
+    use_wikipedia: bool = True,
     dry_run: bool = False,
 ) -> FighterReport:
     fights = repo.fights_with_sides(source_name, from_year)
     names: dict[str, str] = {}
     appearances: dict[str, list[_Appearance]] = defaultdict(list)
+    has_record: set[str] = set()
     for fight in fights:
         names[fight.a_source_id] = fight.a_name
         names[fight.b_source_id] = fight.b_name
         _add(appearances, fight, "a", fight.a_source_id, fight.b_name)
         _add(appearances, fight, "b", fight.b_source_id, fight.a_name)
+        for side, fighter_id in (("a", fight.a_source_id), ("b", fight.b_source_id)):
+            if (fight.stored_records or {}).get(side):
+                has_record.add(fighter_id)
+    if only_missing:  # fighters nobody has found a record for yet
+        names = {fighter: name for fighter, name in names.items() if fighter not in has_record}
 
     report = FighterReport(fighters=len(names), fights_considered=len(fights))
     countries: dict[str, str] = {}
     records: dict[str, dict[str, Any]] = defaultdict(dict)
     pending = set(names)
 
-    for suffix in TITLE_SUFFIXES:
+    def take(fighter: str, text: str) -> bool:
+        """Use `text` for `fighter` if it demonstrably is their page."""
+        found = _records_for(parse_record_rows(text), appearances[fighter])
+        if not found:
+            return False  # a page, but not (demonstrably) this fighter's
+        pending.discard(fighter)
+        report.fighters_resolved += 1
+        code = country_code(text)
+        if code is not None:
+            countries[fighter] = code
+            report.fighters_with_country += 1
+        for fight_source_id, (side, record) in found.items():
+            records[fight_source_id][side] = record_json(record)
+        return True
+
+    for suffix in TITLE_SUFFIXES if use_wikipedia else ():
         if not pending:
             break
         titles = {fighter: names[fighter] + suffix for fighter in pending}
         texts = source.page_wikitexts(sorted(set(titles.values())), batch_size=batch_size)
         for fighter in sorted(pending):
             text = texts.get(titles[fighter])
-            if text is None:
-                continue
-            rows = parse_record_rows(text)
-            found = _records_for(rows, appearances[fighter])
-            if not found:
-                continue  # a page, but not (demonstrably) this fighter's
-            pending.discard(fighter)
-            report.fighters_resolved += 1
-            code = country_code(text)
+            if text is not None:
+                take(fighter, text)
+
+    # Third try: the search finds pages whose title has accents our source leaves out
+    # ("Natalia Silva" -> "Natalia Silva (fighter)", "Maurício Ruffy").
+    if pending and use_wikipedia:
+        candidates = {
+            fighter: source.search_titles(f"{names[fighter]} mixed martial artist")
+            for fighter in sorted(pending)
+        }
+        wanted = sorted({title for found in candidates.values() for title in found})
+        texts = source.page_wikitexts(wanted, batch_size=batch_size) if wanted else {}
+        for fighter in sorted(pending):
+            for title in candidates[fighter]:
+                text = texts.get(title)
+                if text is not None and take(fighter, text):
+                    break
+
+    # Fighters without an article of their own: Sherdog's pro history gives the record.
+    if sherdog is not None:
+        for fighter in sorted(pending):
+            for page in sherdog.pages_for(names[fighter]):
+                found = _sherdog_records(page, appearances[fighter])
+                if not found:
+                    continue
+                pending.discard(fighter)
+                report.fighters_resolved += 1
+                report.fighters_via_sherdog += 1
+                if page.country is not None and fighter not in countries:
+                    countries[fighter] = page.country
+                    report.fighters_with_country += 1
+                for fight_source_id, (side, record) in found.items():
+                    records[fight_source_id][side] = record_json(record)
+                break
+
+    # Fighters without an article of their own: Wikidata's one-line description names the country.
+    if countries_source is not None:
+        for fighter in sorted(set(names) - set(countries)):
+            code = countries_source.country_for_fighter(names[fighter])
             if code is not None:
                 countries[fighter] = code
                 report.fighters_with_country += 1
-            for fight_source_id, (side, record) in found.items():
-                records[fight_source_id][side] = record_json(record)
 
     for payload in records.values():
         if len(payload) == 2:
@@ -145,6 +211,17 @@ def _add(
     appearances[fighter_id].append(
         _Appearance(fight.fight_source_id, side, fight.event_date, opponent_name)
     )
+
+
+def _sherdog_records(
+    page: SherdogPage, appearances: list[_Appearance]
+) -> dict[str, tuple[str, Record]]:
+    found: dict[str, tuple[str, Record]] = {}
+    for appearance in appearances:
+        record = record_before_bout(page.bouts, appearance.event_date, appearance.opponent_name)
+        if record is not None:
+            found[appearance.fight_source_id] = (appearance.side, record)
+    return found
 
 
 def _records_for(

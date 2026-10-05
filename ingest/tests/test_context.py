@@ -27,11 +27,13 @@ def test_career_json_has_exactly_what_the_card_shows() -> None:
         prior_fights=(12, 3),
         prior_headliners=(2, 0),
         unbeaten=(False, True),
+        prior_records=((10, 2, 0, 0), (5, 0, 1, 1)),
+        complete_history=(True, False),
     )
     assert career_json(context) == {
         "meetings": 1,
-        "a": {"streak": 4, "unbeaten": False},
-        "b": {"streak": 0, "unbeaten": True},
+        "a": {"streak": 4, "unbeaten": False, "w": 10, "l": 2, "d": 0, "nc": 0},
+        "b": {"streak": 0, "unbeaten": True},  # b's record is incomplete: not claimed
     }
 
 

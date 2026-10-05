@@ -55,6 +55,22 @@ class WikipediaClient:
         except (KeyError, TypeError) as exc:
             raise WikipediaError("the events list has no wikitext") from exc
 
+    def search_titles(self, query: str, *, limit: int = 3) -> list[str]:
+        """Titles of the best article matches for `query` (accent-insensitive: "Natalia Silva"
+        finds "Natalia Silva (fighter)" and "Natália Silva")."""
+        data = self._get_json(
+            {
+                "action": "query",
+                "list": "search",
+                "srsearch": query,
+                "srnamespace": "0",
+                "srlimit": str(limit),
+            },
+            max_age_seconds=PAGES_MAX_AGE_SECONDS,
+        )
+        hits = data.get("query", {}).get("search", [])
+        return [str(hit["title"]) for hit in hits if isinstance(hit, dict) and "title" in hit]
+
     def page_wikitexts(
         self, titles: Sequence[str], *, batch_size: int = BATCH_SIZE
     ) -> dict[str, str]:
