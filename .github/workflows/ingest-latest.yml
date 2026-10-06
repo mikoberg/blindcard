@@ -13,7 +13,7 @@ name: ingest-latest
 # condition-driven (it only does work that is not done yet), so extra runs are harmless.
 #
 # Prerequisites, once: the migrations (`blindcard-ingest migrate`), `backfill --from 2001`, then
-# `rescore --version 22 --activate`. Without an active score version `ingest` fails on purpose.
+# `rescore --version 23 --activate`. Without an active score version `ingest` fails on purpose.
 # docs/RUNBOOK.md has the full order.
 #
 # Needs the repository secret DATABASE_URL (the session pooler URL: the runners have IPv4 only).

@@ -52,7 +52,7 @@ The full order for a new database is in `docs/RUNBOOK.md`. The main ones:
 
 ```powershell
 .\.venv\Scriptslindcard-ingest backfill --from 2001        # all completed events from a year on
-.\.venv\Scriptslindcard-ingest rescore --version 22 --activate   # build the reference, score everything
+.\.venv\Scriptslindcard-ingest rescore --version 23 --activate   # build the reference, score everything
 .\.venv\Scriptslindcard-ingest ingest-latest               # recent events not yet complete
 .\.venv\Scriptslindcard-ingest audit-scores --strict       # do the newest scores look like they should?
 ```

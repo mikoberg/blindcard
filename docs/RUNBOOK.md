@@ -32,7 +32,7 @@ From `ingest/` with the virtualenv (see the root README for the install):
 ```powershell
 .\.venv\Scripts\blindcard-ingest migrate                      # all supabase/migrations, recorded in public.schema_migrations
 .\.venv\Scripts\blindcard-ingest backfill --from 2001         # every completed event (hours; resumable, cached)
-.\.venv\Scripts\blindcard-ingest rescore --version 22 --activate
+.\.venv\Scripts\blindcard-ingest rescore --version 23 --activate
 .\.venv\Scripts\blindcard-ingest ingest-context
 .\.venv\Scripts\blindcard-ingest ingest-fighters --from 2001
 .\.venv\Scripts\blindcard-ingest ingest-segments --from 2001
