@@ -37,8 +37,8 @@ Apply the migrations with the ledger-based runner (never by hand), then run the 
 **throwaway** database:
 
 ```powershell
-.\.venv\Scriptslindcard-ingest migrate              # supabase/migrations/NNNN_*.sql in order, recorded in public.schema_migrations
-.\.venv\Scriptslindcard-ingest rls-test             # supabase/tests/rls.sql on TEST_DATABASE_URL, rolled back
+.\.venv\Scripts\blindcard-ingest migrate              # supabase/migrations/NNNN_*.sql in order, recorded in public.schema_migrations
+.\.venv\Scripts\blindcard-ingest rls-test             # supabase/tests/rls.sql on TEST_DATABASE_URL, rolled back
 ```
 
 Result data (`fight_results`, `fight_rounds`, `excitement_features`, `upcoming_picks`) is private:
@@ -51,10 +51,10 @@ functions, one row per call (`reveal_fight`, `reveal_score`, `judge_disputed_car
 The full order for a new database is in `docs/RUNBOOK.md`. The main ones:
 
 ```powershell
-.\.venv\Scriptslindcard-ingest backfill --from 2001        # all completed events from a year on
-.\.venv\Scriptslindcard-ingest rescore --version 23 --activate   # build the reference, score everything
-.\.venv\Scriptslindcard-ingest ingest-latest               # recent events not yet complete
-.\.venv\Scriptslindcard-ingest audit-scores --strict       # do the newest scores look like they should?
+.\.venv\Scripts\blindcard-ingest backfill --from 2001        # all completed events from a year on
+.\.venv\Scripts\blindcard-ingest rescore --version 23 --activate   # build the reference, score everything
+.\.venv\Scripts\blindcard-ingest ingest-latest               # recent events not yet complete
+.\.venv\Scripts\blindcard-ingest audit-scores --strict       # do the newest scores look like they should?
 ```
 
 `blindcard-ingest --help` lists the rest (fighter facts, segments, bonuses, judges, upcoming cards,
