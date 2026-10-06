@@ -583,6 +583,34 @@ begin
 end $$;
 reset role;
 
+-- The rest of a fighter's career: private table, one narrow function, one fighter per call.
+insert into public.fighter_bouts (fighter_id, bout_date, opponent, result, method, event_name) values
+  ('00000000-0000-0000-0000-0000000000a1', '2019-05-01', 'Early Opponent', 'win', 'KO (punch)', 'Regional 1'),
+  ('00000000-0000-0000-0000-0000000000a1', '2020-05-01', 'Later Opponent', 'loss', 'Decision', 'Regional 2');
+set local role anon;
+do $$
+declare
+  n integer;
+  r record;
+begin
+  begin
+    perform count(*) from public.fighter_bouts;
+    raise exception 'FAIL: anon could read fighter_bouts';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot read fighter_bouts';
+  end;
+  select * into r from public.fighter_other_bouts('fighter-a');
+  if r.opponent <> 'Later Opponent' or r.result <> 'loss' then
+    raise exception 'FAIL: fighter_other_bouts should list the newest bout first';
+  end if;
+  select count(*) into n from public.fighter_other_bouts('fighter-a');
+  if n <> 2 then raise exception 'FAIL: fighter_other_bouts should return both bouts, got %', n; end if;
+  select count(*) into n from public.fighter_other_bouts('nobody');
+  if n <> 0 then raise exception 'FAIL: fighter_other_bouts answered for an unknown slug'; end if;
+  raise notice 'PASS fighter_other_bouts serves one fighter, newest first';
+end $$;
+reset role;
+
 -- The calculation behind a rating: private table, one narrow function, newest fight first.
 insert into public.fighter_elo_steps (fighter_id, seq, fight_id, fight_date, opponent_id, score, how,
   rating_before, opponent_rating, expected, k, change, rating_after) values

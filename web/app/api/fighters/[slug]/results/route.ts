@@ -19,9 +19,9 @@ export async function POST(_request: Request, context: { params: Promise<{ slug:
   const { slug } = await context.params;
   if (!isValidSlug(slug)) return respond(400, { error: "invalid_slug" });
   try {
-    const results = await revealFighterResults(slug);
-    if (results.length === 0) return respond(404, { error: "not_found" });
-    return respond(200, { results });
+    const career = await revealFighterResults(slug);
+    if (career.results.length === 0 && career.others.length === 0) return respond(404, { error: "not_found" });
+    return respond(200, career);
   } catch {
     return respond(503, { error: "unavailable" });
   }

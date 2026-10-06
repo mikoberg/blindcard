@@ -32,13 +32,14 @@ From `ingest/` with the virtualenv (see the root README for the install):
 ```powershell
 .\.venv\Scripts\blindcard-ingest migrate                      # all supabase/migrations, recorded in public.schema_migrations
 .\.venv\Scripts\blindcard-ingest backfill --from 2001         # every completed event (hours; resumable, cached)
-.\.venv\Scripts\blindcard-ingest rescore --version 23 --activate
+.\.venv\Scripts\blindcard-ingest rescore --version 24 --activate
 .\.venv\Scripts\blindcard-ingest ingest-context
 .\.venv\Scripts\blindcard-ingest ingest-fighters --from 2001
 .\.venv\Scripts\blindcard-ingest ingest-segments --from 2001
 .\.venv\Scripts\blindcard-ingest ingest-bonuses --from 2001
 .\.venv\Scripts\blindcard-ingest ingest-judges
 .\.venv\Scripts\blindcard-ingest ingest-upcoming
+.\.venv\Scripts\blindcard-ingest ingest-ranks --from 2018         # official UFC rank going into each bout (Wikipedia); after ingest-upcoming
 .\.venv\Scripts\blindcard-ingest compute-elo                  # Elo on the cards (going in) and the Elo page; after ingest-upcoming
 .\.venv\Scripts\blindcard-ingest predict-upcoming
 .\.venv\Scripts\blindcard-ingest predict-picks
@@ -51,7 +52,7 @@ Notes:
   applied. `migrate --dry-run` lists what would run. `--baseline-through N` is only for a database
   that was set up by hand before the ledger existed (empty ledger only).
 - Always run `migrate` **before** deploying a web build that depends on a new migration (0019: `upcoming_pick`
-  date guard; 0020, 0021 and 0024: the folded search columns and the last-fight date, without which `/api/search`, `/api/fighters` and `/fighters` fail; 0022 and 0023: the Elo tables).
+  date guard; 0020, 0021 and 0024: the folded search columns and the last-fight date, without which `/api/search`, `/api/fighters` and `/fighters` fail; 0022 and 0023: the Elo tables; 0030: the rank columns the cards select).
 - Use `ingest-fighters --from 2001 --styles-only` to refresh only the fighting styles.
 - `ingest-ufc-styles --limit 40` drips fighting styles from the official athlete pages (15 s per page,
   the crawl delay); the daily job does this on its own.

@@ -13,6 +13,8 @@ export interface UpcomingFighter {
   styles: string[];
   /** Today's Elo rating (see lib/card/elo.ts); null when the fighter has no earlier fight here. */
   elo?: FighterElo | null;
+  /** Today's UFC ranking in the bout's division (0 = champion); null when not ranked. */
+  rank?: number | null;
 }
 
 /** A reason behind an expected rating: what moved it, in stars, against an average fight. */

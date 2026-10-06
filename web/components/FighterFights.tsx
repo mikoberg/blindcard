@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 import { formatMonthYear } from "@/lib/format";
-import { fetchFighterResults, type FightOutcome, type FighterResult } from "@/lib/fighters/results";
+import { fetchFighterResults, type FightOutcome, type FighterResult, type OtherBout } from "@/lib/fighters/results";
 import { formatRating, isHighRating } from "@/lib/leaderboard/format";
 import type { FighterFight } from "@/lib/leaderboard/types";
 
@@ -11,7 +11,7 @@ type State =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error" }
-  | { status: "shown"; results: ReadonlyMap<string, FighterResult> };
+  | { status: "shown"; results: ReadonlyMap<string, FighterResult>; others: readonly OtherBout[] };
 
 type Filter = "all" | "win" | "loss";
 
@@ -19,7 +19,7 @@ const OUTCOME_LABEL: Record<FightOutcome, string> = { win: "Won", loss: "Lost", 
 const OUTCOME_SHORT: Record<FightOutcome, string> = { win: "W", loss: "L", draw: "D", no_contest: "NC" };
 
 /** W in ink, L as an outline, the rest quiet: readable at a glance and never colour alone. */
-function Outcome({ result }: { result: FighterResult }) {
+function Outcome({ result }: { result: Pick<FighterResult, "outcome" | "how"> }) {
   const style =
     result.outcome === "win"
       ? "border-[var(--text)] bg-[var(--text)] text-[var(--bg)]"
@@ -45,7 +45,7 @@ function Outcome({ result }: { result: FighterResult }) {
 }
 
 /** How many of each, as one sentence: "Won 6, lost 3." */
-export function summarise(results: Iterable<FighterResult>): string {
+export function summarise(results: Iterable<Pick<FighterResult, "outcome">>): string {
   const count: Record<FightOutcome, number> = { win: 0, loss: 0, draw: 0, no_contest: 0 };
   for (const result of results) count[result.outcome] += 1;
   const parts = [`Won ${count.win}`, `lost ${count.loss}`];
@@ -65,11 +65,14 @@ export function FighterFights({
   name,
   fights,
   showClass,
+  record,
 }: {
   slug: string;
   name: string;
   fights: readonly FighterFight[];
   showClass: boolean;
+  /** The record as of today, to say how much of the career the lists cover. */
+  record: { w: number; l: number; d: number; nc: number } | null;
 }) {
   const [state, setState] = useState<State>({ status: "idle" });
   const [filter, setFilter] = useState<Filter>("all");
@@ -79,8 +82,12 @@ export function FighterFights({
     if (state.status === "loading") return;
     setState({ status: "loading" });
     try {
-      const results = await fetchFighterResults(slug);
-      setState({ status: "shown", results: new Map(results.map((result) => [result.fightId, result])) });
+      const career = await fetchFighterResults(slug);
+      setState({
+        status: "shown",
+        results: new Map(career.results.map((result) => [result.fightId, result])),
+        others: career.others,
+      });
     } catch {
       setState({ status: "error" });
     }
@@ -91,6 +98,10 @@ export function FighterFights({
   const listed = results
     ? fights.flatMap((fight) => (fight.fightId && results.has(fight.fightId) ? [results.get(fight.fightId) as FighterResult] : []))
     : [];
+  const others = shown ? state.others : [];
+  const visibleOthers = others.filter((bout) => filter === "all" || bout.outcome === filter);
+  const total = record ? record.w + record.l + record.d + record.nc : null;
+  const listedAll = listed.length + others.length;
   const visible = fights.filter((fight) => {
     if (!results || filter === "all") return true;
     return fight.fightId ? results.get(fight.fightId)?.outcome === filter : false;
@@ -100,7 +111,7 @@ export function FighterFights({
     <section aria-labelledby="fights">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <h2 id="fights" className="display text-xl sm:text-2xl">
-          Rated fights
+          Rated UFC fights
         </h2>
         {shown && (
           <div role="group" aria-label="Which fights" className="inline-flex border-2 border-[var(--text)]">
@@ -171,11 +182,20 @@ export function FighterFights({
             )}
             {shown && (
               <p className="px-4 py-2 text-sm">
-                {summarise(listed)}{" "}
+                {summarise([...listed, ...others])}{" "}
                 <span className="text-[var(--muted)]">
-                  In the {fights.length} {fights.length === 1 ? "fight" : "fights"} listed here; the record above covers
-                  the whole career.
+                  {total !== null && total === listedAll
+                    ? `All ${total} fights of the record are listed.`
+                    : total !== null
+                      ? `${listedAll} of the ${total} fights in the record are listed; the rest are not in our sources.`
+                      : `${listedAll} fights listed.`}
                 </span>
+              </p>
+            )}
+            {!shown && state.status !== "error" && (
+              <p className="px-4 pb-2 text-xs text-[var(--muted)]">
+                This list holds the UFC fights we have rated. With the results open, the rest of the career (earlier
+                fights and other promotions) appears below it.
               </p>
             )}
           </div>
@@ -253,6 +273,31 @@ export function FighterFights({
           </ul>
         )}
       </div>
+
+      {shown && visibleOthers.length > 0 && (
+        <div className="mt-6">
+          <h3 className="display text-lg sm:text-xl">Earlier fights and other promotions</h3>
+          <p className="mt-1 text-sm text-[var(--muted)]">Not rated: we have no fight statistics for these.</p>
+          <ul className="mt-3 divide-y divide-[var(--border)] border-2 border-[var(--text)] bg-[var(--surface)]">
+            {visibleOthers.map((bout) => (
+              <li
+                key={`${bout.date}-${bout.opponent}`}
+                className="flex min-h-[3.25rem] items-center gap-3 px-3 py-2 sm:px-4"
+              >
+                <span className="w-16 shrink-0 text-sm tabular-nums text-[var(--muted)]">{formatMonthYear(bout.date)}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words font-extrabold leading-tight sm:text-lg">
+                    <span className="mr-1 text-sm font-bold text-[var(--accent-text)]">vs</span>
+                    {bout.opponent}
+                  </span>
+                  {bout.event && <span className="block truncate text-xs text-[var(--muted)]">{bout.event}</span>}
+                </span>
+                <Outcome result={bout} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

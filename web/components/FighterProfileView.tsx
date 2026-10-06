@@ -158,7 +158,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
 
       {fights.length > 1 && <RatingStrip fights={fights} />}
 
-      <FighterFights slug={profile.slug} name={profile.name} fights={fights} showClass={showClass} />
+      <FighterFights slug={profile.slug} name={profile.name} fights={fights} showClass={showClass} record={record} />
 
       <p className="max-w-2xl text-xs text-[var(--muted)]">
         The average is the total of these ratings divided by the number of fights

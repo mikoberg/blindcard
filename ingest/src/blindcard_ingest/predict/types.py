@@ -167,3 +167,14 @@ class FighterNow:
     fighter_id: str
     record: dict[str, int] | None
     elo: EloBefore | None
+
+
+@dataclass(frozen=True)
+class RankBout:
+    """A bout to give UFC ranks to: a stored fight or an announced bout (by id)."""
+
+    key: str
+    event_date: dt.date
+    weight_class: str | None
+    a_name: str
+    b_name: str

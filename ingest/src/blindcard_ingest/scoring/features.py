@@ -40,6 +40,7 @@ NEW_FEATURES: tuple[str, ...] = (
     "control_stalling",  # that share, waived the more submission attempts and reversals there were
     "knockdowns_both",  # both fighters scored a knockdown (back and forth)
     "min_pace",  # significant strikes per minute of the LESS active fighter
+    "min_pace_nofinish",  # that rate, only when no real finish ended the fight
     "total_pace",  # total strikes landed per minute, both fighters
     "takedown_rate",  # takedowns landed per minute, both fighters
     # Stakes: announced before the fight, so they say nothing about how it went.
@@ -85,6 +86,7 @@ CAPPED_FEATURES: tuple[str, ...] = (
     "reversals",
     "swings",
     "min_pace",
+    "min_pace_nofinish",
     "total_pace",
     "takedown_rate",
     "volume",
@@ -294,6 +296,9 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         if all(knockdowns_by_fighter[f] > 0 for f in (first, second))
         else 0.0,
         "min_pace": min(sig_landed[first], sig_landed[second]) / minutes,
+        "min_pace_nofinish": (
+            0.0 if real_finish else min(sig_landed[first], sig_landed[second]) / minutes
+        ),
         "total_pace": total_strikes / minutes,
         "takedown_rate": total_takedowns / minutes,
         "main_event": 1.0 if inp.card_position == 1 else 0.0,

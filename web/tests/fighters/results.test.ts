@@ -5,13 +5,14 @@ vi.mock("@/lib/reveal/service", () => ({ revealFighterResults }));
 
 import * as route from "@/app/api/fighters/[slug]/results/route";
 import { summarise } from "@/components/FighterFights";
-import { howDecided, rowToResult, rowsToResults } from "@/lib/fighters/map";
+import { howDecided, rowToOther, rowToResult, rowsToOthers, rowsToResults } from "@/lib/fighters/map";
 import {
   FighterResultsParseError,
   FighterResultsRequestError,
   MAX_FIGHTER_RESULTS,
+  MAX_OTHER_BOUTS,
   fetchFighterResults,
-  parseResults,
+  parseCareer,
 } from "@/lib/fighters/results";
 
 const ID = "0e55d8a3-d7a7-4391-8c3b-6a6e6d1d0b11";
@@ -57,21 +58,56 @@ describe("rowToResult", () => {
   });
 });
 
-describe("parseResults and fetchFighterResults", () => {
-  it("accepts the results the route sends and rejects error bodies", () => {
-    const result = rowToResult(row);
-    expect(parseResults({ results: [result] })).toEqual([result]);
-    expect(() => parseResults({ error: "not_found" })).toThrow(FighterResultsParseError);
-    expect(() => parseResults({ results: [{ ...result, outcome: "x" }] })).toThrow(FighterResultsParseError);
-    expect(() => parseResults({ results: [{ ...result, how: "" }] })).toThrow(FighterResultsParseError);
-    expect(() => parseResults({ results: Array.from({ length: MAX_FIGHTER_RESULTS + 1 }, () => result) })).toThrow(
+const other = { bout_date: "2018-03-03", opponent: "Early Opponent", result: "loss", method: "KO (punches)", event_name: "Regional 1" };
+
+describe("other bouts", () => {
+  it("maps a row of the rest of the career, wording the method and keeping the event", () => {
+    expect(rowToOther(other)).toEqual({
+      date: "2018-03-03",
+      opponent: "Early Opponent",
+      event: "Regional 1",
+      outcome: "loss",
+      how: "KO/TKO",
+    });
+    expect(rowToOther({ ...other, event_name: null }).event).toBeNull();
+    expect(rowToOther({ ...other, method: "Technical Submission (guillotine)" }).how).toBe("Submission");
+  });
+
+  it("refuses anything unexpected and too many rows", () => {
+    for (const bad of [
+      { ...other, bout_date: "soon" },
+      { ...other, opponent: "" },
+      { ...other, result: "victory" },
+    ]) {
+      expect(() => rowToOther(bad)).toThrow(FighterResultsParseError);
+    }
+    expect(() => rowsToOthers(Array.from({ length: MAX_OTHER_BOUTS + 1 }, () => other))).toThrow(
       FighterResultsParseError,
     );
   });
+});
+
+describe("parseCareer and fetchFighterResults", () => {
+  const career = () => ({ results: [rowToResult(row)], others: [rowToOther(other)] });
+
+  it("accepts what the route sends and rejects error bodies", () => {
+    expect(parseCareer(career())).toEqual(career());
+    expect(() => parseCareer({ error: "not_found" })).toThrow(FighterResultsParseError);
+    expect(() => parseCareer({ results: [], others: "x" })).toThrow(FighterResultsParseError);
+    expect(() => parseCareer({ ...career(), results: [{ ...career().results[0], outcome: "x" }] })).toThrow(
+      FighterResultsParseError,
+    );
+    expect(() => parseCareer({ ...career(), others: [{ ...career().others[0], date: "later" }] })).toThrow(
+      FighterResultsParseError,
+    );
+    expect(() =>
+      parseCareer({ results: Array.from({ length: MAX_FIGHTER_RESULTS + 1 }, () => career().results[0]), others: [] }),
+    ).toThrow(FighterResultsParseError);
+  });
 
   it("asks with POST for one fighter, never cached, and refuses a bad slug before asking", async () => {
-    const ok = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [rowToResult(row)] }) });
-    expect(await fetchFighterResults("ann-one", ok as unknown as typeof fetch)).toHaveLength(1);
+    const ok = vi.fn().mockResolvedValue({ ok: true, json: async () => career() });
+    expect((await fetchFighterResults("ann-one", ok as unknown as typeof fetch)).others).toHaveLength(1);
     expect(ok).toHaveBeenCalledWith("/api/fighters/ann-one/results", { method: "POST", cache: "no-store" });
     await expect(fetchFighterResults("Bad Slug!", ok as unknown as typeof fetch)).rejects.toBeInstanceOf(
       FighterResultsParseError,
@@ -104,18 +140,20 @@ describe("POST /api/fighters/[slug]/results", () => {
   afterEach(() => info.mockRestore());
 
   it("serves one fighter's results, never cached", async () => {
-    revealFighterResults.mockResolvedValue([rowToResult(row)]);
+    revealFighterResults.mockResolvedValue({ results: [rowToResult(row)], others: [rowToOther(other)] });
     const response = await call("ann-one");
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect((await response.json()).results).toHaveLength(1);
+    const body = await response.json();
+    expect(body.results).toHaveLength(1);
+    expect(body.others).toHaveLength(1);
     expect(revealFighterResults).toHaveBeenCalledWith("ann-one");
   });
 
   it("rejects a bad slug first and answers 404 and 503 generically", async () => {
     expect((await call("Bad Slug!")).status).toBe(400);
     expect(revealFighterResults).not.toHaveBeenCalled();
-    revealFighterResults.mockResolvedValue([]);
+    revealFighterResults.mockResolvedValue({ results: [], others: [] });
     expect((await call("nobody")).status).toBe(404);
     revealFighterResults.mockRejectedValue(new Error("boom with details"));
     const failed = await call("ann-one");
@@ -126,7 +164,7 @@ describe("POST /api/fighters/[slug]/results", () => {
   it("exports POST only, is dynamic and logs no name, fight or result", async () => {
     expect(Object.keys(route).filter((n) => /^(GET|PUT|PATCH|DELETE|HEAD|OPTIONS)$/.test(n))).toEqual([]);
     expect(route.dynamic).toBe("force-dynamic");
-    revealFighterResults.mockResolvedValue([rowToResult(row)]);
+    revealFighterResults.mockResolvedValue({ results: [rowToResult(row)], others: [] });
     await call("ann-one");
     for (const [line] of info.mock.calls) {
       expect(Object.keys(JSON.parse(String(line))).sort()).toEqual(["route", "status"]);

@@ -53,11 +53,21 @@ class Record:
 
 @dataclass(frozen=True)
 class RecordRow:
-    """One bout of the table. `after` is the record AFTER it; the bout's result is not kept."""
+    """One bout of the table. `after` is the record AFTER it.
+
+    `result`, `method`, `event` and `round` are the bout's own outcome, read only for the career
+    list of a fighter's page (`career_bouts`): result data kept in a private table and shown behind
+    a click. The record-before logic (`record_before`) never reads them.
+    """
 
     date: dt.date
     opponent: str
     after: Record
+    #: "win", "loss", "draw" or "no_contest"; None when the cell is not one of those.
+    result: str | None = None
+    method: str | None = None
+    event: str | None = None
+    round: int | None = None
 
 
 DEBUT = Record(0, 0, 0, 0)
@@ -266,7 +276,62 @@ def _row(cells: list[str], columns: dict[str, int]) -> RecordRow | None:
         return None
     if record is None or date is None or opponent == "":
         return None
-    return RecordRow(date=date, opponent=opponent, after=record)
+    return RecordRow(
+        date=date,
+        opponent=opponent,
+        after=record,
+        result=_result(_cell(cells, columns, "res") or _cell(cells, columns, "result")),
+        method=_short(_cell(cells, columns, "method")),
+        event=_short(_cell(cells, columns, "event")),
+        round=_round(_cell(cells, columns, "round")),
+    )
+
+
+def _cell(cells: list[str], columns: dict[str, int], name: str) -> str | None:
+    index = columns.get(name)
+    return clean_wikitext(cells[index]) if index is not None and index < len(cells) else None
+
+
+def _short(text: str | None, limit: int = 80) -> str | None:
+    """A cell as plain text of reasonable length; None when empty."""
+    if text is None:
+        return None
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit] if text else None
+
+
+def _result(text: str | None) -> str | None:
+    word = (text or "").strip().lower()
+    if word.startswith("win"):
+        return "win"
+    if word.startswith("loss"):
+        return "loss"
+    if word.startswith("draw"):
+        return "draw"
+    if word in ("nc", "no contest") or word.startswith("no contest"):
+        return "no_contest"
+    return None
+
+
+def _round(text: str | None) -> int | None:
+    match = re.match(r"\s*(\d{1,2})\b", text or "")
+    found = int(match.group(1)) if match else None
+    return found if found is not None and 1 <= found <= 25 else None  # 0: no round was fought
+
+
+def career_bouts(
+    rows: list[RecordRow], own_dates: set[dt.date], *, tolerance_days: int = 1
+) -> list[RecordRow]:
+    """The bouts of the table that are not in our own data: every row with a usable result whose
+    date is not within a day of one of `own_dates` (the dates of the fighter's fights we store: they
+    carry their own ratings and results). A fighter fights once on a date, so the date is enough."""
+    own = sorted(own_dates)
+    return [
+        row
+        for row in rows
+        if row.result is not None
+        and not any(abs((row.date - date).days) <= tolerance_days for date in own)
+    ]
 
 
 def record_before(

@@ -197,3 +197,31 @@ their stars, 481 + 29 rise (29 by a full star), 539 fall by half a star. The fal
 fights (mean 0.6 submission attempts plus reversals) that lose a rank to the risers, who have 4.2 on
 average; stars are percentile-based, so every rise pushes some fights down. Classics 70 -> 72 (0.83%),
 `audit-scores --strict` clean. The fight that prompted it goes from 2.0 to 2.5.
+
+## Score v24: a one-sided knockout is not a dull fight
+
+Prompted by a first-round TKO (4:59 of a three-round fight, 37 significant strikes for the winner and none
+for the loser) that v23 rated 2.0. Nothing in the data was wrong: the loser landed nothing, so `min_pace`
+(the pace of the less active fighter, the heaviest weight of v22 and v23, 1.0) was 0, and the finish
+was almost at the bell, so it earned little for coming early.
+
+Checked on the 5577 fights with bonus labels (v23 stars):
+
+- First-round KO/TKOs where the loser landed nothing (135 fights) got a Performance of the Night bonus
+  in 25% of the cases among those rated 2.0 or lower, 22% at 2.5-3.0 and 33% at 3.5 and up, against 2%
+  for the other first-round KOs rated 2.0 or lower. The low stars were not what the bonuses said.
+- The point of `min_pace` is two-way action in a fight that went on. In a finish the loser's output says
+  little: the fight ended because one fighter did.
+
+v24 is a fit like v22 (same recipe, same leak margin 0.30) with two changes to its features: `min_pace`
+is replaced by `min_pace_nofinish` (zero after a real finish) and the fit takes v23's `control_stalling`
+in place of `control_share_nofinish` (so the weight is fitted, -0.38, instead of copied). Held out on
+2024 onwards: Fight of the Night AUC 0.778 (v22 0.795), Performance of the Night AUC 0.749 (0.737),
+finish-in-round-1 AUC 0.665 (0.648). Bonus rate at 2.0 stars 3.3% (5.0%), at 4.5 stars 37.7% (36.4%), every
+step still rising. KO/TKOs rated 2.0 or lower fell from 158 to 101 of 2,741 (decisions rose from 1,951 to
+2,066 in the same range). `audit-scores --strict` clean.
+
+Honest limit: this fight goes from the 17th to the 24th percentile and stays at 2.0 (2.5 starts at the
+28th). Fixing that one fight outright would need a rule that lifts every one-sided KO, which the labels
+do not support (the Fight of the Night AUC already gives up 0.017 here). Raising `--finish-leak` is the
+other lever: more credit for every finish, at the cost of the Fight of the Night ranking.

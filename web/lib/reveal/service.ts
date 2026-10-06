@@ -3,8 +3,8 @@ import { getSupabase } from "@/lib/supabase/server";
 import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
 import { ELO_ROWS_SHOWN, rowsToEntries, type EloEntry, type EloRow } from "@/lib/elo/board";
 import { rowsToSteps, type EloStepRow, type EloStepView } from "@/lib/elo/history";
-import { rowsToResults, type FighterResultRow } from "@/lib/fighters/map";
-import type { FighterResult } from "@/lib/fighters/results";
+import { rowsToOthers, rowsToResults, type FighterResultRow, type OtherBoutRow } from "@/lib/fighters/map";
+import type { FighterCareer } from "@/lib/fighters/results";
 import { rowToPick, type PickRow, type UpcomingPick } from "@/lib/upcoming/pick";
 import { RevealUnavailableError } from "./errors";
 import { buildScoreBreakdown } from "./breakdown";
@@ -85,13 +85,22 @@ export async function revealEloHistory(slug: string): Promise<EloStepView[]> {
 }
 
 /**
- * How every fight of one fighter ended, newest first. Result data like `reveal_fight`: only called
+ * How every fight of one fighter ended, newest first, and the rest of their career. Result data like `reveal_fight`: only called
  * from a POST route after a click on the fighter page, one fighter per call, and the database
  * function (not this code) enforces the row limit.
  */
-export async function revealFighterResults(slug: string): Promise<FighterResult[]> {
-  const { data, error } = await getSupabase().rpc("fighter_results", { p_slug: slug });
-  if (error) throw new RevealUnavailableError(error.code ?? "unknown");
-  if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
-  return rowsToResults(data as FighterResultRow[]);
+export async function revealFighterResults(slug: string): Promise<FighterCareer> {
+  const db = getSupabase();
+  const [own, other] = await Promise.all([
+    db.rpc("fighter_results", { p_slug: slug }),
+    db.rpc("fighter_other_bouts", { p_slug: slug }),
+  ]);
+  for (const answer of [own, other]) {
+    if (answer.error) throw new RevealUnavailableError(answer.error.code ?? "unknown");
+    if (!Array.isArray(answer.data)) throw new RevealUnavailableError("bad_shape");
+  }
+  return {
+    results: rowsToResults(own.data as FighterResultRow[]),
+    others: rowsToOthers(other.data as OtherBoutRow[]),
+  };
 }

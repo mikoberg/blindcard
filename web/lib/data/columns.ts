@@ -5,7 +5,7 @@
  */
 export const EVENT_COLUMNS = "id, name, slug, event_date, location";
 export const FIGHT_COLUMNS =
-  "id, event_id, card_position, card_segment, career, records, elo, weight_class, is_title_fight, scheduled_rounds, fighter_a_id, fighter_b_id";
+  "id, event_id, card_position, card_segment, career, records, elo, ranks, weight_class, is_title_fight, scheduled_rounds, fighter_a_id, fighter_b_id";
 export const FIGHTER_COLUMNS = "id, name, country, style, slug";
 /** Which fighters have a profile page: the ones with a rated fight (the `fighter_ratings` view). */
 export const FIGHTER_PAGE_COLUMNS = "slug";
@@ -28,4 +28,4 @@ export const JUDGE_BASELINE_COLUMNS = "cards, dissent, abs_sum, abs_sumsq, judge
 export const UPCOMING_EVENT_COLUMNS =
   "id, name, slug, event_date, location, main_card_at, prelims_at, early_prelims_at";
 export const UPCOMING_BOUT_COLUMNS =
-  "id, event_id, card_position, segment, weight_class, is_title_fight, fighter_a_name, fighter_b_name, predicted_stars, prediction_basis, prediction_why, has_pick, fighter_a_record, fighter_b_record, fighter_a_elo, fighter_b_elo, fighter_a_style, fighter_b_style, fighter_a:fighters!fighter_a_id(slug, country, style), fighter_b:fighters!fighter_b_id(slug, country, style)";
+  "id, event_id, card_position, segment, weight_class, is_title_fight, fighter_a_name, fighter_b_name, predicted_stars, prediction_basis, prediction_why, has_pick, fighter_a_record, fighter_b_record, fighter_a_elo, fighter_b_elo, fighter_a_rank, fighter_b_rank, fighter_a_style, fighter_b_style, fighter_a:fighters!fighter_a_id(slug, country, style), fighter_b:fighters!fighter_b_id(slug, country, style)";

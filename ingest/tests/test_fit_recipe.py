@@ -36,7 +36,7 @@ def synthetic_rows(seed: int = 1) -> list[LabeledRow]:
             action = rng.random()
             raw.update(
                 pace=4 + 8 * action + rng.random(),
-                min_pace=1 + 4 * action,
+                min_pace_nofinish=0.0 if ko else 1 + 4 * action,
                 swings=float(rng.randint(0, 3)) * action,
                 knockdowns=float(ko),
                 ko_finish=1.0 if ko else 0.0,
@@ -74,7 +74,7 @@ def result() -> FitResult:
 def test_the_score_follows_the_action_and_leaves_out_redundant_duration(result: FitResult) -> None:
     assert set(result.weights) <= set(SCORE_FEATURES)
     assert "time_fraction" not in result.weights  # early_finish says the same
-    assert result.weights["min_pace"] > 0
+    assert result.weights["min_pace_nofinish"] > 0
     assert max(abs(w) for w in result.weights.values()) == 1.0
 
 

@@ -68,6 +68,8 @@ export interface CardFight {
   records: FightRecords | null;
   /** Elo going into the bout, never after it (see lib/card/elo.ts). null = not computed. */
   elo?: { a: FighterElo | null; b: FighterElo | null } | null;
+  /** UFC ranking going into the bout (0 = champion), never after it. null = neither is ranked. */
+  ranks?: { a: number | null; b: number | null } | null;
   weightClass: string | null;
   isTitleFight: boolean;
   scheduledRounds: number | null;

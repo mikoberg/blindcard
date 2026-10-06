@@ -6,6 +6,7 @@ titles per query, `maxlag=5` so we back off when the servers are busy, redirects
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import logging
 from collections.abc import Sequence
@@ -21,6 +22,21 @@ EVENTS_LIST_PAGE = "List_of_UFC_events"
 BATCH_SIZE = 50
 LIST_MAX_AGE_SECONDS = 24 * 3600
 PAGES_MAX_AGE_SECONDS = 7 * 24 * 3600
+RANKINGS_PAGE = "UFC_rankings"
+RANKINGS_LIST_MAX_AGE_SECONDS = 3600
+REVISION_MAX_AGE_SECONDS = 365 * 24 * 3600
+
+
+def _revision_rows(data: dict[str, Any]) -> list[tuple[int, dt.datetime]]:
+    rows: list[tuple[int, dt.datetime]] = []
+    for page in data.get("query", {}).get("pages", []):
+        for revision in page.get("revisions") or []:
+            try:
+                when = dt.datetime.strptime(str(revision["timestamp"]), "%Y-%m-%dT%H:%M:%SZ")
+                rows.append((int(revision["revid"]), when.replace(tzinfo=dt.UTC)))
+            except (KeyError, TypeError, ValueError):
+                continue
+    return rows
 
 
 class WikipediaError(RuntimeError):
@@ -54,6 +70,61 @@ class WikipediaClient:
             return str(data["parse"]["wikitext"])
         except (KeyError, TypeError) as exc:
             raise WikipediaError("the events list has no wikitext") from exc
+
+    def ranking_revisions(self, since: dt.datetime) -> list[tuple[int, dt.datetime]]:
+        """The revisions of the UFC rankings article from the one in force at `since` on, oldest
+        first, as (revision id, time in UTC). Revisions never change, so a revision's text can be
+        kept for good; the list itself is refreshed hourly."""
+        stamp = since.strftime("%Y-%m-%dT%H:%M:%SZ")
+        revisions: list[tuple[int, dt.datetime]] = []
+        base = {
+            "action": "query",
+            "prop": "revisions",
+            "titles": RANKINGS_PAGE,
+            "rvprop": "ids|timestamp",
+        }
+        # The revision in force at `since` (the newest one before it), then everything after.
+        start = self._get_json(
+            {**base, "rvlimit": "1", "rvdir": "older", "rvstart": stamp},
+            max_age_seconds=RANKINGS_LIST_MAX_AGE_SECONDS,
+        )
+        revisions.extend(_revision_rows(start))
+        params = {**base, "rvlimit": "500", "rvdir": "newer", "rvstart": stamp}
+        for _ in range(40):  # a page of 500 each time; a few years are a few pages
+            data = self._get_json(params, max_age_seconds=RANKINGS_LIST_MAX_AGE_SECONDS)
+            revisions.extend(_revision_rows(data))
+            more = data.get("continue", {}).get("rvcontinue")
+            if not more:
+                break
+            params = {**params, "rvcontinue": str(more)}
+        unique = {revid: when for revid, when in revisions}
+        return sorted(unique.items(), key=lambda item: item[1])
+
+    def revision_wikitexts(self, revids: Sequence[int], *, batch_size: int = 8) -> dict[int, str]:
+        """The wikitext of each requested revision of the rankings article (kept for good: a
+        revision never changes). Small batches: each text is 25 to 170 KB."""
+        result: dict[int, str] = {}
+        unique = sorted(set(revids))
+        for start in range(0, len(unique), batch_size):
+            batch = unique[start : start + batch_size]
+            data = self._get_json(
+                {
+                    "action": "query",
+                    "prop": "revisions",
+                    "rvprop": "ids|content",
+                    "rvslots": "main",
+                    "revids": "|".join(str(r) for r in batch),
+                },
+                max_age_seconds=REVISION_MAX_AGE_SECONDS,
+            )
+            for page in data.get("query", {}).get("pages", []):
+                for revision in page.get("revisions") or []:
+                    try:
+                        result[int(revision["revid"])] = str(revision["slots"]["main"]["content"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+        logger.info("fetched %d of %d requested revisions", len(result), len(unique))
+        return result
 
     def search_titles(self, query: str, *, limit: int = 3) -> list[str]:
         """Titles of the best article matches for `query` (accent-insensitive: "Natalia Silva"

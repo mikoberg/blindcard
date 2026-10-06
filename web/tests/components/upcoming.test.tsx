@@ -249,14 +249,11 @@ describe("fighting styles", () => {
       ],
     });
 
-  it("shows the styles under the name, comma separated, and nothing when they are not known", () => {
+  it("leaves the styles off an announced bout: they are on the fighter's page", () => {
     const html = renderToStaticMarkup(
-      <UpcomingView event={styled(["Kickboxing", "Brazilian jiu-jitsu"], [])} today={TODAY} />,
+      <UpcomingView event={styled(["Kickboxing", "Brazilian jiu-jitsu"], ["Wrestling"])} today={TODAY} />,
     );
-    expect(html).toContain("Kickboxing, Brazilian jiu-jitsu");
-    expect(html.match(/>Kickboxing, Brazilian jiu-jitsu</g)).toHaveLength(1); // the title attribute repeats it for a truncated line
-    const none = renderToStaticMarkup(<UpcomingView event={styled([], [])} today={TODAY} />);
-    expect(none).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
+    expect(html).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
   });
 
   it("maps only plain labels from the database and at most three", () => {
@@ -301,5 +298,32 @@ describe("Elo on an upcoming card", () => {
   it("shows nothing for a fighter with no earlier fight", () => {
     const html = render(fighter("Alan A", null), fighter("Ben B", null));
     expect(html).not.toContain("Elo");
+  });
+});
+
+describe("UFC ranks on an upcoming card", () => {
+  const fighter = (name: string, rank: number | null) => ({
+    name,
+    slug: null,
+    country: null,
+    record: null,
+    styles: [],
+    rank,
+  });
+  const render = (a: ReturnType<typeof fighter>, b: ReturnType<typeof fighter>) =>
+    renderToStaticMarkup(<UpcomingView event={event({ bouts: [bout({ a, b })] })} today={TODAY} />);
+
+  it("shows today's place, and the champion as C", () => {
+    const html = render(fighter("Alan A", 0), fighter("Ben B", 3));
+    expect(html).toContain('aria-label="Champion"');
+    expect(html).toContain('aria-label="Ranked number 3 in the division"');
+    expect(html).toContain(">C<");
+    expect(html).toContain(">#3<");
+  });
+
+  it("shows nothing for an unranked fighter, nor on a card without ranks", () => {
+    const html = render(fighter("Alan A", null), fighter("Ben B", 7));
+    expect(html.match(/in the division/g)).toHaveLength(1);
+    expect(render(fighter("Alan A", null), fighter("Ben B", null))).not.toContain("in the division");
   });
 });

@@ -15,3 +15,7 @@ award, a special one-off bonus).
 The `sherdog_*.html` and `../ufc_event_times.html` files are not copies of pages: they are small hand-made
 files with the same element structure the parsers read (names of rivals are placeholders), kept only to test
 those parsers.
+
+- `ufc_rankings_layouts.json`: the Lightweight (and one women's) section of the English Wikipedia
+  article "UFC rankings" in its four layouts (2018, 2021, 2024 and the current one), cut to the first
+  rows with references removed. Text of Wikipedia, CC BY-SA 4.0.

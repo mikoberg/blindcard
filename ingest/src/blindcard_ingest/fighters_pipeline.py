@@ -24,6 +24,7 @@ from blindcard_ingest.sources.wikipedia.countries import country_code
 from blindcard_ingest.sources.wikipedia.fighter_record import (
     Record,
     RecordRow,
+    career_bouts,
     parse_record_rows,
     record_before,
 )
@@ -127,6 +128,7 @@ def run_ingest_fighters(
     countries: dict[str, str] = {}
     styles: dict[str, list[str]] = {}
     records: dict[str, dict[str, Any]] = defaultdict(dict)
+    careers: dict[str, list[RecordRow]] = {}
     pending = set(names)
 
     def take(fighter: str, text: str) -> bool:
@@ -146,6 +148,10 @@ def run_ingest_fighters(
             report.fighters_with_style += 1
         for fight_source_id, (side, record) in found.items():
             records[fight_source_id][side] = record_json(record)
+        # The rest of the career (earlier fights, other promotions): result data, kept privately.
+        careers[fighter] = career_bouts(
+            parse_record_rows(text), {a.event_date for a in appearances[fighter]}
+        )
         return True
 
     for suffix in TITLE_SUFFIXES if use_wikipedia else ():
@@ -208,11 +214,13 @@ def run_ingest_fighters(
         changed_countries = repo.set_fighter_countries(source_name, countries)
         changed_records = repo.set_fight_records(source_name, records)
         changed_styles = repo.set_fighter_styles(source_name, styles)
+        stored_bouts = repo.set_fighter_bouts(source_name, careers)
         logger.info(
-            "ingest-fighters: %d countries, %d fights' records and %d styles changed",
+            "ingest-fighters: %d countries, %d fights' records, %d styles, %d other bouts changed",
             changed_countries,
             changed_records,
             changed_styles,
+            stored_bouts,
         )
     logger.info("ingest-fighters%s: %s", " (dry run)" if dry_run else "", report.summary())
     return report

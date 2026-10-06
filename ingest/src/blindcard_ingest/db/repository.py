@@ -32,6 +32,7 @@ from blindcard_ingest.predict.types import (
     FightElo,
     FighterNow,
     FightOutcome,
+    RankBout,
     UpcomingBoutInput,
     UpcomingElo,
     UpcomingPick,
@@ -47,9 +48,10 @@ from blindcard_ingest.scoring.features import (
     is_injury_stoppage,
 )
 from blindcard_ingest.scoring.scorer import Reference, ScoredFight
+from blindcard_ingest.sources.wikipedia.fighter_record import RecordRow
 from blindcard_ingest.sources.wikipedia.fighter_style import merge_styles
 from blindcard_ingest.upcoming import UpcomingEvent
-from blindcard_ingest.upcoming_records import current_record
+from blindcard_ingest.upcoming_records import current_record, with_later_bouts
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +226,28 @@ class Repository(Protocol):
     def set_fighter_styles(self, source: str, styles: Mapping[str, Sequence[str]]) -> int:
         """Add style labels to fighters by source id (kept with what is stored, at most three);
         returns how many rows changed."""
+        ...
+
+    def set_fighter_bouts(self, source: str, bouts: Mapping[str, Sequence[RecordRow]]) -> int:
+        """Replace, per fighter (by source id), the bouts of their career that are not in our own
+        data (RESULT DATA: a private table, shown only after a click). Returns the rows written."""
+        ...
+
+    def rank_bouts(self, from_year: int) -> list[RankBout]:
+        """Stored fights from `from_year` on, with the weight class and both names."""
+        ...
+
+    def rank_bouts_upcoming(self) -> list[RankBout]:
+        """Announced bouts, with the weight class and both names."""
+        ...
+
+    def set_fight_ranks(self, ranks: Mapping[str, tuple[int | None, int | None]]) -> int:
+        """Store the UFC rank of both fighters going into each fight (`fights.ranks`, public:
+        pre-fight only; 0 = champion), by fight id. A fight with no ranked fighter has none."""
+        ...
+
+    def set_upcoming_ranks(self, ranks: Mapping[str, tuple[int | None, int | None]]) -> int:
+        """Store the current UFC rank of both fighters of each announced bout, by bout id."""
         ...
 
     def fighters_for_ufc_styles(self, limit: int, *, older_than_days: int) -> list[StyleCandidate]:
@@ -762,6 +786,97 @@ class PostgresRepository:
                 changed += cur.rowcount
         return changed
 
+    def set_fighter_bouts(self, source: str, bouts: Mapping[str, Sequence[RecordRow]]) -> int:
+        source_ids = list(bouts)
+        flat = [(sid, row) for sid, rows in bouts.items() for row in rows]
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(
+                "delete from public.fighter_bouts where fighter_id in"
+                " (select id from public.fighters where source = %s and source_id = any(%s))",
+                (source, source_ids),
+            )
+            if not flat:
+                return 0
+            cur.execute(
+                "insert into public.fighter_bouts"
+                " (fighter_id, bout_date, opponent, result, method, event_name, round)"
+                " select f.id, v.d, v.opp, v.res, v.meth, v.ev, v.rnd"
+                " from unnest(%s::text[], %s::date[], %s::text[], %s::text[], %s::text[],"
+                "             %s::text[], %s::int[]) as v(sid, d, opp, res, meth, ev, rnd)"
+                " join public.fighters f on f.source = %s and f.source_id = v.sid"
+                " on conflict do nothing",
+                (
+                    [sid for sid, _ in flat],
+                    [row.date for _, row in flat],
+                    [row.opponent for _, row in flat],
+                    [row.result for _, row in flat],
+                    [row.method for _, row in flat],
+                    [row.event for _, row in flat],
+                    [row.round for _, row in flat],
+                    source,
+                ),
+            )
+            return cur.rowcount
+
+    def rank_bouts(self, from_year: int) -> list[RankBout]:
+        query = """
+            select f.id::text as key, e.event_date, f.weight_class,
+                   a.name as a_name, b.name as b_name
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fighters a on a.id = f.fighter_a_id
+            join public.fighters b on b.id = f.fighter_b_id
+            where e.event_date >= make_date(%s, 1, 1)
+            order by e.event_date, f.card_position
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (from_year,))
+            return [RankBout(**row) for row in cur.fetchall()]
+
+    def rank_bouts_upcoming(self) -> list[RankBout]:
+        query = """
+            select b.id::text as key, e.event_date, b.weight_class,
+                   b.fighter_a_name as a_name, b.fighter_b_name as b_name
+            from public.upcoming_bouts b
+            join public.upcoming_events e on e.id = b.event_id
+            order by e.event_date, b.card_position
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query)
+            return [RankBout(**row) for row in cur.fetchall()]
+
+    def set_fight_ranks(self, ranks: Mapping[str, tuple[int | None, int | None]]) -> int:
+        if not ranks:
+            return 0
+        ids = list(ranks)
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(
+                "update public.fights f set ranks = case"
+                "   when v.a is null and v.b is null then null"
+                "   else jsonb_strip_nulls(jsonb_build_object('a', v.a, 'b', v.b)) end"
+                " from unnest(%s::uuid[], %s::int[], %s::int[]) as v(id, a, b)"
+                " where f.id = v.id and f.ranks is distinct from case"
+                "   when v.a is null and v.b is null then null"
+                "   else jsonb_strip_nulls(jsonb_build_object('a', v.a, 'b', v.b)) end",
+                (ids, [ranks[i][0] for i in ids], [ranks[i][1] for i in ids]),
+            )
+            return cur.rowcount
+
+    def set_upcoming_ranks(self, ranks: Mapping[str, tuple[int | None, int | None]]) -> int:
+        ids = list(ranks)
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(
+                "update public.upcoming_bouts set fighter_a_rank = null, fighter_b_rank = null"
+            )
+            if not ids:
+                return 0
+            cur.execute(
+                "update public.upcoming_bouts b set fighter_a_rank = v.a, fighter_b_rank = v.b"
+                " from unnest(%s::uuid[], %s::int[], %s::int[]) as v(id, a, b) where b.id = v.id",
+                (ids, [ranks[i][0] for i in ids], [ranks[i][1] for i in ids]),
+            )
+            return cur.rowcount
+
     def fighters_for_ufc_styles(self, limit: int, *, older_than_days: int) -> list[StyleCandidate]:
         query = """
             select f.id::text as id, f.name,
@@ -1094,7 +1209,7 @@ class PostgresRepository:
                    case when f.fighter_a_id = x.fid then f.records -> 'a' else f.records -> 'b' end
                      as going_in,
                    r.outcome, (r.winner_fighter_id = x.fid) as won,
-                   r.winner_fighter_id is null as open
+                   r.winner_fighter_id is null as open, e.event_date as last_date
             from (select unnest(%s::uuid[]) as fid) x
             join public.fights f on f.fighter_a_id = x.fid or f.fighter_b_id = x.fid
             join public.events e on e.id = f.event_id
@@ -1104,13 +1219,32 @@ class PostgresRepository:
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute(query, (list(fighter_ids),))
             rows = cur.fetchall()
+        # Bouts after the latest fight we store (other promotions, from the fighter's Wikipedia
+        # table) are not in that fight's record going in, so they are added.
+        later_query = """
+            select b.fighter_id::text as fid, b.result, count(*) as n
+            from public.fighter_bouts b
+            join (select unnest(%s::uuid[]) as fid, unnest(%s::date[]) as last_date) x
+              on x.fid = b.fighter_id and b.bout_date > x.last_date
+            group by 1, 2
+        """
         records: dict[str, dict[str, int]] = {}
+        last_dates: dict[str, date] = {}
         for row in rows:
             record = current_record(
                 row["going_in"], row["outcome"], None if row["open"] else row["won"]
             )
             if record is not None:
                 records[row["fid"]] = record
+                last_dates[row["fid"]] = row["last_date"]
+        if records:
+            with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+                cur.execute(later_query, (list(last_dates), list(last_dates.values())))
+                later: dict[str, dict[str, int]] = {}
+                for row in cur.fetchall():
+                    later.setdefault(row["fid"], {})[row["result"]] = int(row["n"])
+            for fid, counts in later.items():
+                records[fid] = with_later_bouts(records[fid], counts)
         return records
 
     def replace_upcoming(

@@ -301,3 +301,17 @@ def test_control_stalling_leaves_the_older_feature_alone_and_is_zero_after_a_fin
     knockout = [rnd(1, A, sig=10, kd=1, control=120), rnd(1, B, sig=5)]
     done = compute_raw_features(scoring_input(knockout, method="KO/TKO", end_round=1, end_time=100))
     assert done["control_stalling"] == 0
+
+
+def test_min_pace_nofinish_only_counts_when_no_real_finish_ended_the_fight() -> None:
+    rounds = [rnd(1, A, sig=30), rnd(1, B, sig=10)]
+    quiet_ko = [rnd(1, A, sig=37), rnd(1, B, sig=0)]
+    ko = compute_raw_features(scoring_input(quiet_ko, method="KO/TKO", end_round=1, end_time=299))
+    assert ko["min_pace"] == 0 and ko["min_pace_nofinish"] == 0
+    busy_ko = compute_raw_features(
+        scoring_input(rounds, method="KO/TKO", end_round=1, end_time=290)
+    )
+    assert busy_ko["min_pace"] > 0 and busy_ko["min_pace_nofinish"] == 0  # a finish: not counted
+    distance = [rnd(r, f, sig=s) for r in (1, 2, 3) for f, s in ((A, 30), (B, 10))]
+    full = compute_raw_features(scoring_input(distance))
+    assert full["min_pace_nofinish"] == pytest.approx(full["min_pace"]) and full["min_pace"] > 0

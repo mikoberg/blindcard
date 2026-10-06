@@ -131,6 +131,8 @@ class FakeRepository:
     predictions: list | None = None
     outcome_rows: list = field(default_factory=list)
     elo_fight_rows: list = field(default_factory=list)
+    rank_bout_rows: list = field(default_factory=list)
+    rank_bout_upcoming_rows: list = field(default_factory=list)
     score_versions: list = field(default_factory=list)
     active_version: int | None = None
     picks: list | None = None
@@ -342,6 +344,24 @@ class FakeRepository:
 
     def reclaim_score_space(self) -> None:
         self.reclaimed = True
+
+    def set_fighter_bouts(self, source, bouts) -> int:  # type: ignore[no-untyped-def]
+        self.fighter_bouts = {k: list(v) for k, v in bouts.items()}
+        return sum(len(v) for v in bouts.values())
+
+    def rank_bouts(self, from_year):  # type: ignore[no-untyped-def]
+        return [b for b in self.rank_bout_rows if b.event_date.year >= from_year]
+
+    def rank_bouts_upcoming(self):  # type: ignore[no-untyped-def]
+        return list(self.rank_bout_upcoming_rows)
+
+    def set_fight_ranks(self, ranks) -> int:  # type: ignore[no-untyped-def]
+        self.fight_ranks = dict(ranks)
+        return len(ranks)
+
+    def set_upcoming_ranks(self, ranks) -> int:  # type: ignore[no-untyped-def]
+        self.upcoming_ranks = dict(ranks)
+        return len(ranks)
 
     def set_fighters_now(self, rows) -> None:  # type: ignore[no-untyped-def]
         self.fighters_now_rows = list(rows)

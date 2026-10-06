@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { eloGap, isProvisional, type FighterElo } from "@/lib/card/elo";
+import { rankSpoken, rankText } from "@/lib/card/rank";
 import { recordParts } from "@/lib/card/record";
 import type { FighterRecord } from "@/lib/card/types";
 import { Monogram } from "./Monogram";
@@ -9,11 +10,12 @@ export interface MatchupFighter {
   /** The profile page, when there is one. */
   slug?: string | null;
   country?: string | null;
-  styles?: string[];
   record: FighterRecord | null;
   /** A short note under the line, e.g. "Won 5 in a row". */
   note?: string | null;
   elo?: FighterElo | null;
+  /** UFC ranking in the division (0 = champion); null or missing when not ranked. */
+  rank?: number | null;
 }
 
 /**
@@ -29,6 +31,20 @@ export function nameSize(longest: number): string {
 /** Said to assistive tech, in front of the number: what the rating is the rating OF. */
 const ELO_LABEL = { before: "Elo going into the fight", now: "Elo today" } as const;
 
+/** "#3", or "C" for a champion: the official ranking, ink for a place, gold for the champion. */
+function RankChip({ rank, when }: { rank: number; when: keyof typeof ELO_LABEL }) {
+  return (
+    <span
+      aria-label={rankSpoken(rank, when === "now" ? "now" : "before")}
+      className={`shrink-0 whitespace-nowrap rounded-sm px-1.5 py-0.5 text-xs font-semibold leading-none tabular-nums ${
+        rank === 0 ? "bg-[var(--gold-mid)] text-[var(--ink)]" : "bg-[var(--text)] text-[var(--surface)]"
+      }`}
+    >
+      <span aria-hidden="true">{rankText(rank)}</span>
+    </span>
+  );
+}
+
 /** "Elo 1712", quieter than the record; set apart as provisional when it rests on few fights. */
 function EloChip({ elo, when }: { elo: FighterElo; when: keyof typeof ELO_LABEL }) {
   const provisional = isProvisional(elo);
@@ -39,7 +55,7 @@ function EloChip({ elo, when }: { elo: FighterElo; when: keyof typeof ELO_LABEL 
     <span
       aria-label={spoken}
       title={provisional ? `Provisional: based on ${elo.fights} ${elo.fights === 1 ? "fight" : "fights"}` : undefined}
-      className={`whitespace-nowrap text-xs tabular-nums text-[var(--muted)] ${provisional ? "italic" : ""}`}
+      className={`shrink-0 whitespace-nowrap text-xs tabular-nums text-[var(--muted)] ${provisional ? "italic" : ""}`}
     >
       <span aria-hidden="true">
         Elo {provisional ? "~" : ""}
@@ -101,12 +117,13 @@ function FighterMeta({
     <span className={`block min-w-0 ${mirrored ? "sm:text-right" : ""} ${className}`}>
       <span
         data-matchup-meta
-        className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm sm:flex-nowrap ${mirrored ? "sm:flex-row-reverse" : ""}`}
+        className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm md:flex-nowrap ${mirrored ? "sm:flex-row-reverse" : ""}`}
       >
         <Monogram name={fighter.name} country={fighter.country} size="sm" />
+        {typeof fighter.rank === "number" && <RankChip rank={fighter.rank} when={when} />}
         {parts && (
           <span
-            className="leading-none"
+            className="shrink-0 whitespace-nowrap leading-none"
             aria-label={`Record ${when === "now" ? "going into the fight" : "before the fight"}: ${parts.main}${caption ? ` ${caption}` : ""}`}
           >
             <span aria-hidden="true" className="display-tight tabular-nums">
@@ -120,10 +137,9 @@ function FighterMeta({
           </span>
         )}
         {fighter.elo && <EloChip elo={fighter.elo} when={when} />}
-        {fighter.note && <span className="whitespace-nowrap text-xs text-[var(--muted)]">{fighter.note}</span>}
-        {fighter.styles && fighter.styles.length > 0 && (
-          <span title={fighter.styles.join(", ")} className="min-w-0 truncate text-xs text-[var(--muted)]">
-            {fighter.styles.join(", ")}
+        {fighter.note && (
+          <span className="min-w-0 text-xs text-[var(--muted)] md:truncate" title={fighter.note}>
+            {fighter.note}
           </span>
         )}
       </span>

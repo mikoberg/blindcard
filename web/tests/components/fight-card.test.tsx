@@ -168,17 +168,19 @@ describe("FightCard: the official video", () => {
 });
 
 describe("FightCard fighting styles", () => {
-  it("shows each fighter's styles under their own name, and nothing when they are not known", () => {
+  it("leaves the styles off the card: they are on the fighter's page, and the line stays short", () => {
     const html = render(
       makeFight(2, 4, {
         fighterA: { id: "a", name: "Ann One", country: "br", styles: ["Kickboxing", "Brazilian jiu-jitsu"] },
-        fighterB: { id: "b", name: "Bea Two", country: "se" },
+        fighterB: { id: "b", name: "Bea Two", country: "se", styles: ["Wrestling"] },
       }),
     );
-    const a = html.indexOf(">Ann One<");
-    const b = html.indexOf(">Bea Two<");
-    expect(html.slice(a, b)).toContain("Kickboxing, Brazilian jiu-jitsu");
-    expect(html.slice(b)).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
+    expect(html).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
+  });
+
+  it("keeps a record from breaking across two lines", () => {
+    const html = render(makeFight(2, 4, { records: { a: { w: 22, l: 5, d: 0, nc: 0 }, b: { w: 12, l: 1, d: 0, nc: 0 } } }));
+    expect(html).toMatch(/whitespace-nowrap leading-none"[^>]*aria-label="Record before the fight: 22-5"/);
   });
 });
 
@@ -253,5 +255,20 @@ describe("FightCard matchup layout", () => {
     expect(html.match(/sm:row-start-2/g)).toHaveLength(2);
     expect(html).toContain("sm:row-span-2");
     expect(html).toContain("sm:self-center");
+  });
+});
+
+describe("FightCard UFC rank going into the fight", () => {
+  it("shows the place each fighter held before the event, the champion as C", () => {
+    const html = render(makeFight(2, 4, { ranks: { a: 0, b: 12 } }));
+    expect(html).toContain('aria-label="Champion going into the fight"');
+    expect(html).toContain('aria-label="Ranked going into the fight: number 12 in the division"');
+    expect(html).toContain(">C<");
+    expect(html).toContain(">#12<");
+  });
+
+  it("shows one chip when only one fighter was ranked, and none without ranks", () => {
+    expect(render(makeFight(2, 4, { ranks: { a: null, b: 5 } })).match(/in the division/g)).toHaveLength(1);
+    expect(render(makeFight(2, 4))).not.toContain("in the division");
   });
 });

@@ -86,8 +86,8 @@ export function FightCard({
           </div>
 
           <Matchup
-            a={{ ...fight.fighterA, record: fight.records?.a ?? null, note: fighterNote(fight.career?.a), elo: fight.elo?.a }}
-            b={{ ...fight.fighterB, record: fight.records?.b ?? null, note: fighterNote(fight.career?.b), elo: fight.elo?.b }}
+            a={{ ...fight.fighterA, record: fight.records?.a ?? null, note: fighterNote(fight.career?.a), elo: fight.elo?.a, rank: fight.ranks?.a }}
+            b={{ ...fight.fighterB, record: fight.records?.b ?? null, note: fighterNote(fight.career?.b), elo: fight.elo?.b, rank: fight.ranks?.b }}
             weightClass={fight.weightClass}
             when="before"
           />

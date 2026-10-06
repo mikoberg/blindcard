@@ -1,5 +1,6 @@
 import { flagCode } from "@/lib/card/country";
 import { toFighterElo, type FighterElo } from "@/lib/card/elo";
+import { toRanks } from "@/lib/card/rank";
 import { isValidStars } from "@/lib/card/stars";
 import { isVideoId } from "@/lib/card/watch";
 import type {
@@ -31,6 +32,7 @@ export interface FightRow {
   career: unknown;
   records?: unknown;
   elo?: unknown;
+  ranks?: unknown;
   weight_class: string | null;
   is_title_fight: boolean;
   scheduled_rounds: number | null;
@@ -187,6 +189,7 @@ export function buildCard(
         career: toCareer(fight.career),
         records: toRecords(fight.records),
         elo: toElo(fight.elo),
+        ranks: toRanks(fight.ranks),
         weightClass: fight.weight_class,
         isTitleFight: fight.is_title_fight,
         scheduledRounds: fight.scheduled_rounds,

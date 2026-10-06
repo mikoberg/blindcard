@@ -60,9 +60,9 @@ SCORE_FEATURES: tuple[str, ...] = (
     "swings",
     "competitiveness",
     "real_finish",
-    "control_share_nofinish",
+    "control_stalling",
     "knockdowns_both",
-    "min_pace",
+    "min_pace_nofinish",
     "takedown_rate",
     "real_early_finish",
     "main_event",
@@ -91,7 +91,7 @@ FIXED_WEIGHTS: dict[str, float] = {
 
 #: Compared with fights of their own era: strikes per minute grew over the years, so a typical
 #: fight of 2013 would otherwise look dull next to one of 2022.
-ERA_FEATURES: tuple[str, ...] = ("pace", "min_pace", "volume_nofinish")
+ERA_FEATURES: tuple[str, ...] = ("pace", "min_pace", "min_pace_nofinish", "volume_nofinish")
 
 #: Share of the Performance fit blended into the score, tried in this order.
 BLEND_GRID: tuple[float, ...] = tuple(i / 40 for i in range(25))
@@ -145,7 +145,8 @@ FEATURE_NOTES: dict[str, str] = {
     "competitiveness": "1 - |A - B| / (A + B) on significant strikes landed",
     "close_decision": "split or majority decision",
     "real_finish": "ended by KO/TKO or submission, not by an injury (adds, never subtracts)",
-    "control_share_nofinish": "share of the fight under control, when it did not end in a finish",
+    "control_stalling": "share under control, no finish, waived by grappling action",
+    "min_pace_nofinish": "strikes per minute of the less active fighter, when no real finish came",
     "knockdowns_both": "both fighters scored a knockdown",
     "min_pace": "significant strikes per minute of the less active fighter",
     "takedown_rate": "takedowns landed per minute, both fighters",

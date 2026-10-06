@@ -173,6 +173,16 @@ jobs:
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-upcoming "${args[@]}"
 
+      # The official UFC ranking of each fighter going into a bout (the last revision of Wikipedia's
+      # "UFC rankings" article from before the event; today's for an announced bout). Public,
+      # pre-fight context. Runs after the upcoming cards are stored, because it writes onto them.
+      - name: UFC rankings
+        if: ${{ !cancelled() }}
+        run: |
+          args=(--from "$(date -u -d '120 days ago' +%Y)")
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          blindcard-ingest ingest-ranks "${args[@]}"
+
       # Elo: the rating of every fighter going into every fight and into every announced bout (shown
       # on the cards like the record), and the private board and history of /fighters/elo. Runs
       # after the upcoming cards are stored, because it writes onto them. Rebuilt in full each run.

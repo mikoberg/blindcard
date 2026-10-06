@@ -134,6 +134,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="store an expected rating for every announced bout (public data only)",
     )
 
+    ranks = commands.add_parser(
+        "ingest-ranks",
+        parents=[common],
+        help="store each fighter's UFC ranking going into a bout (Wikipedia, public, pre-fight)",
+    )
+    ranks.add_argument(
+        "--from",
+        dest="from_year",
+        type=int,
+        default=2018,
+        metavar="YEAR",
+        help="events from this year on (the article's layout is read from 2018 on; default 2018)",
+    )
+
     commands.add_parser(
         "compute-elo",
         parents=[common],
@@ -398,6 +412,13 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
 
         with _open_repository(settings) as repo:
             run_predict_upcoming(repo, dry_run=args.dry_run)
+        return EXIT_OK
+
+    if args.command == "ingest-ranks":
+        from blindcard_ingest.ranks_pipeline import run_ingest_ranks
+
+        with _open_repository(settings) as repo, _open_wikipedia(settings) as wiki:
+            run_ingest_ranks(wiki, repo, from_year=args.from_year, dry_run=args.dry_run)
         return EXIT_OK
 
     if args.command == "compute-elo":

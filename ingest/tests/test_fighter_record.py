@@ -121,3 +121,53 @@ def test_the_template_block_may_end_with_a_table_close_instead_of_end() -> None:
     rows = parse_record_rows(block)
     assert [r.opponent for r in rows] == ["Second Opponent", "First Opponent"]
     assert record_before(rows, dt.date(2020, 5, 2), "Second Opponent") == Record(1, 0, 0, 0)
+
+
+# --- the career list: the bouts outside our own data, with their outcome -------------------------
+
+
+def test_a_row_carries_the_bouts_own_outcome_for_the_career_list() -> None:
+    from blindcard_ingest.sources.wikipedia.fighter_record import career_bouts  # noqa: F401
+
+    first = parse_record_rows(PAGE)[0]
+    assert first.result == "loss"
+    assert first.method == "KO (punches)"
+    assert first.event == "UFC 232"
+    assert first.round == 3
+    assert parse_record_rows(PAGE)[1].result == "win"
+
+
+def test_the_record_before_logic_does_not_depend_on_the_outcome_columns() -> None:
+    rows = parse_record_rows(PAGE)
+    bare = [type(r)(date=r.date, opponent=r.opponent, after=r.after) for r in rows]
+    opponent = rows[1].opponent
+    assert record_before(rows, rows[1].date, opponent) == record_before(
+        bare, rows[1].date, opponent
+    )
+
+
+def test_career_bouts_leaves_out_the_fights_we_store_by_date() -> None:
+    from blindcard_ingest.sources.wikipedia.fighter_record import career_bouts
+
+    rows = parse_record_rows(PAGE)
+    ours = {rows[0].date, rows[1].date}
+    rest = career_bouts(rows, ours)
+    assert [r.opponent for r in rest] == [r.opponent for r in rows[2:]]
+    assert career_bouts(rows, set()) == rows  # nothing stored: the whole table
+    # a day off (events outside the US) still counts as the same fight
+    near = {rows[0].date + dt.timedelta(days=1)}
+    assert rows[0] not in career_bouts(rows, near)
+
+
+def test_a_row_without_a_usable_result_is_not_listed() -> None:
+    from blindcard_ingest.sources.wikipedia.fighter_record import RecordRow, career_bouts
+
+    odd = RecordRow(date=dt.date(2020, 1, 1), opponent="X", after=Record(1, 0, 0, 0), result=None)
+    assert career_bouts([odd], set()) == []
+
+
+def test_a_round_outside_one_to_twenty_five_is_left_out() -> None:
+    from blindcard_ingest.sources.wikipedia.fighter_record import _round
+
+    assert _round("0") is None and _round("26") is None
+    assert _round("3") == 3 and _round("1 (5:00)") == 1
