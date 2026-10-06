@@ -35,7 +35,7 @@ export default async function HomePage() {
     <div className="space-y-14">
       <section
         aria-labelledby="intro"
-        className="grid items-center gap-8 pt-4 lg:grid-cols-[1.15fr_1fr] lg:gap-14 lg:pt-10"
+        className="grid items-end gap-8 pt-4 lg:grid-cols-[1.15fr_1fr] lg:gap-14 lg:pt-10"
       >
         <div>
           <h1 id="intro" className="page-title">

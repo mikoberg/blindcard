@@ -87,7 +87,7 @@ export function SiteSearch() {
         />
       </div>
 
-      <div aria-live="polite" className="mt-3">
+      <div aria-live="polite" className="mt-3 empty:mt-0">
         {term === null && text.trim().length > 0 && (
           <p className="text-sm text-[var(--muted)]">Type at least {SEARCH_MIN_LENGTH} letters.</p>
         )}
