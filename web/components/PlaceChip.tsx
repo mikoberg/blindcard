@@ -16,7 +16,7 @@ export function PlaceChip({ location, detail }: { location: string | null; detai
   const info = placeInfo(location);
   if (!info) return null;
   return (
-    <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+    <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm sm:flex-nowrap">
       <span
         className={`inline-flex shrink-0 items-center gap-1 px-1.5 py-px font-bold ${
           info.away

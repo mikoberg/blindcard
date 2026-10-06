@@ -31,7 +31,7 @@ export default async function UpcomingIndexPage() {
       {events.length === 0 ? (
         <Notice>No cards are announced yet. Check back soon.</Notice>
       ) : (
-        <ul className="grid gap-5 sm:grid-cols-2">
+        <ul className="grid gap-5 sm:auto-rows-fr sm:grid-cols-2">
           {events.map((event) => (
             <li key={event.id}>
               <UpcomingCard event={event} today={now} />
