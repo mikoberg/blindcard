@@ -20,12 +20,20 @@ const STAR = (() => {
   return `M${points.join("L")}z`;
 })();
 
-export function TitleBelt({ className = "h-5 w-[70px]" }: { className?: string }) {
+export function TitleBelt({
+  className = "h-5 w-[70px]",
+  caption = false,
+}: {
+  className?: string;
+  /** Write "Title fight" in small gold type above the belt (then the words are not repeated for screen readers). */
+  caption?: boolean;
+}) {
   const ink = { fill: "var(--ink)" };
   const gold = { fill: "var(--gold-mid)" };
   const rim = { fill: "var(--gold-hi)" };
   return (
-    <span className="inline-flex shrink-0" title="Title fight">
+    <span className={`shrink-0 ${caption ? "inline-flex flex-col items-center gap-0.5" : "inline-flex"}`} title="Title fight">
+      {caption && <span className="text-[0.68rem] font-extrabold leading-none text-[var(--gold-text)]">Title fight</span>}
       <svg viewBox="0 0 112 32" aria-hidden="true" className={className}>
         <rect x="0" y="9" width="112" height="14" rx="3" style={ink} />
         {[12.5, 19.5].flatMap((y) =>
@@ -41,7 +49,7 @@ export function TitleBelt({ className = "h-5 w-[70px]" }: { className?: string }
         <path d={octagon(56, 16, 13.5, 10.8, 5.2)} style={gold} stroke="var(--ink)" strokeWidth="0.8" />
         <path d={STAR} style={ink} />
       </svg>
-      <span className="sr-only">Title fight</span>
+      {!caption && <span className="sr-only">Title fight</span>}
     </span>
   );
 }
