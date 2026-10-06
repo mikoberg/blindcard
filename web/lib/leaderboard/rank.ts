@@ -3,6 +3,7 @@ import { mapStyles, toRecord } from "@/lib/data/map";
 import { isValidSlug } from "@/lib/slug";
 import { profileStats } from "./profile";
 import type {
+  FighterAwards,
   FighterFightRow,
   FighterNowRow,
   ProfileStats,
@@ -58,6 +59,14 @@ function toStars(value: number | string): number | null {
  * The fighter page: the rated fights behind the average, newest first, and the average computed
  * from exactly those fights (so what is listed always adds up to the number shown).
  */
+/** Both totals, or null when the stored value does not have the expected shape. */
+export function toAwards(value: unknown): FighterAwards | null {
+  if (typeof value !== "object" || value === null) return null;
+  const o = value as { fotn?: unknown; potn?: unknown };
+  const whole = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
+  return whole(o.fotn) && whole(o.potn) ? { fotn: o.fotn, potn: o.potn } : null;
+}
+
 export function buildProfile(
   fighter: Pick<FighterRatingRow, "name" | "country" | "slug">,
   rows: readonly FighterFightRow[],
@@ -96,6 +105,7 @@ export function buildProfile(
     styles: mapStyles(now.style),
     record: now.record == null ? null : toRecord(now.record),
     elo: toFighterElo(now.elo),
+    awards: toAwards(now.awards),
     stats: profileStats(fights) as ProfileStats,
     fights,
   };

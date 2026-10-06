@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHUNK_LEAK_PATTERNS, HTML_LEAK_PATTERNS, findLeaks } from "./leaks";
+import { CHUNK_LEAK_PATTERNS, FIGHTER_PAGE_HTML_LEAK_PATTERNS, HTML_LEAK_PATTERNS, findLeaks } from "./leaks";
 
 // The live suite is SKIPPED unless SPOILER_TEST_BASE_URL is set. To run it:
 //   npm run build
@@ -35,13 +35,15 @@ live("the running app serves no result data", () => {
     for (const path of ["/", "/best", "/events/year/2024", "/fighters", "/fighters/elo", "/classics", "/judges/sal-damato", ...fighterPaths, ...eventPaths, ...upcomingPaths]) {
       const html = await get(path);
       expect(html.status, path).toBe(200);
-      expect(findLeaks(html.text, HTML_LEAK_PATTERNS), `HTML ${path}`).toEqual([]);
+      // A fighter's own page may name the two bonuses (it shows their career totals); nothing else may.
+      const patterns = /^\/fighters\/(?!elo$)[a-z0-9-]+$/.test(path) ? FIGHTER_PAGE_HTML_LEAK_PATTERNS : HTML_LEAK_PATTERNS;
+      expect(findLeaks(html.text, patterns), `HTML ${path}`).toEqual([]);
 
       const payload = await get(path, { RSC: "1" });
       // Prove a real Flight payload was scanned (not an error page or an ignored header).
       expect(payload.status, `payload status ${path}`).toBe(200);
       expect(payload.headers.get("content-type"), `payload content-type ${path}`).toContain("text/x-component");
-      expect(findLeaks(payload.text, HTML_LEAK_PATTERNS), `payload ${path}`).toEqual([]);
+      expect(findLeaks(payload.text, patterns), `payload ${path}`).toEqual([]);
 
       for (const match of html.text.matchAll(/src="(\/_next\/static\/[^"]+\.js)"/g)) {
         chunkUrls.add(match[1] as string);

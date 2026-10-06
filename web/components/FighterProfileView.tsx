@@ -127,7 +127,21 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
           </Figure>
         )}
         <Figure label="Rated fights">{stats.rated}</Figure>
-        <Figure label="Best rated">{formatRating(stats.best)}</Figure>
+        {profile.awards && (
+          <Figure label="Night bonuses">
+            <span
+              aria-label={`Fight of the Night bonuses: ${profile.awards.fotn}. Performance of the Night bonuses: ${profile.awards.potn}.`}
+              title="Fight of the Night and Performance of the Night bonuses earned since 2015"
+            >
+              <span aria-hidden="true">
+                {profile.awards.fotn}
+                <span className="ml-1 mr-3 text-xs font-normal text-[var(--muted)]">FOTN</span>
+                {profile.awards.potn}
+                <span className="ml-1 text-xs font-normal text-[var(--muted)]">POTN</span>
+              </span>
+            </span>
+          </Figure>
+        )}
         <Figure label="Rated 4.0 or higher">
           {stats.fourPlus}
           <span className="ml-1 text-xs font-normal text-[var(--muted)]">of {stats.rated}</span>

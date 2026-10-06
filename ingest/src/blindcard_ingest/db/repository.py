@@ -211,6 +211,13 @@ class Repository(Protocol):
         """
         ...
 
+    def refresh_fighter_awards(self) -> int:
+        """Rebuild `fighters.awards` ({"fotn": n, "potn": n}, a public current-standing total) from
+        the private bonus labels: a Fight of the Night counts for both fighters of the fight, a
+        Performance of the Night for its winner, and only fights of events whose awards are stored
+        count. Returns how many fighters have awards now."""
+        ...
+
     def fights_with_sides(self, source: str, from_year: int) -> list[FightSides]:
         """Stored fights from `from_year` on, with both fighters' ids and names."""
         ...
@@ -725,6 +732,40 @@ class PostgresRepository:
                 )
                 updated += cur.rowcount
         return updated
+
+    def refresh_fighter_awards(self) -> int:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("update public.fighters set awards = null where awards is not null")
+            cur.execute(
+                """
+                update public.fighters f
+                set awards = jsonb_build_object('fotn', a.fotn, 'potn', a.potn)
+                from (
+                    select side.fighter_id,
+                           count(*) filter (
+                               where 'fight_of_the_night' = any(r.bonuses)
+                           )::int as fotn,
+                           count(*) filter (
+                               where 'performance_of_the_night' = any(r.bonuses)
+                                 and r.winner_fighter_id = side.fighter_id
+                           )::int as potn
+                    from public.fights fi
+                    join public.fight_results r on r.fight_id = fi.id
+                    cross join lateral (
+                        values (fi.fighter_a_id), (fi.fighter_b_id)
+                    ) as side(fighter_id)
+                    where exists (
+                        select 1
+                        from public.fights f2
+                        join public.fight_results r2 on r2.fight_id = f2.id
+                        where f2.event_id = fi.event_id and cardinality(r2.bonuses) > 0
+                    )
+                    group by side.fighter_id
+                ) a
+                where f.id = a.fighter_id
+                """
+            )
+            return cur.rowcount
 
     def fights_with_sides(self, source: str, from_year: int) -> list[FightSides]:
         query = """

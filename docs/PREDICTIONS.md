@@ -238,3 +238,13 @@ Effect on dev: KO/TKOs rated 2.5 or lower went from 290 to 47 (of 2,741); those 
 an injury ("toLeg Injury" and the like), which are not knockouts. The percentile of a fight is not changed,
 only the stars. Rated 3.0: 1,551 fights (1,299 in v24). `audit-scores --strict` clean. Submissions get no
 floor (not asked for).
+
+## Score v26: a real submission finish is never rated below 3 stars either
+
+A standing guillotine choke after 57 seconds came out at 2.0 in v25 (the knockout floor did not cover it).
+The same product decision as for knockouts: a finish is entertainment in itself. `stars.submission_min_stars =
+3.0` sets the floor for a real submission (a finish that is not a knockout and not an injury stoppage);
+the knockout floor stays. v26 has v25's weights to the digit.
+
+Effect on dev: submissions rated 2.5 or lower went from 415 to 8 (of 1,331), the 8 being injury stoppages and
+the like; 833 submissions now sit at 3.0. `audit-scores --strict` clean. The percentile of a fight is not changed.

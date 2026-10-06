@@ -115,6 +115,7 @@ def run_ingest_bonuses(
     if not dry_run and to_store:
         updated = repo.set_bonuses(source_name, to_store)
         logger.info("stored bonus labels for %d fights", updated)
+        logger.info("fighter awards rebuilt for %d fighters", repo.refresh_fighter_awards())
     if report_path is not None:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(json.dumps(report.details, ensure_ascii=False, indent=1), "utf-8")

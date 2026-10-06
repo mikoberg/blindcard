@@ -30,6 +30,7 @@ const profile = (patch: Partial<FighterProfile> = {}): FighterProfile => ({
   styles: [],
   record: null,
   elo: null,
+  awards: null,
   stats: profileStats(fights)!,
   fights,
   ...patch,
@@ -41,7 +42,7 @@ describe("FighterProfileView", () => {
     expect(html).toContain("Ann One");
     expect(html).toContain('aria-label="Average rating 4.3 out of 5"');
     expect(html).toContain("Rated fights");
-    expect(html).toContain("Best rated");
+    expect(html).not.toContain("Best rated");
     expect(html).toContain('aria-label="Rated 4.5 out of 5"');
     expect(html).toContain("Mar 2026");
     expect(html).toContain("url(/flags/nl.svg)");
@@ -130,6 +131,23 @@ describe("the record as the way in to the fight history", () => {
   it("has no button when no record is known", () => {
     const html = renderToStaticMarkup(<FighterProfileView profile={profile({ record: null })} />);
     expect(html).not.toContain("Full history");
+  });
+});
+
+describe("the night bonuses figure", () => {
+  it("replaces the best rating with the two career totals", () => {
+    const html = renderToStaticMarkup(<FighterProfileView profile={profile({ awards: { fotn: 10, potn: 5 } })} />);
+    expect(html).toContain("Night bonuses");
+    expect(html).toContain("FOTN");
+    expect(html).toContain("POTN");
+    expect(html).toContain("Fight of the Night bonuses: 10. Performance of the Night bonuses: 5.");
+    expect(html).not.toContain("Best rated");
+  });
+
+  it("is left out when we hold no awards for the fighter", () => {
+    const html = renderToStaticMarkup(<FighterProfileView profile={profile({ awards: null })} />);
+    expect(html).not.toContain("Night bonuses");
+    expect(html).not.toContain("Best rated");
   });
 });
 

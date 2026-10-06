@@ -64,3 +64,13 @@ describe("findLeaks (negative control: the scanner can fail)", () => {
     expect(findLeaks(clean, CHUNK_LEAK_PATTERNS)).toEqual([]);
   });
 });
+
+describe("the fighter page exemption", () => {
+  it("lets a fighter's page name the bonuses and nothing else", async () => {
+    const { FIGHTER_PAGE_HTML_LEAK_PATTERNS } = await import("./leaks");
+    expect(findLeaks("12 FOTN 5 POTN Fight of the Night bonuses", FIGHTER_PAGE_HTML_LEAK_PATTERNS)).toEqual([]);
+    expect(findLeaks("Raul Rosas Jr. KO/TKO", FIGHTER_PAGE_HTML_LEAK_PATTERNS)).not.toEqual([]);
+    expect(findLeaks("a Submission", FIGHTER_PAGE_HTML_LEAK_PATTERNS)).not.toEqual([]);
+    expect(findLeaks("12 FOTN", HTML_LEAK_PATTERNS)).not.toEqual([]); // every other page still may not
+  });
+});

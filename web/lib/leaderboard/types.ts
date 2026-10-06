@@ -32,6 +32,7 @@ export interface FighterNowRow {
   style?: unknown;
   record?: unknown;
   elo?: unknown;
+  awards?: unknown;
 }
 
 /** A rated fight as the fighter page lists it. */
@@ -62,6 +63,12 @@ export interface ProfileStats {
   titleFights: number;
 }
 
+/** Career totals of the two night bonuses. */
+export interface FighterAwards {
+  fotn: number;
+  potn: number;
+}
+
 export interface FighterProfile {
   name: string;
   country: string | null;
@@ -77,6 +84,11 @@ export interface FighterProfile {
   record: FighterRecord | null;
   /** The Elo as of today, same rule as the record. null for a fighter without an earlier fight. */
   elo: FighterElo | null;
+  /**
+   * How many Fight / Performance of the Night bonuses they have earned (from 2015 on, the years we hold
+   * the awards for), as one total as of today, like the record. Never listed fight by fight.
+   */
+  awards: FighterAwards | null;
   stats: ProfileStats;
   /** Newest first. */
   fights: FighterFight[];

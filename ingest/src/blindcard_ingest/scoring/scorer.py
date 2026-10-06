@@ -240,7 +240,8 @@ def stars_with_gate(config: ScoringConfig, percentile: float, raw: Mapping[str, 
 
     A fight shorter than `classic_min_seconds` cannot get the top star level: it gets the level
     below instead (a 13-second knockout can be a great moment, but is not a classic fight).
-    A real knockout never gets fewer than `knockout_min_stars`.
+    A real knockout never gets fewer than `knockout_min_stars`, a real submission never fewer than
+    `submission_min_stars`.
     """
     stars = stars_for_percentile(config, percentile)
     top = config.star_thresholds[-1].stars
@@ -250,12 +251,11 @@ def stars_with_gate(config: ScoringConfig, percentile: float, raw: Mapping[str, 
         and raw["fight_seconds"] < config.classic_min_seconds
     ):
         stars = config.star_thresholds[-2].stars if len(config.star_thresholds) > 1 else stars
-    if (
-        config.knockout_min_stars
-        and raw.get("ko_finish", 0.0) == 1.0
-        and raw.get("real_finish", 0.0) == 1.0
-    ):
-        stars = max(stars, config.knockout_min_stars)
+    if raw.get("real_finish", 0.0) == 1.0:
+        if raw.get("ko_finish", 0.0) == 1.0:
+            stars = max(stars, config.knockout_min_stars)
+        elif raw.get("sub_finish", 0.0) == 1.0:
+            stars = max(stars, config.submission_min_stars)
     return stars
 
 

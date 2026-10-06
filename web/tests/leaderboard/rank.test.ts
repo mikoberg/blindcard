@@ -75,6 +75,7 @@ describe("buildProfile", () => {
     const profile = buildProfile(fighter, [fight("a", "2024-01-01", 4)])!;
     expect(Object.keys(profile).sort()).toEqual([
       "average",
+      "awards",
       "country",
       "elo",
       "fights",

@@ -33,6 +33,17 @@ export const HTML_LEAK_PATTERNS: readonly RegExp[] = [
   /"method"/, // the reveal JSON key; HTML only, for the same reason
 ];
 
+/** The bonus wording: a fighter's page shows how many of each bonus they have earned in total. */
+const BONUS_WORDING = HTML_LEAK_PATTERNS.find((pattern) => pattern.source.includes("Fight of the Night"));
+
+/**
+ * The same patterns for a fighter's own page: it may carry the bonus wording, because it shows the two
+ * career totals of one fighter (CLAUDE.md). Everything else is still checked; no other page may use it.
+ */
+export const FIGHTER_PAGE_HTML_LEAK_PATTERNS: readonly RegExp[] = HTML_LEAK_PATTERNS.filter(
+  (pattern) => pattern !== BONUS_WORDING,
+);
+
 /**
  * The browser bundles may mention generic words, but never a method string or a table name.
  * The words wins / Submission / No contest / DQ / outcome / endRound are NOT listed here:
