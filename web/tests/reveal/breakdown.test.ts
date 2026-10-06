@@ -96,3 +96,21 @@ describe("buildScoreBreakdown", () => {
     expect(buildScoreBreakdown({ ...row, ...patch } as ScoreRow)).toBeNull();
   });
 });
+
+describe("the breakdown of score v23", () => {
+  it("labels the stalling feature in plain words and shows its share", () => {
+    const v23: ScoreRow = {
+      ...row,
+      version: 23,
+      config: { version: 23, weights: { pace: 1, control_stalling: -0.5 } },
+      features: {
+        raw: { pace: 9, control_stalling: 0.45 },
+        normalised: { pace: 0.5, control_stalling: 0.45 },
+      },
+    };
+    const down = buildScoreBreakdown(v23)?.fight.down ?? [];
+    expect(down).toHaveLength(1);
+    expect(down[0]?.label).toBe("Time under control without much action");
+    expect(down[0]?.value).toBe("45%");
+  });
+});

@@ -264,3 +264,40 @@ def test_career_features_come_from_the_context_and_are_zero_without_one() -> Non
 
     none = compute_raw_features(scoring_input(rounds, context=None))
     assert none["streak"] == 0 and none["experience"] == 0 and none["unbeaten_fighter"] == 0
+
+
+def test_control_stalling_is_control_without_much_grappling_going_on() -> None:
+    def stalling(rounds) -> float:  # type: ignore[no-untyped-def]
+        return compute_raw_features(scoring_input(rounds))["control_stalling"]
+
+    quiet = [
+        rnd(1, A, sig=20, control=150),
+        rnd(1, B, sig=10),
+        rnd(2, A, sig=10),
+        rnd(2, B, sig=10),
+        rnd(3, A, sig=10),
+        rnd(3, B, sig=10),
+    ]
+    assert stalling(quiet) == pytest.approx(150 / 900)  # nothing else going on: all of it counts
+    two = [rnd(1, A, sig=20, control=150, subs=1, rev=1), *quiet[1:]]
+    assert stalling(two) == pytest.approx(150 / 900 * (1 - 2 / 5))  # two actions: waived in part
+    five = [rnd(1, A, sig=20, control=150, subs=3, rev=2), *quiet[1:]]
+    assert stalling(five) == 0  # five actions: a grappling fight, nothing held against it
+    many = [rnd(1, A, sig=20, control=150, subs=9, rev=4), *quiet[1:]]
+    assert stalling(many) == 0  # more actions never turn it into a bonus
+
+
+def test_control_stalling_leaves_the_older_feature_alone_and_is_zero_after_a_finish() -> None:
+    rounds = [
+        rnd(1, A, sig=20, control=150, subs=3, rev=2),
+        rnd(1, B, sig=10),
+        rnd(2, A, sig=10),
+        rnd(2, B, sig=10),
+        rnd(3, A, sig=10),
+        rnd(3, B, sig=10),
+    ]
+    raw = compute_raw_features(scoring_input(rounds))
+    assert raw["control_share_nofinish"] == pytest.approx(150 / 900)  # v22 and earlier see this
+    knockout = [rnd(1, A, sig=10, kd=1, control=120), rnd(1, B, sig=5)]
+    done = compute_raw_features(scoring_input(knockout, method="KO/TKO", end_round=1, end_time=100))
+    assert done["control_stalling"] == 0

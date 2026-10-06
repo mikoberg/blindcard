@@ -170,3 +170,30 @@ Honest reading: Elo alone predicts about 56-57% of fights, so the list is a summ
 forecast, and neighbouring ranks are within noise. Not modelled: weight class, inactivity (a fighter
 away for years keeps the rating; the page only lists fighters who fought in the last two years), and
 fights outside our data.
+
+## Score v23: time under control only counts against a fight with little going on
+
+Prompted by a fight (a three-round decision with 4 submission attempts, 2 reversals and 75% of the
+time under control) that v22 rated 2.0 while a viewer remembered a good fight. v22 held time under
+control without a finish against every fight with weight -0.36, whatever happened during it.
+
+Checked on the 5577 fights of events with Fight / Performance of the Night labels (v22 scores):
+
+- Fight of the Night rate falls with the share of the fight under control, for fights without a finish:
+  11.1% under 30%, 5.7% for 30-50%, 5.4% for 50-70%, 1.4% for 70-85%, 0% above 85%. The penalty as a
+  principle is right.
+- Fights with 60%+ control and 5+ submission attempts plus reversals (57 fights) had 5 Fight of the Night
+  bonuses; their v22 stars expected 2.8 (3+ actions: 10 against 6.6 expected). The same bonus rate is
+  twice what the stars said. Small group, so not conclusive, and the bonuses themselves lean to striking
+  fights, so they cannot settle what is "good" either. Position changes and scrambles are not in our
+  statistics at all.
+- A one-parameter fix: scale the penalty by `1 - min(1, (submission attempts + reversals) / 5)`. FOTN AUC
+  on the labelled fights 0.8031 (v22) -> 0.8070 (waiver at 6), 0.8075 (at 5), 0.8084 (at 3); within
+  fights without a finish 0.8548 -> 0.8559 at most. A small gain, consistent for every waiver value tried.
+
+v23 is v22 with that one change, no refit (new feature `control_stalling`, same -0.36 weight; the old
+feature stays computed so v22 and earlier reproduce exactly). Result on dev: 7606 of 8655 fights keep
+their stars, 481 + 29 rise (29 by a full star), 539 fall by half a star. The fallers are ordinary
+fights (mean 0.6 submission attempts plus reversals) that lose a rank to the risers, who have 4.2 on
+average; stars are percentile-based, so every rise pushes some fights down. Classics 70 -> 72 (0.83%),
+`audit-scores --strict` clean. The fight that prompted it goes from 2.0 to 2.5.

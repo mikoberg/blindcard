@@ -49,6 +49,7 @@ const LABELS: Record<string, FeatureLabel> = {
   unbeaten_fighter: { label: "An unbeaten fighter", format: yesNo },
   experience: { label: "UFC fights of the less experienced fighter", format: count },
   control_share_nofinish: { label: "Time under control without a finish", format: percent },
+  control_stalling: { label: "Time under control without much action", format: percent },
 };
 
 /** Unknown features (a future score version) fall back to their key, so nothing breaks. */

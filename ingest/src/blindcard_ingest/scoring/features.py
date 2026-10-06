@@ -37,6 +37,7 @@ NEW_FEATURES: tuple[str, ...] = (
     "early_finish",  # 1 - fraction of the scheduled time used, for finishes (early = high)
     "time_fraction",  # fraction of the scheduled time used, finish or not
     "control_share_nofinish",  # control share, only when no finish came out of it (stalling)
+    "control_stalling",  # that share, waived the more submission attempts and reversals there were
     "knockdowns_both",  # both fighters scored a knockdown (back and forth)
     "min_pace",  # significant strikes per minute of the LESS active fighter
     "total_pace",  # total strikes landed per minute, both fighters
@@ -70,6 +71,11 @@ NEW_FEATURES: tuple[str, ...] = (
 )
 
 FEATURE_NAMES: tuple[str, ...] = V1_FEATURES + NEW_FEATURES
+
+#: Submission attempts plus reversals at which time under control stops counting against a fight:
+#: control with that much going on is a grappling fight, not stalling. Below it the penalty is
+#: waived in proportion. (Analysis in docs/PREDICTIONS.md, "Score v23".)
+GRAPPLING_WAIVER = 5.0
 
 # Unbounded count/rate features: clipped at a reference quantile and scaled to 0..1.
 CAPPED_FEATURES: tuple[str, ...] = (
@@ -279,6 +285,11 @@ def compute_raw_features(inp: ScoringInput) -> dict[str, float]:
         "early_finish": 1.0 - time_fraction if finished else 0.0,
         "time_fraction": time_fraction,
         "control_share_nofinish": 0.0 if finished else control_share,
+        "control_stalling": (
+            0.0
+            if finished
+            else control_share * (1.0 - min(1.0, (total_subs + total_reversals) / GRAPPLING_WAIVER))
+        ),
         "knockdowns_both": 1.0
         if all(knockdowns_by_fighter[f] > 0 for f in (first, second))
         else 0.0,
