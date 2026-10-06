@@ -21,6 +21,7 @@ fights are stored; whether one is still active is decided when the list is serve
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -142,6 +143,16 @@ def pre_fight_elo(ledger: Ledger) -> list[FightElo]:
     return [FightElo(fid, a, b) for fid, (a, b) in sorted(ledger.before.items())]
 
 
+def peaks(ledger: Ledger) -> dict[str, tuple[float, dt.date]]:
+    """Every fighter's highest rating after a fight, with the date of the earliest fight at it."""
+    best: dict[str, tuple[float, dt.date]] = {}
+    for step in ledger.steps:
+        known = best.get(step.fighter_id)
+        if known is None or step.rating_after > known[0]:
+            best[step.fighter_id] = (step.rating_after, step.fight_date)
+    return best
+
+
 def fighters_now(
     ledger: Ledger,
     fighter_ids: list[str],
@@ -150,12 +161,13 @@ def fighters_now(
     """Every fighter's record and Elo as of today, for their page. A fighter with neither is left
     out (and loses any old values when stored)."""
     rows: list[FighterNow] = []
+    peak_of = peaks(ledger)
     for fighter in sorted(set(fighter_ids)):
         n = ledger.counts.get(fighter, 0)
         elo = EloBefore(round(ledger.ratings[fighter], 1), n) if n > 0 else None
         record = records.get(fighter)
         if elo is not None or record is not None:
-            rows.append(FighterNow(fighter, record, elo))
+            rows.append(FighterNow(fighter, record, elo, peak_of.get(fighter)))
     return rows
 
 

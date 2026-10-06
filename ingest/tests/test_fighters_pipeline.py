@@ -335,3 +335,19 @@ def test_a_fighter_found_on_sherdog_also_gets_the_rest_of_the_career() -> None:
         (dt.date(2019, 1, 1), "B"),
         (dt.date(2020, 1, 1), "A"),
     ]  # the bout we store ourselves is not repeated
+
+
+def test_the_date_of_birth_of_a_fighter_with_a_wikipedia_page_is_stored() -> None:
+    repo, wiki = setup()
+    wiki._pages["Ann One"] = wiki._pages["Ann One"].replace(
+        "| nationality = Brazilian\n",
+        "| nationality = Brazilian\n| birth_date = {{Birth date and age|1990|2|13}}\n",
+    )
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015)
+    assert repo.birth_dates == {"id-ann-one": dt.date(1990, 2, 13)}  # only the fighter who has one
+
+
+def test_a_dry_run_stores_no_birth_dates() -> None:
+    repo, wiki = setup()
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015, dry_run=True)
+    assert not hasattr(repo, "birth_dates")

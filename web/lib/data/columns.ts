@@ -22,7 +22,7 @@ export const FIGHTER_FIGHT_COLUMNS =
 /** The career totals of every fighter that has them: night bonuses and how fights ended (0033, 0034). */
 export const FIGHTER_AWARD_COLUMNS = "slug, awards, tally";
 /** A fighter's standing as of today (see migration 0027). */
-export const FIGHTER_NOW_COLUMNS = "style, record, elo, awards";
+export const FIGHTER_NOW_COLUMNS = "style, record, elo, awards, birth_date";
 export const FIGHT_RATING_COLUMNS =
   "fight_id, event_slug, event_name, event_date, fighter_a_name, fighter_b_name, weight_class, is_title_fight, stars";
 export const FIGHT_VIDEO_COLUMNS = "fight_id, youtube_id";

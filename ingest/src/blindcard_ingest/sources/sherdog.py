@@ -23,6 +23,7 @@ from urllib.parse import quote_plus, unquote
 from blindcard_ingest.bonus_matching import EventIndex, FightNames
 from blindcard_ingest.http.client import PoliteClient
 from blindcard_ingest.sources.wikipedia.countries import COUNTRIES
+from blindcard_ingest.sources.wikipedia.fighter_birth import valid_birth_date
 from blindcard_ingest.sources.wikipedia.fighter_record import DEBUT, Record, RecordRow
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,8 @@ class SherdogPage:
     url: str
     country: str | None
     bouts: tuple[SherdogBout, ...]
+    #: Date of birth from the page ("AGE 31 / Aug 6, 1995"); None when not given.
+    birth_date: dt.date | None = None
 
 
 def _text(fragment: str) -> str:
@@ -168,6 +171,16 @@ def career_rows(
     return rows
 
 
+def _birth_date(html: str) -> dt.date | None:
+    match = re.search(
+        r'itemprop="birthDate"[^>]*>\s*([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),\s*(\d{4})', html
+    )
+    if match is None:
+        return None
+    month = _MONTHS.get(match.group(1).lower())
+    return valid_birth_date(int(match.group(3)), month, int(match.group(2))) if month else None
+
+
 def parse_fighter_page(html: str, url: str = "") -> SherdogPage:
     """The pro fight history and the country of a Sherdog fighter page."""
     start = html.find("FIGHT HISTORY - PRO")
@@ -192,7 +205,9 @@ def parse_fighter_page(html: str, url: str = "") -> SherdogPage:
                     round=_round(cells[4]) if len(cells) > 4 else None,
                 )
             )
-    return SherdogPage(url=url, country=_country(html), bouts=tuple(bouts))
+    return SherdogPage(
+        url=url, country=_country(html), bouts=tuple(bouts), birth_date=_birth_date(html)
+    )
 
 
 def record_before_bout(

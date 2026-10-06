@@ -120,3 +120,20 @@ describe("toTally", () => {
     }
   });
 });
+
+describe("the finish rate says what it is made of", () => {
+  const e = (id: string, victories: number, ko: number, sub: number, average: number) =>
+    entry(id, average, 10, null, tally({ victories, ko, sub }));
+
+  it("shows the finishes out of the victories", () => {
+    const rate = orderById("finishRate");
+    expect(rate.detail?.(e("a", 9, 6, 3, 4))).toBe("9 of 9 victories");
+    expect(rate.detail?.(e("b", 12, 5, 2, 4))).toBe("7 of 12 victories");
+    expect(rate.detail?.(entry("c", 4, 10, null))).toBeNull(); // no tally
+  });
+
+  it("puts 100% from more victories ahead of 100% from fewer, before the rating", () => {
+    const board = [e("few", 5, 3, 2, 4.4), e("many", 12, 7, 5, 3.0), e("half", 8, 2, 2, 4.9)];
+    expect(ids(orderEntries(board, "finishRate"))).toEqual(["many", "few", "half"]);
+  });
+});

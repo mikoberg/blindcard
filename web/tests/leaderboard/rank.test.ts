@@ -76,6 +76,7 @@ describe("buildProfile", () => {
     expect(Object.keys(profile).sort()).toEqual([
       "average",
       "awards",
+      "born",
       "country",
       "elo",
       "fights",

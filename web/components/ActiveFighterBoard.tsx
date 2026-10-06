@@ -73,7 +73,11 @@ export function ActiveFighterBoard({ entries, today }: { entries: readonly Leade
       ) : (
         <FighterLeaderboard
           entries={shown}
-          extra={option.column ? { label: option.column, value: option.value, format: option.format } : null}
+          extra={
+            option.column
+              ? { label: option.column, value: option.value, format: option.format, detail: option.detail }
+              : null
+          }
         />
       )}
     </div>

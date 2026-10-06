@@ -30,6 +30,10 @@ export interface BoardOrderOption {
   column: string | null;
   value: (entry: LeaderboardEntry) => number | null;
   format: (value: number) => string;
+  /** A short line under the number that says what it is made of ("9 of 12 victories"). */
+  detail?: (entry: LeaderboardEntry) => string | null;
+  /** Among equal numbers, more of this goes first (the better evidence), before the rating. */
+  tie?: (entry: LeaderboardEntry) => number;
 }
 
 /** A finish rate needs this many wins behind it, so two wins out of two is not a 100% fighter. */
@@ -45,8 +49,9 @@ function option(
   column: string | null,
   value: BoardOrderOption["value"],
   format: BoardOrderOption["format"] = count,
+  extra: Pick<BoardOrderOption, "detail" | "tie"> = {},
 ): BoardOrderOption {
-  return { id, label, group, column, value, format };
+  return { id, label, group, column, value, format, ...extra };
 }
 
 export const BOARD_ORDERS: readonly BoardOrderOption[] = [
@@ -69,13 +74,20 @@ export const BOARD_ORDERS: readonly BoardOrderOption[] = [
   ),
   option(
     "finishRate",
-    `Highest finish rate (from ${MIN_WINS_FOR_RATE} victories)`,
+    `Highest finish rate (finishes per victory, from ${MIN_WINS_FOR_RATE} victories)`,
     "How they win",
     "Finish rate",
-    (e) => (e.tally && e.tally.victories >= MIN_WINS_FOR_RATE
+    (e) =>
+      e.tally && e.tally.victories >= MIN_WINS_FOR_RATE
         ? ((e.tally.ko + e.tally.sub) / e.tally.victories) * 100
-        : null),
+        : null,
     percent,
+    {
+      detail: (e) =>
+        e.tally ? `${e.tally.ko + e.tally.sub} of ${e.tally.victories} victories` : null,
+      // 100% from twelve victories says more than 100% from five
+      tie: (e) => e.tally?.victories ?? 0,
+    },
   ),
   option("r1", "Most first-round finishes", "How they win", "Round 1", (e) => e.tally?.r1 ?? null),
 
@@ -107,6 +119,7 @@ export function orderEntries(entries: readonly LeaderboardEntry[], order: BoardO
       const byValue = a.key === null || b.key === null ? 0 : b.key - a.key;
       return (
         byValue ||
+        (chosen.tie ? chosen.tie(b.entry) - chosen.tie(a.entry) : 0) ||
         b.entry.average - a.entry.average ||
         b.entry.fights - a.entry.fights ||
         a.entry.name.localeCompare(b.entry.name) ||

@@ -248,3 +248,37 @@ def test_run_stores_the_standings_too_and_a_dry_run_does_not() -> None:
     run_compute_elo(repo)
     champ = next(r for r in repo.fighters_now_rows if r.fighter_id == "champ")
     assert champ.record == {"w": 8, "l": 0, "d": 0, "nc": 0} and champ.elo is not None
+
+
+def test_a_fighters_peak_is_their_highest_rating_after_a_fight_and_the_date_it_was_reached() -> (
+    None
+):
+    from blindcard_ingest.predict.elo_board import fighters_now, peaks
+
+    # a wins twice, then loses twice: the peak is after the second win, above today's rating
+    games = [fight(1, "a", "b"), fight(2, "a", "c"), fight(3, "d", "a"), fight(4, "e", "a")]
+    ledger = build_ledger(games)
+    top, day = peaks(ledger)["a"]
+    assert top > ledger.ratings["a"] and top == max(
+        s.rating_after for s in ledger.steps if s.fighter_id == "a"
+    )
+    assert day == games[1].event_date  # the earliest fight at the highest rating
+    row = next(r for r in fighters_now(ledger, ["a"], {}) if r.fighter_id == "a")
+    assert row.peak == (top, day)
+
+
+def test_the_stored_elo_of_a_standing_carries_the_peak_for_the_fighter_page() -> None:
+    import datetime as dt
+    import json
+
+    from blindcard_ingest.db.repository import _standing_elo_json
+    from blindcard_ingest.predict.types import EloBefore, FighterNow
+
+    row = FighterNow("a", None, EloBefore(1648.0, 38), (1730.4, dt.date(2024, 6, 29)))
+    assert json.loads(_standing_elo_json(row) or "") == {
+        "r": 1648.0,
+        "n": 38,
+        "pk": 1730.4,
+        "pd": "2024-06-29",
+    }
+    assert _standing_elo_json(FighterNow("a", {"w": 1, "l": 0, "d": 0, "nc": 0}, None)) is None

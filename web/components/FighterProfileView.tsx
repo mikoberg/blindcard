@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { formatEventDate, formatMonthYear } from "@/lib/format";
 import { isProvisional } from "@/lib/card/elo";
 import { formatRating, isHighRating } from "@/lib/leaderboard/format";
 import { activeYears } from "@/lib/leaderboard/profile";
-import { MIN_FIGHTS } from "@/lib/leaderboard/rank";
+import { MIN_FIGHTS, ageOn } from "@/lib/leaderboard/rank";
 import type { FighterFight, FighterProfile } from "@/lib/leaderboard/types";
 import { barHeight } from "@/lib/overview/poster";
 import { FighterFights } from "./FighterFights";
@@ -57,6 +58,7 @@ function RatingStrip({ fights }: { fights: readonly FighterFight[] }) {
 /** A fighter's page: who they are, how their fights rate, and every rated fight. Public data only. */
 export function FighterProfileView({ profile }: { profile: FighterProfile }) {
   const { fights, stats, record, elo } = profile;
+  const age = profile.born ? ageOn(profile.born, new Date().toISOString().slice(0, 10)) : null;
   // One weight class is said once in the line above the list; a column of it would repeat it.
   const showClass = stats.weightClasses.length > 1;
   return (
@@ -102,7 +104,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         </div>
       </header>
 
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-y-2 border-[var(--text)] py-3 sm:grid-cols-3 lg:grid-cols-6">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-y-2 border-[var(--text)] py-3 sm:grid-cols-3 lg:grid-cols-7">
         {record && (
           <Figure label="Record">
             <RecordButton record={record} />
@@ -124,9 +126,22 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
                 {Math.round(elo.rating)}
               </span>
             </span>
+            {elo.peak && (
+              <span
+                className="mt-0.5 block text-xs font-normal text-[var(--muted)]"
+                title={`Highest rating, reached ${formatMonthYear(elo.peak.date)}`}
+              >
+                Peak {Math.round(elo.peak.rating)}
+              </span>
+            )}
           </Figure>
         )}
         <Figure label="Rated fights">{stats.rated}</Figure>
+        {age !== null && profile.born && (
+          <Figure label="Age">
+            <span title={`Born ${formatEventDate(profile.born)}`}>{age}</span>
+          </Figure>
+        )}
         {profile.awards && (
           <Figure label="Night bonuses">
             <span

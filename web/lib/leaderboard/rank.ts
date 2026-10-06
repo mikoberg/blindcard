@@ -94,6 +94,24 @@ export interface FighterExtras {
   tally: FighterTally | null;
 }
 
+/** An ISO date of birth in a plausible range, or null: never a guess. */
+export function toBirthDate(value: unknown): string | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const year = Number(value.slice(0, 4));
+  const parsed = Date.parse(`${value}T00:00:00Z`);
+  return year >= 1940 && year <= 2012 && Number.isFinite(parsed) ? value : null;
+}
+
+/** Whole years on `today` (both ISO dates); null when either is not a date. */
+export function ageOn(born: string, today: string): number | null {
+  const b = /^(\d{4})-(\d{2})-(\d{2})$/.exec(born);
+  const t = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
+  if (!b || !t) return null;
+  let years = Number(t[1]) - Number(b[1]);
+  if (Number(t[2]) < Number(b[2]) || (Number(t[2]) === Number(b[2]) && Number(t[3]) < Number(b[3]))) years -= 1;
+  return years >= 0 && years < 100 ? years : null;
+}
+
 export function buildProfile(
   fighter: Pick<FighterRatingRow, "name" | "country" | "slug">,
   rows: readonly FighterFightRow[],
@@ -133,6 +151,7 @@ export function buildProfile(
     record: now.record == null ? null : toRecord(now.record),
     elo: toFighterElo(now.elo),
     awards: toAwards(now.awards),
+    born: toBirthDate(now.birth_date),
     stats: profileStats(fights) as ProfileStats,
     fights,
   };

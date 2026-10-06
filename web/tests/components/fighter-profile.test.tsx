@@ -31,6 +31,7 @@ const profile = (patch: Partial<FighterProfile> = {}): FighterProfile => ({
   record: null,
   elo: null,
   awards: null,
+  born: null,
   stats: profileStats(fights)!,
   fights,
   ...patch,
@@ -171,5 +172,35 @@ describe("profileStats", () => {
 
   it("is null without fights", () => {
     expect(profileStats([])).toBeNull();
+  });
+});
+
+describe("the peak Elo on the fighter page", () => {
+  it("shows the highest rating under the Elo, with its date as the tooltip", () => {
+    const html = renderToStaticMarkup(
+      <FighterProfileView
+        profile={profile({ elo: { rating: 1648, fights: 38, peak: { rating: 1730.4, date: "2024-06-29" } } })}
+      />,
+    );
+    expect(html).toContain("Peak 1730");
+    expect(html).toContain("Highest rating, reached Jun 2024");
+  });
+
+  it("shows no peak when there is none", () => {
+    const html = renderToStaticMarkup(<FighterProfileView profile={profile({ elo: { rating: 1648, fights: 38 } })} />);
+    expect(html).not.toContain("Peak");
+  });
+});
+
+describe("the age on the fighter page", () => {
+  it("shows the age with the date of birth as the tooltip", () => {
+    const html = renderToStaticMarkup(<FighterProfileView profile={profile({ born: "1990-02-13" })} />);
+    expect(html).toContain("Age");
+    expect(html).toContain("Born ");
+    expect(html).toMatch(/title="Born [^"]*1990"/);
+  });
+
+  it("shows no age without a date of birth", () => {
+    expect(renderToStaticMarkup(<FighterProfileView profile={profile({ born: null })} />)).not.toContain(">Age<");
   });
 });

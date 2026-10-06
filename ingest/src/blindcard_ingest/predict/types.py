@@ -167,6 +167,9 @@ class FighterNow:
     fighter_id: str
     record: dict[str, int] | None
     elo: EloBefore | None
+    #: The highest rating they reached and the date of the fight that got them there (the
+    #: earliest one at that rating); None when they have no rated fight.
+    peak: tuple[float, dt.date] | None = None
 
 
 @dataclass(frozen=True)

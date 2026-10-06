@@ -241,6 +241,10 @@ class FakeRepository:
         if activate:
             self.active_version = config.version
 
+    def set_fighter_birth_dates(self, source, births) -> int:  # type: ignore[no-untyped-def]
+        self.birth_dates = dict(births)
+        return len(births)
+
     def refresh_fighter_tallies(self) -> int:
         self.tallies_refreshed = getattr(self, "tallies_refreshed", 0) + 1
         return 0

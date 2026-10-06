@@ -51,7 +51,7 @@ from blindcard_ingest.scoring.scorer import Reference, ScoredFight
 from blindcard_ingest.sources.wikipedia.fighter_record import RecordRow
 from blindcard_ingest.sources.wikipedia.fighter_style import merge_styles
 from blindcard_ingest.upcoming import UpcomingEvent
-from blindcard_ingest.upcoming_records import current_record, with_later_bouts
+from blindcard_ingest.upcoming_records import record_from_history, with_later_bouts
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,17 @@ def _elo_outcome(outcome: str | None, has_winner: bool) -> str:
     if outcome == "draw":
         return "draw"
     return "win" if outcome == "win" and has_winner else "none"
+
+
+def _standing_elo_json(row: FighterNow) -> str | None:
+    """A fighter's Elo as of today: {"r", "n"} plus the peak ({"pk", "pd"}), for their page only."""
+    if row.elo is None:
+        return None
+    payload: dict[str, float | int | str] = {"r": row.elo.rating, "n": row.elo.fights}
+    if row.peak is not None:
+        payload["pk"] = row.peak[0]
+        payload["pd"] = row.peak[1].isoformat()
+    return json.dumps(payload)
 
 
 def _side_json(side: EloBefore | None) -> str | None:
@@ -235,6 +246,11 @@ class Repository(Protocol):
 
     def set_fight_records(self, source: str, records: Mapping[str, Mapping[str, Any]]) -> int:
         """Set `fights.records` by fight source id; returns how many rows changed."""
+        ...
+
+    def set_fighter_birth_dates(self, source: str, births: Mapping[str, date]) -> int:
+        """Set `fighters.birth_date` by fighter source id (a known date is never erased by a
+        later run that did not find one); returns how many rows changed."""
         ...
 
     def set_fighter_styles(self, source: str, styles: Mapping[str, Sequence[str]]) -> int:
@@ -894,6 +910,19 @@ class PostgresRepository:
                 changed += cur.rowcount
         return changed
 
+    def set_fighter_birth_dates(self, source: str, births: Mapping[str, date]) -> int:
+        if not births:
+            return 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(
+                "update public.fighters f set birth_date = v.d"
+                " from unnest(%s::text[], %s::date[]) as v(sid, d)"
+                " where f.source = %s and f.source_id = v.sid"
+                " and f.birth_date is distinct from v.d",
+                (list(births), list(births.values()), source),
+            )
+            return cur.rowcount
+
     def set_fighter_bouts(self, source: str, bouts: Mapping[str, Sequence[RecordRow]]) -> int:
         source_ids = list(bouts)
         flat = [(sid, row) for sid, rows in bouts.items() for row in rows]
@@ -1274,7 +1303,7 @@ class PostgresRepository:
     def set_fighters_now(self, rows: Sequence[FighterNow]) -> None:
         ids = [r.fighter_id for r in rows]
         records = [None if r.record is None else json.dumps(r.record) for r in rows]
-        elos = [_side_json(r.elo) for r in rows]
+        elos = [_standing_elo_json(r) for r in rows]
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute("update public.fighters set record = null, elo = null")
             cur.execute(
@@ -1330,7 +1359,7 @@ class PostgresRepository:
         if not fighter_ids:
             return {}
         query = """
-            select distinct on (x.fid) x.fid::text as fid,
+            select x.fid::text as fid,
                    case when f.fighter_a_id = x.fid then f.records -> 'a' else f.records -> 'b' end
                      as going_in,
                    r.outcome, (r.winner_fighter_id = x.fid) as won,
@@ -1344,6 +1373,9 @@ class PostgresRepository:
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute(query, (list(fighter_ids),))
             rows = cur.fetchall()
+        by_fighter: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            by_fighter.setdefault(row["fid"], []).append(row)
         # Bouts after the latest fight we store (other promotions, from the fighter's Wikipedia
         # table) are not in that fight's record going in, so they are added.
         later_query = """
@@ -1355,13 +1387,11 @@ class PostgresRepository:
         """
         records: dict[str, dict[str, int]] = {}
         last_dates: dict[str, date] = {}
-        for row in rows:
-            record = current_record(
-                row["going_in"], row["outcome"], None if row["open"] else row["won"]
-            )
+        for fid, fights in by_fighter.items():
+            record = record_from_history(fights)
             if record is not None:
-                records[row["fid"]] = record
-                last_dates[row["fid"]] = row["last_date"]
+                records[fid] = record
+                last_dates[fid] = fights[0]["last_date"]
         if records:
             with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
                 cur.execute(later_query, (list(last_dates), list(last_dates.values())))

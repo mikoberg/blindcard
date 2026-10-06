@@ -21,6 +21,7 @@ from typing import Any, Protocol
 from blindcard_ingest.db.repository import FightSides, Repository
 from blindcard_ingest.sources.sherdog import SherdogPage, career_rows, record_before_bout
 from blindcard_ingest.sources.wikipedia.countries import country_code
+from blindcard_ingest.sources.wikipedia.fighter_birth import parse_birth_date
 from blindcard_ingest.sources.wikipedia.fighter_record import (
     Record,
     RecordRow,
@@ -129,6 +130,7 @@ def run_ingest_fighters(
     styles: dict[str, list[str]] = {}
     records: dict[str, dict[str, Any]] = defaultdict(dict)
     careers: dict[str, list[RecordRow]] = {}
+    births: dict[str, dt.date] = {}
     pending = set(names)
 
     def take(fighter: str, text: str) -> bool:
@@ -142,6 +144,9 @@ def run_ingest_fighters(
         if code is not None:
             countries[fighter] = code
             report.fighters_with_country += 1
+        born = parse_birth_date(text)
+        if born is not None:
+            births[fighter] = born
         labels = parse_styles(text)
         if labels:
             styles[fighter] = labels
@@ -197,6 +202,8 @@ def run_ingest_fighters(
                 careers[fighter] = career_rows(
                     page.bouts, {a.event_date for a in appearances[fighter]}
                 )
+                if page.birth_date is not None and fighter not in births:
+                    births[fighter] = page.birth_date
                 break
 
     # Fighters without an article of their own: Wikidata's one-line description names the country.
@@ -218,6 +225,7 @@ def run_ingest_fighters(
         changed_records = repo.set_fight_records(source_name, records)
         changed_styles = repo.set_fighter_styles(source_name, styles)
         stored_bouts = repo.set_fighter_bouts(source_name, careers)
+        repo.set_fighter_birth_dates(source_name, births)
         logger.info(
             "ingest-fighters: %d countries, %d fights' records, %d styles, %d other bouts changed",
             changed_countries,

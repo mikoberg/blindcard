@@ -33,6 +33,7 @@ export interface FighterNowRow {
   record?: unknown;
   elo?: unknown;
   awards?: unknown;
+  birth_date?: unknown;
 }
 
 /** A rated fight as the fighter page lists it. */
@@ -108,6 +109,8 @@ export interface FighterProfile {
    * the awards for), as one total as of today, like the record. Never listed fight by fight.
    */
   awards: FighterAwards | null;
+  /** ISO date of birth (a public fact from their Wikipedia or Sherdog page); null when not known. */
+  born: string | null;
   stats: ProfileStats;
   /** Newest first. */
   fights: FighterFight[];

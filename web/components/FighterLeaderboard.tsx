@@ -26,6 +26,7 @@ export function FighterLeaderboard({
     label: string;
     value: (entry: LeaderboardEntry) => number | null;
     format?: (value: number) => string;
+    detail?: (entry: LeaderboardEntry) => string | null;
   } | null;
 }) {
   return (
@@ -35,7 +36,7 @@ export function FighterLeaderboard({
         <span className="w-6 shrink-0" />
         <span className="flex-1">Fighter</span>
         <span className={FIGHTS_COL}>Rated fights</span>
-        {extra && <span className="w-20 shrink-0 text-right">{extra.label}</span>}
+        {extra && <span className="w-24 shrink-0 text-right">{extra.label}</span>}
         <span className="w-12 shrink-0 text-center">Rating</span>
       </ListHeader>
       <ol className="divide-y divide-[var(--border)]">
@@ -50,7 +51,12 @@ export function FighterLeaderboard({
               average={entry.average}
               extra={
                 extra
-                  ? { label: extra.label, value: extra.value(entry), format: extra.format }
+                  ? {
+                      label: extra.label,
+                      value: extra.value(entry),
+                      format: extra.format,
+                      detail: extra.detail ? extra.detail(entry) : null,
+                    }
                   : undefined
               }
             />

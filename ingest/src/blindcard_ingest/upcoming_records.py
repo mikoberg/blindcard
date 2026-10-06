@@ -8,7 +8,8 @@ is no record (a debut and an unmatched fighter have none either).
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 #: What `fighter_bouts.result` holds, as the record's keys.
 _RESULT_KEY = {"win": "w", "loss": "l", "draw": "d", "no_contest": "nc"}
@@ -44,3 +45,40 @@ def current_record(
     else:
         return None
     return record
+
+
+def record_from_history(fights: Sequence[Mapping[str, Any]]) -> dict[str, int] | None:
+    """A fighter's record today from their completed fights, NEWEST FIRST.
+
+    Each fight has `going_in` ({w, l, d, nc} or None), `outcome` (win / draw / no_contest), `won`
+    (whether this fighter won) and `open` (a win without a known winner). The newest fight with a
+    record going in is the anchor: its record plus its own result, plus the result of every fight
+    after it, all of which are in our data. So one fight with a missing record going in (a table
+    that lags behind) no longer takes the fighter's current record away. None when nothing can be
+    anchored or a later result is unknown: never a guess.
+    """
+    later: list[Mapping[str, Any]] = []
+    for fight in fights:
+        record = current_record(
+            fight.get("going_in"),
+            str(fight["outcome"]),
+            None if fight.get("open") else fight["won"],
+        )
+        if record is None:
+            if fight.get("going_in") is not None:
+                return None  # a fight with a record but no readable result: stop, never guess
+            later.append(fight)
+            continue
+        counts: dict[str, int] = {}
+        for newer in later:
+            if newer["outcome"] == "win":
+                if newer.get("open"):
+                    return None
+                result = "win" if newer["won"] else "loss"
+            elif newer["outcome"] in ("draw", "no_contest"):
+                result = str(newer["outcome"])
+            else:
+                return None
+            counts[result] = counts.get(result, 0) + 1
+        return with_later_bouts(record, counts)
+    return None

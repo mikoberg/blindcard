@@ -7,6 +7,11 @@ export interface FighterElo {
   rating: number;
   /** How many earlier fights the rating rests on. */
   fights: number;
+  /**
+   * The highest rating they reached and the ISO date of that fight. Only a fighter's own page
+   * carries it (it comes with the standing as of today); the cards never do.
+   */
+  peak?: { rating: number; date: string };
 }
 
 /** Under this many earlier fights a rating is mostly the starting value plus luck. */
@@ -22,10 +27,16 @@ export function isProvisional(elo: FighterElo): boolean {
 /** A rating from the database; anything unexpected is unknown, never a guess. */
 export function toFighterElo(value: unknown): FighterElo | null {
   if (typeof value !== "object" || value === null) return null;
-  const o = value as { r?: unknown; n?: unknown };
+  const o = value as { r?: unknown; n?: unknown; pk?: unknown; pd?: unknown };
   const rating = typeof o.r === "string" ? Number(o.r) : o.r;
   if (typeof rating !== "number" || !Number.isFinite(rating) || rating < 500 || rating > 3000) return null;
   if (typeof o.n !== "number" || !Number.isInteger(o.n) || o.n < 1) return null;
+  const peak = typeof o.pk === "string" ? Number(o.pk) : o.pk;
+  if (typeof peak === "number" && Number.isFinite(peak) && peak >= rating && peak <= 3000) {
+    if (typeof o.pd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.pd)) {
+      return { rating, fights: o.n, peak: { rating: peak, date: o.pd } };
+    }
+  }
   return { rating, fights: o.n };
 }
 

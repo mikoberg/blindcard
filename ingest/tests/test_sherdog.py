@@ -115,3 +115,10 @@ def test_the_career_leaves_out_the_bouts_we_store_ourselves() -> None:
         (dt.date(2025, 11, 1), "win"),
     ]
     assert rows[-1].after == Record(2, 0, 1, 0) and rows[-1].method == "KO"
+
+
+def test_the_date_of_birth_is_read_from_the_page() -> None:
+    html = '<td>AGE</td><td><b>31</b> <em>/</em> <span itemprop="birthDate">Aug 6, 1995</span></td>'
+    assert parse_fighter_page(html).birth_date == dt.date(1995, 8, 6)
+    assert parse_fighter_page("<td>AGE</td><td>unknown</td>").birth_date is None
+    assert PAGE.birth_date is None  # the older fixture has none
