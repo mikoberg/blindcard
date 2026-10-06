@@ -9,10 +9,10 @@ export function EventHeader({ event }: { event: EventSummary }) {
   return (
     <header className="border-2 border-[var(--text)] bg-[var(--surface)]">
       <EventPoster event={event} size="lg" />
-      <div className="flex items-center justify-between gap-4 border-t-2 border-[var(--text)] p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-4 border-t-2 border-[var(--text)] px-4 py-3 sm:px-5">
         <div className="min-w-0">
-          <h1 className="display break-words text-2xl leading-tight sm:text-3xl">{event.name}</h1>
-          <p className="mt-2 text-[var(--muted)]">
+          <h1 className="display break-words text-xl leading-tight sm:text-2xl">{event.name}</h1>
+          <p className="mt-1.5 text-sm text-[var(--muted)]">
             <span className="font-semibold text-[var(--text)]">{formatEventDate(event.eventDate)}</span>
             {event.location && (
               <span className="block sm:inline">
@@ -28,11 +28,11 @@ export function EventHeader({ event }: { event: EventSummary }) {
           <div className="shrink-0 text-center" role="img" aria-label={`Card rating ${cardRating.toFixed(1)} out of 5`}>
             <p
               aria-hidden="true"
-              className={`scorebox h-14 w-[4.25rem] text-3xl ${cardRating >= 3.5 ? "scorebox-hot" : ""}`}
+              className={`scorebox h-11 w-14 text-2xl ${cardRating >= 3.5 ? "scorebox-hot" : ""}`}
             >
               {cardRating.toFixed(1)}
             </p>
-            <p aria-hidden="true" className="mt-1.5 text-xs text-[var(--muted)]">
+            <p aria-hidden="true" className="mt-1 text-xs text-[var(--muted)]">
               card rating
             </p>
           </div>

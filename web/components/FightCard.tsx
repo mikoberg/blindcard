@@ -6,7 +6,6 @@ import { formatStars } from "@/lib/card/stars";
 import { fighterNote, pairingLabel } from "@/lib/card/story";
 import type { CardFight } from "@/lib/card/types";
 import { ClassicBadge } from "./ClassicBadge";
-import { ClassicSeal } from "./ClassicSeal";
 import { FightTag } from "./FightTag";
 import { Matchup } from "./Matchup";
 import { ShareFightButton } from "./ShareFightButton";
@@ -15,31 +14,31 @@ import { WatchButton } from "./WatchButton";
 import { StarRating } from "./StarRating";
 
 /**
- * The rating, kept small: the number in the display type (the gold seal for a classic) with the
- * stars under it. On a phone it sits in a row above the matchup, on wide screens in a column of its
- * own beside it. Red from 4, ink below. The number is decorative; the stars carry the spoken label.
+ * The rating: a column of its own with the number in the display type and the stars under it. On a
+ * phone it is a strip above the matchup. A hairline separates it; the tier shows in the numeral
+ * (red from 4) and, for a classic, a gold tint and a gold numeral. The number is decorative; the
+ * stars carry the spoken label.
  */
 function RatingMark({ stars }: { stars: number | null }) {
   const classic = isClassic(stars);
   const hot = stars !== null && stars >= 4;
   return (
     <div
-      className={`ticket-stub flex items-center gap-3 px-4 py-2.5 sm:w-[6.25rem] sm:flex-col sm:justify-center sm:gap-1.5 sm:px-0 sm:py-3 ${
-        classic ? "ticket-stub-gold" : ""
+      className={`flex items-center gap-3 border-b border-[var(--border)] px-4 py-2 sm:w-[5.5rem] sm:row-span-2 sm:flex-col sm:justify-center sm:gap-1.5 sm:border-b-0 sm:border-r sm:px-0 ${
+        classic ? "rating-classic" : ""
       }`}
     >
-      {stars !== null &&
-        (classic ? (
-          <ClassicSeal size="sm" value={formatStars(stars)} />
-        ) : (
-          <span
-            aria-hidden="true"
-            className={`display text-3xl leading-none tabular-nums sm:text-4xl ${hot ? "text-[var(--accent)]" : "text-[var(--text)]"}`}
-          >
-            {formatStars(stars)}
-          </span>
-        ))}
-      <StarRating stars={stars} showNumber={false} small />
+      {stars !== null && (
+        <span
+          aria-hidden="true"
+          className={`display text-[1.7rem] leading-none tabular-nums sm:text-[2.3rem] ${
+            classic ? "text-[var(--gold-lo)]" : hot ? "text-[var(--accent)]" : "text-[var(--text)]"
+          }`}
+        >
+          {formatStars(stars)}
+        </span>
+      )}
+      <StarRating stars={stars} showNumber={false} flat />
     </div>
   );
 }
@@ -61,9 +60,9 @@ export function FightCard({
       data-fight-id={fight.id}
       className="scroll-mt-20 relative border-2 border-[var(--text)] bg-[var(--surface)]"
     >
-      <div className="sm:flex">
+      <div className="sm:grid sm:grid-cols-[5.5rem_1fr]">
         <RatingMark stars={stars} />
-        <div className="min-w-0 flex-1 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
+        <div className="min-w-0 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-h-6 flex-wrap items-center gap-1.5">
               {showSegment && fight.cardSegment && (
@@ -90,9 +89,8 @@ export function FightCard({
           {fight.videoId && (
             <WatchButton fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} videoId={fight.videoId} />
           )}
-
-          <RevealButton fightId={fight.id} fighterA={fight.fighterA} fighterB={fight.fighterB} />
         </div>
+        <RevealButton fightId={fight.id} fighterA={fight.fighterA} fighterB={fight.fighterB} />
       </div>
     </li>
   );

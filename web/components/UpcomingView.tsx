@@ -8,6 +8,7 @@ import {
 import type { UpcomingBout, UpcomingEvent, UpcomingSegment } from "@/lib/upcoming/types";
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 import { ExpectedMark } from "./ExpectedPlate";
+import { FightTag } from "./FightTag";
 import { Matchup } from "./Matchup";
 import { headliners } from "./UpcomingCard";
 import { UpcomingPick } from "./UpcomingPick";
@@ -22,7 +23,6 @@ const SEGMENT_LABELS: Record<UpcomingSegment, string> = {
   prelim: "Prelims",
   early_prelim: "Early prelims",
 };
-const TAG = "inline-flex items-center border-[1.5px] px-1.5 py-px text-[0.7rem] font-bold leading-4";
 
 /** The card split by part when every bout has one (all or nothing, as on completed cards). */
 function groups(bouts: readonly UpcomingBout[]): { label: string | null; bouts: UpcomingBout[] }[] {
@@ -91,20 +91,14 @@ function Why({ bout }: { bout: UpcomingBout }) {
  * fight itself and no result.
  */
 function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
-  const tags = bout.isTitleFight;
   return (
     <li className="relative border-2 border-[var(--text)] bg-[var(--surface)]">
-      {tags && (
-        // Sits on the top border like a label, so the card is no taller for it.
-        <div className="absolute -top-3 left-4 z-10 flex flex-wrap items-center gap-1.5 sm:left-[7.25rem]">
-          {bout.isTitleFight && (
-            <span className={`${TAG} border-[var(--accent)] bg-[var(--surface)] text-[var(--accent-text)]`}>Title fight</span>
-          )}
-        </div>
-      )}
-      <div className="sm:flex sm:min-h-[5.875rem]">
+      <div className={bout.prediction ? "sm:grid sm:grid-cols-[5.5rem_1fr]" : undefined}>
         {bout.prediction && <ExpectedMark stars={bout.prediction.stars} />}
-        <div className="min-w-0 flex-1 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
+        <div className="min-w-0 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
+          <div className="flex min-h-6 items-center gap-1.5">
+            {bout.isTitleFight && <FightTag kind="title">Title fight</FightTag>}
+          </div>
           <Matchup
             a={{ ...bout.a, note: null }}
             b={{ ...bout.b, note: null }}

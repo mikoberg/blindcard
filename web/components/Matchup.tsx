@@ -4,7 +4,7 @@ import { rankSpoken, rankText } from "@/lib/card/rank";
 import { recordParts } from "@/lib/card/record";
 import type { FighterRecord } from "@/lib/card/types";
 import { BillingMark } from "./BillingMark";
-import { Monogram } from "./Monogram";
+import { FlagChip } from "./FlagChip";
 
 export interface MatchupFighter {
   name: string;
@@ -120,7 +120,7 @@ function FighterMeta({
         data-matchup-meta
         className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm md:flex-nowrap ${mirrored ? "sm:flex-row-reverse" : ""}`}
       >
-        <Monogram name={fighter.name} country={fighter.country} size="sm" />
+        <FlagChip country={fighter.country} />
         {typeof fighter.rank === "number" && <RankChip rank={fighter.rank} when={when} />}
         {parts && (
           <span

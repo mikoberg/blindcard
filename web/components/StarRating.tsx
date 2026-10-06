@@ -47,12 +47,42 @@ function Star({ fill, onDark, small }: { fill: StarFill; onDark: boolean; small:
   );
 }
 
+/** The five stars as flat marks: gold when earned, grey when not, half gold for a half. For the card. */
+function FlatStars({ stars, showNumber }: { stars: number; showNumber: boolean }) {
+  const mask = "polygon(50% 0, 62% 36%, 100% 38%, 70% 60%, 80% 98%, 50% 76%, 20% 98%, 30% 60%, 0 38%, 38% 36%)";
+  const paint: Record<StarFill, string> = {
+    full: "var(--gold-mid)",
+    half: "linear-gradient(90deg, var(--gold-mid) 50%, var(--border) 50%)",
+    empty: "var(--border)",
+  };
+  return (
+    <span className="inline-flex items-center gap-3" role="img" aria-label={starsLabel(stars)}>
+      <span className="inline-flex gap-0.5" aria-hidden="true">
+        {starFills(stars).map((fill, index) => (
+          <i key={index} className="block h-[11px] w-[11px]" style={{ clipPath: mask, background: paint[fill] }} />
+        ))}
+      </span>
+      {showNumber && (
+        <span
+          aria-hidden="true"
+          className={`display text-xl leading-none tabular-nums ${stars >= 4 ? "text-[var(--accent)]" : "text-[var(--text)]"}`}
+        >
+          {formatStars(stars)}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function StarRating({
   stars,
   showNumber = true,
   onDark = false,
   small = false,
+  flat = false,
 }: {
+  /** Flat, small stars without outline, as on the fight card. With the number when `showNumber` is set. */
+  flat?: boolean;
   /** Smaller stars, for dense places such as the fight card. */
   small?: boolean;
   stars: number | null;
@@ -68,6 +98,7 @@ export function StarRating({
       </span>
     );
   }
+  if (flat) return <FlatStars stars={stars} showNumber={showNumber} />;
   return (
     <span className="inline-flex items-center gap-2.5" role="img" aria-label={starsLabel(stars)}>
       <span className={`flex ${small ? "gap-px" : "gap-0.5"}`} aria-hidden="true">

@@ -15,9 +15,9 @@ interface Props {
 }
 
 /**
- * The result, sealed. The seal is a slim strip with a dashed edge, the line you tear along: it looks
- * the same for every fight, so nothing about it can hint at an outcome, and it turns to solid ink
- * under the pointer, like a redaction. The result is only loaded, and only for this fight, after a
+ * The result, sealed: one quiet row along the foot of the card, a hairline above it and a lock on
+ * the right. It looks the same for every fight, so nothing about it can hint at an outcome, and it
+ * turns to solid ink under the pointer. The result is only loaded, and only for this fight, after a
  * click on it.
  */
 export function RevealButton({ fightId, fighterA, fighterB }: Props) {
@@ -45,45 +45,51 @@ export function RevealButton({ fightId, fighterA, fighterB }: Props) {
           ? "Try again"
           : "Reveal result";
 
+  // Two grid cells of the fight card: the row under the matchup, and the panel across the full width
+  // below it, so the rating column keeps its place when the result opens.
   return (
-    <div className="mt-3">
-      <button
-        type="button"
-        onClick={shown ? () => dispatch({ type: "hide" }) : reveal}
-        disabled={state.status === "loading"}
-        aria-expanded={shown}
-        aria-controls={panelId}
-        // Many identical buttons on a card: the name says which fight this one is for.
-        aria-label={`${label}: ${fighterA.name} versus ${fighterB.name}`}
-        className={`flex h-9 w-full items-center justify-between gap-3 border-[1.5px] px-3 text-left text-[0.8rem] font-bold transition-colors disabled:opacity-70 ${
-          shown
-            ? "border-solid border-[var(--text)] bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--border)]"
-            : "border-dashed border-[color-mix(in_srgb,var(--text)_65%,transparent)] text-[var(--text)] hover:border-solid hover:border-[var(--text)] hover:bg-[var(--text)] hover:text-[var(--bg)] focus-visible:bg-[var(--text)] focus-visible:text-[var(--bg)]"
-        }`}
-      >
-        <span>{label}</span>
-        {!shown && (
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="h-3.5 w-3.5 shrink-0 opacity-75"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="5" y="11" width="14" height="10" rx="1" />
-            <path d="M8 11V8a4 4 0 018 0v3" />
-          </svg>
-        )}
-      </button>
-      <div id={panelId} aria-live="polite">
+    <>
+      <div className="border-t border-[var(--border)] sm:col-start-2">
+        <button
+          type="button"
+          onClick={shown ? () => dispatch({ type: "hide" }) : reveal}
+          disabled={state.status === "loading"}
+          aria-expanded={shown}
+          aria-controls={panelId}
+          // Many identical buttons on a card: the name says which fight this one is for.
+          aria-label={`${label}: ${fighterA.name} versus ${fighterB.name}`}
+          className={`flex h-9 w-full items-center justify-between gap-3 px-4 text-left text-[0.8rem] font-bold transition-colors focus-visible:-outline-offset-4 disabled:opacity-70 sm:px-5 ${
+            shown
+              ? "bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--border)]"
+              : "text-[var(--text)] hover:bg-[var(--text)] hover:text-[var(--surface)] focus-visible:bg-[var(--text)] focus-visible:text-[var(--surface)]"
+          }`}
+        >
+          <span>{label}</span>
+          {!shown && (
+            <span aria-hidden="true" className="flex items-center gap-1.5 font-semibold opacity-70">
+              Spoiler
+              <svg
+                viewBox="0 0 24 24"
+                className="h-3.5 w-3.5 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="5" y="11" width="14" height="10" rx="1" />
+                <path d="M8 11V8a4 4 0 018 0v3" />
+              </svg>
+            </span>
+          )}
+        </button>
+      </div>
+      <div id={panelId} aria-live="polite" className="sm:col-span-2">
         {state.status === "error" && (
-          <p className="pt-2 text-sm text-[var(--muted)]">Couldn&apos;t load the result. Try again.</p>
+          <p className="px-4 pb-2 text-sm text-[var(--muted)] sm:px-5">Couldn&apos;t load the result. Try again.</p>
         )}
         {state.status === "shown" && (
-          <div className="mt-2 space-y-1 bg-[var(--bg)] p-3 sm:p-4">
+          <div className="space-y-1 border-t-2 border-[var(--text)] bg-[var(--bg)] px-4 py-3 sm:px-5">
             <p className="display break-words text-xl">{state.view.headline}</p>
             <p className="break-words text-sm">{state.view.method}</p>
             <p className="text-sm text-[var(--muted)]">{state.view.when}</p>
@@ -100,6 +106,6 @@ export function RevealButton({ fightId, fighterA, fighterB }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
