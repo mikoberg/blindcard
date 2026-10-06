@@ -131,6 +131,8 @@ class FakeRepository:
     predictions: list | None = None
     outcome_rows: list = field(default_factory=list)
     elo_fight_rows: list = field(default_factory=list)
+    score_versions: list = field(default_factory=list)
+    active_version: int | None = None
     picks: list | None = None
     fighter_styles: dict = field(default_factory=dict)
     style_candidates: list = field(default_factory=list)
@@ -323,6 +325,23 @@ class FakeRepository:
 
     def elo_fights(self):  # type: ignore[no-untyped-def]
         return list(self.elo_fight_rows)
+
+    def old_score_versions(self, keep):  # type: ignore[no-untyped-def]
+        newest = sorted(self.score_versions, reverse=True)
+        kept = {*newest[: max(keep, 1)]}
+        if self.active_version is not None:
+            others = [v for v in newest if v != self.active_version]
+            kept = {self.active_version, *others[: max(keep - 1, 0)]}
+        return sorted(v for v in self.score_versions if v not in kept)
+
+    def prune_score_versions(self, versions):  # type: ignore[no-untyped-def]
+        if self.active_version in versions:
+            raise RuntimeError("refusing to prune the active score version")
+        self.pruned = list(versions)
+        return len(versions) * 10, len(versions) * 10
+
+    def reclaim_score_space(self) -> None:
+        self.reclaimed = True
 
     def set_fighters_now(self, rows) -> None:  # type: ignore[no-untyped-def]
         self.fighters_now_rows = list(rows)

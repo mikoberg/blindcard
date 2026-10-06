@@ -235,6 +235,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--force", action="store_true", help="replace an existing scoring_vN.toml (never v1)"
     )
 
+    prune = commands.add_parser(
+        "prune-scores",
+        parents=[common],
+        help="drop the per-fight scores of old score versions to free space (never the active one)",
+    )
+    prune.add_argument(
+        "--keep",
+        type=int,
+        default=2,
+        metavar="N",
+        help="keep the scores of the active version and the newest others, N versions in all",
+    )
+    prune.add_argument(
+        "--reclaim",
+        action="store_true",
+        help="afterwards give the disk space back to the database (VACUUM FULL, locks the tables)",
+    )
+
     rescore = commands.add_parser(
         "rescore", parents=[common], help="rebuild the reference and rescore all fights"
     )
@@ -335,6 +353,13 @@ def _finish(report: IngestReport) -> int:
 
 
 def _run(args: argparse.Namespace, settings: Settings) -> int:
+    if args.command == "prune-scores":
+        from blindcard_ingest.prune import run_prune_scores
+
+        with _open_repository(settings) as repo:
+            run_prune_scores(repo, keep=args.keep, reclaim=args.reclaim, dry_run=args.dry_run)
+        return EXIT_OK
+
     if args.command == "rescore":
         with _open_repository(settings) as repo:
             rescore = run_rescore(

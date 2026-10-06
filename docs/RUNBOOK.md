@@ -101,7 +101,23 @@ Security headers and a static Content-Security-Policy are set in `web/next.confi
 only in production builds). If a page ever needs an outside script, image or font, the policy must
 be changed on purpose.
 
-## 7. Rolling back
+## 7. Housekeeping: free space
+
+Every `rescore --version N` keeps all of a version's per-fight scores and features (about 15 MB per
+version), and only the active version is ever read. After trying a new version, drop the old ones:
+
+```powershell
+.\.venv\Scripts\blindcard-ingest prune-scores --keep 2 --dry-run   # what would go
+.\.venv\Scripts\blindcard-ingest prune-scores --keep 2 --reclaim   # drop, then give the space back
+```
+
+It keeps the active version and the newest other one, never touches the active one, and leaves every
+version's config in `scoring_versions`. A dropped version is rebuilt with `rescore --version N`.
+`--reclaim` runs VACUUM FULL, which locks the two score tables while it runs. On a development
+database with 22 versions this took the database from 399 MB to 74 MB; production keeps one version
+and is about 48 MB.
+
+## 8. Rolling back
 
 - Web: redeploy the previous build from the host.
 - Database: migrations are forward-only. Fix forward with a new numbered migration; never edit an

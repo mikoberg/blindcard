@@ -339,6 +339,20 @@ class Repository(Protocol):
         """Stored events from `from_year` on, with the fighter names of each fight."""
         ...
 
+    def old_score_versions(self, keep: int) -> list[int]:
+        """The versions whose per-fight scores and features can be dropped: all but the active one
+        and the newest others, `keep` versions in total. Their config stays in scoring_versions."""
+        ...
+
+    def prune_score_versions(self, versions: Sequence[int]) -> tuple[int, int]:
+        """Delete the per-fight scores and features of these versions (never the active one).
+        Returns (scores deleted, features deleted)."""
+        ...
+
+    def reclaim_score_space(self) -> None:
+        """Give the disk space of deleted scores back (VACUUM FULL: locks the two tables)."""
+        ...
+
     def replace_version(
         self,
         config: ScoringConfig,
@@ -1333,6 +1347,50 @@ class PostgresRepository:
             )
             for event_id, group in grouped.items()
         ]
+
+    def old_score_versions(self, keep: int) -> list[int]:
+        query = """
+            with kept as (
+              select version from public.scoring_versions
+              order by is_active desc, version desc limit %s
+            )
+            select version from public.scoring_versions
+            where version not in (select version from kept) order by version
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (max(keep, 1),))
+            return [row["version"] for row in cur.fetchall()]
+
+    def prune_score_versions(self, versions: Sequence[int]) -> tuple[int, int]:
+        if not versions:
+            return 0, 0
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(
+                "select count(*) as n from public.scoring_versions"
+                " where version = any(%s) and is_active",
+                (list(versions),),
+            )
+            if cur.fetchone()["n"]:
+                raise RepositoryError("refusing to prune the active score version")
+            cur.execute(
+                "delete from public.excitement_features where version = any(%s)", (list(versions),)
+            )
+            features = cur.rowcount
+            cur.execute(
+                "delete from public.excitement_scores where version = any(%s)", (list(versions),)
+            )
+            return cur.rowcount, features
+
+    def reclaim_score_space(self) -> None:
+        # VACUUM cannot run inside a transaction: end it, switch to autocommit, switch back.
+        with sanitized_db_errors():
+            self._conn.commit()
+            self._conn.autocommit = True
+            try:
+                for table in ("excitement_features", "excitement_scores"):
+                    self._conn.execute(f"vacuum full public.{table}")
+            finally:
+                self._conn.autocommit = False
 
     def replace_version(
         self,
