@@ -83,6 +83,7 @@ export function FightCard({
             b={{ ...fight.fighterB, record: fight.records?.b ?? null, note: fighterNote(fight.career?.b), elo: fight.elo?.b, rank: fight.ranks?.b }}
             weightClass={fight.weightClass}
             when="before"
+            billing={fight.cardPosition}
           />
 
           {fight.videoId && (

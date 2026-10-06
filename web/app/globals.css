@@ -210,3 +210,18 @@ body {
 .gold-foil {
   background-image: linear-gradient(145deg, var(--gold-hi) 0%, var(--gold-mid) 45%, var(--gold-lo) 100%);
 }
+
+/* The main event and co-main marks: belt plates, an ink rim around a face (see BillingMark). */
+.billing-plate {
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0 50%);
+  background-color: var(--text);
+}
+.billing-face {
+  clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%);
+}
+.billing-face-main {
+  background-image: linear-gradient(180deg, #d9401c 0%, #c23314 55%, #a82a0e 100%);
+}
+.billing-face-co {
+  background-color: var(--surface);
+}

@@ -59,7 +59,7 @@ describe("findLeaks (negative control: the scanner can fail)", () => {
 
   it("passes ordinary page text", () => {
     const clean =
-      "Main event. Lightweight title fight, scheduled for five rounds. Rated 4.5 out of 5. Sat 26 Sep 2026. Reveal result";
+      "Lightweight title fight, scheduled for five rounds. Rated 4.5 out of 5. Sat 26 Sep 2026. Reveal result";
     expect(findLeaks(clean, HTML_LEAK_PATTERNS)).toEqual([]);
     expect(findLeaks(clean, CHUNK_LEAK_PATTERNS)).toEqual([]);
   });

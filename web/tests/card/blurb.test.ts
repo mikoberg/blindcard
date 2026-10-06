@@ -4,10 +4,10 @@ import { fightBlurb } from "@/lib/card/blurb";
 const base = { cardPosition: 5, isTitleFight: false, weightClass: "Lightweight", scheduledRounds: 3 };
 
 describe("fightBlurb", () => {
-  it("describes a main-event title fight", () => {
+  it("describes a title fight (the main event mark is not part of the text)", () => {
     expect(
       fightBlurb({ cardPosition: 1, isTitleFight: true, weightClass: "Lightweight", scheduledRounds: 5 }),
-    ).toBe("Main event. Lightweight title fight, scheduled for five rounds.");
+    ).toBe("Lightweight title fight, scheduled for five rounds.");
   });
 
   it("describes an ordinary bout without a role", () => {
@@ -16,16 +16,12 @@ describe("fightBlurb", () => {
     );
   });
 
-  it("labels the co-main event", () => {
-    expect(fightBlurb({ ...base, cardPosition: 2 })).toBe(
-      "Co-main event. Lightweight bout, scheduled for three rounds.",
-    );
+  it("says nothing of the place on the bill: the mark above the vs does", () => {
+    expect(fightBlurb({ ...base, cardPosition: 2 })).toBe("Lightweight bout, scheduled for three rounds.");
   });
 
   it("copes with unknown weight class and unknown rounds", () => {
-    expect(fightBlurb({ cardPosition: 2, isTitleFight: false, weightClass: null, scheduledRounds: null })).toBe(
-      "Co-main event. Bout.",
-    );
+    expect(fightBlurb({ cardPosition: 2, isTitleFight: false, weightClass: null, scheduledRounds: null })).toBe("Bout.");
     expect(fightBlurb({ cardPosition: 3, isTitleFight: true, weightClass: null, scheduledRounds: 1 })).toBe(
       "Title fight, scheduled for one round.",
     );

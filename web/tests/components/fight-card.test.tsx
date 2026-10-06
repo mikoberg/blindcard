@@ -9,7 +9,7 @@ describe("FightCard", () => {
   it("shows the stars, the blurb and a reveal button", () => {
     const html = render(makeFight(1, 4.5, { isTitleFight: true, scheduledRounds: 5 }));
     expect(html).toContain('aria-label="Rated 4.5 out of 5"');
-    expect(html).toContain("Main event. Lightweight title fight, scheduled for five rounds.");
+    expect(html).toContain("Lightweight title fight, scheduled for five rounds.");
     expect(html).toContain("Reveal result");
     expect(html).toContain('data-fight-id="fight-1"');
     expect(html).toContain("Title fight");
@@ -270,5 +270,27 @@ describe("FightCard UFC rank going into the fight", () => {
   it("shows one chip when only one fighter was ranked, and none without ranks", () => {
     expect(render(makeFight(2, 4, { ranks: { a: null, b: 5 } })).match(/in the division/g)).toHaveLength(1);
     expect(render(makeFight(2, 4))).not.toContain("in the division");
+  });
+});
+
+describe("the main event and co-main marks", () => {
+  it("puts the mark above the vs: the main event as the loud plate, the co-main as the quiet one", () => {
+    const main = render(makeFight(1, 4.5));
+    const co = render(makeFight(2, 4));
+    expect(main).toMatch(/Main event<\/span><\/span><\/span><span[^>]*>vs<\/span>/);
+    expect(co).toMatch(/Co-main<\/span><\/span><\/span><span[^>]*>vs<\/span>/);
+    expect(main).not.toContain("Co-main");
+    expect(co).not.toContain("Main event");
+    expect(main).toContain("billing-face-main"); // stamp-red face
+    expect(co).toContain("billing-face-co");
+    expect(co).not.toContain("billing-face-main");
+  });
+
+  it("marks no other fight, and no longer says it in the blurb", () => {
+    for (const position of [3, 5, 9]) {
+      const html = render(makeFight(position, 4));
+      expect(html).not.toMatch(/Main event|Co-main/);
+    }
+    expect(render(makeFight(1, 4.5))).not.toContain("Main event. ");
   });
 });

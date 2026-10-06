@@ -91,15 +91,12 @@ function Why({ bout }: { bout: UpcomingBout }) {
  * fight itself and no result.
  */
 function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
-  const tags = bout.position === 1 || bout.isTitleFight;
+  const tags = bout.isTitleFight;
   return (
     <li className="relative border-2 border-[var(--text)] bg-[var(--surface)]">
       {tags && (
         // Sits on the top border like a label, so the card is no taller for it.
         <div className="absolute -top-3 left-4 z-10 flex flex-wrap items-center gap-1.5 sm:left-[7.25rem]">
-          {bout.position === 1 && (
-            <span className={`${TAG} border-[var(--text)] bg-[var(--text)] text-[var(--bg)]`}>Main event</span>
-          )}
           {bout.isTitleFight && (
             <span className={`${TAG} border-[var(--accent)] bg-[var(--surface)] text-[var(--accent-text)]`}>Title fight</span>
           )}
@@ -113,6 +110,7 @@ function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
             b={{ ...bout.b, note: null }}
             weightClass={bout.weightClass}
             when="now"
+            billing={bout.position}
           />
           {bout.weightClass && <p className="sr-only">{bout.weightClass} bout</p>}
         </div>

@@ -11,13 +11,11 @@ function roundsPhrase(rounds: number | null): string {
 }
 
 /**
- * Template text from pre-fight facts only (position, title flag, weight class, scheduled
- * rounds). Never add anything derived from a result or from round statistics.
+ * Template text from pre-fight facts only (title flag, weight class, scheduled rounds; the place on
+ * the bill is a mark above the "vs", see BillingMark). Never add anything derived from a result or from round statistics.
  */
 export function fightBlurb(input: BlurbInput): string {
   const weightClass = input.weightClass?.trim() || null;
-  const role =
-    input.cardPosition === 1 ? "Main event" : input.cardPosition === 2 ? "Co-main event" : null;
   const subject = input.isTitleFight
     ? weightClass
       ? `${weightClass} title fight`
@@ -25,5 +23,5 @@ export function fightBlurb(input: BlurbInput): string {
     : weightClass
       ? `${weightClass} bout`
       : "Bout";
-  return `${role ? `${role}. ` : ""}${subject}${roundsPhrase(input.scheduledRounds)}.`;
+  return `${subject}${roundsPhrase(input.scheduledRounds)}.`;
 }
