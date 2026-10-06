@@ -13,38 +13,35 @@ export interface HistoryBout {
 const KEY: Record<FightOutcome, keyof FighterRecord> = { win: "w", loss: "l", draw: "d", no_contest: "nc" };
 
 /**
- * The record the fighter had going INTO each fight of the history, found by taking the record as it
- * stands today and walking back: take off the newest fight, that is the record before it, take off
- * the next, and so on. This stays right for every listed fight as long as no LATER fight is missing
- * from the list (the fights we miss are the early ones, so it nearly always does).
+ * The record the fighter had AFTER each fight of the history (what a record column in a fight table
+ * shows: a win in the first fight reads 1-0), found by starting from the record as it stands today and
+ * walking back: today's record is the record after the newest fight; take that fight off and you have
+ * the record after the one before it, and so on. This stays right for every listed fight as long as no
+ * LATER fight is missing from the list (the fights we miss are the early ones, so it nearly always is).
  *
- * A fight gets null when it cannot be known: its result or a later one is unknown, or the numbers
- * would go below zero (the lists then do not match the record). Once that happens every older fight
- * is null too. Never a guess.
+ * A fight gets null when it cannot be known: a later result is unknown, or the numbers would go below
+ * zero (the lists then do not match the record). Once that happens every older fight is null too.
+ * Never a guess.
  */
-export function recordsBefore(
+export function recordsAfter(
   today: FighterRecord | null,
   bouts: readonly HistoryBout[],
 ): Map<string, FighterRecord | null> {
-  const before = new Map<string, FighterRecord | null>();
+  const after = new Map<string, FighterRecord | null>();
   // Newest first; the sort is stable, so fights of one date keep the order they were given in.
   const ordered = [...bouts].sort((a, b) => b.date.localeCompare(a.date));
   let running: FighterRecord | null = today;
   for (const bout of ordered) {
+    // The record after a fight includes its own result: a win cannot leave nought wins.
+    if (running !== null && bout.outcome !== null && running[KEY[bout.outcome]] < 1) running = null;
+    after.set(bout.key, running);
     if (running === null || bout.outcome === null) {
       running = null;
-      before.set(bout.key, null);
       continue;
     }
     const next: FighterRecord = { ...running };
     next[KEY[bout.outcome]] -= 1;
-    if (next.w < 0 || next.l < 0 || next.d < 0 || next.nc < 0) {
-      running = null;
-      before.set(bout.key, null);
-      continue;
-    }
-    running = next;
-    before.set(bout.key, next);
+    running = next.w < 0 || next.l < 0 || next.d < 0 || next.nc < 0 ? null : next;
   }
-  return before;
+  return after;
 }

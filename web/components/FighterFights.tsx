@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { recordParts } from "@/lib/card/record";
 import { formatMonthYear } from "@/lib/format";
 import { HISTORY_OPEN_EVENT } from "@/lib/fighters/open";
-import { recordsBefore } from "@/lib/fighters/history";
+import { recordsAfter } from "@/lib/fighters/history";
 import { fetchFighterResults, type FightOutcome, type FighterResult, type OtherBout } from "@/lib/fighters/results";
 import { formatRating, isHighRating } from "@/lib/leaderboard/format";
 import type { FighterFight } from "@/lib/leaderboard/types";
@@ -162,8 +162,8 @@ export function FighterFights({
   const rows: Row[] = fights.map((fight) => ufcRow(fight, results && fight.fightId ? results.get(fight.fightId) : undefined));
   if (shown) rows.push(...state.others.map(otherRow));
   rows.sort((a, b) => b.date.localeCompare(a.date)); // stable: rated fights stay ahead of others of one date
-  const before = shown
-    ? recordsBefore(
+  const after = shown
+    ? recordsAfter(
         record,
         rows.map((row) => ({ key: row.key, date: row.date, outcome: row.result ? row.result.outcome : null })),
       )
@@ -239,7 +239,7 @@ export function FighterFights({
           <div id={panelId} aria-live="polite">
             {!shown && state.status !== "error" && (
               <p className="px-4 py-2 text-xs text-[var(--muted)]">
-                Spoilers: shows every fight of the career, how it ended, win or loss, and the record at the time. It
+                Spoilers: shows every fight of the career, how it ended, win or loss, and the record after each fight. It
                 stays closed until you open it.
               </p>
             )}
@@ -276,7 +276,7 @@ export function FighterFights({
           <span className="hidden min-w-0 flex-1 md:block">Event</span>
           {showClass && <span className="hidden w-36 shrink-0 lg:block">Weight class</span>}
           {shown && <span className="w-[6.5rem] shrink-0">Result</span>}
-          {shown && <span className="hidden w-16 shrink-0 md:block">Record then</span>}
+          {shown && <span className="hidden w-16 shrink-0 md:block">Record</span>}
           <span className="w-12 shrink-0 text-center">Rating</span>
         </div>
         {visible.length === 0 ? (
@@ -284,7 +284,7 @@ export function FighterFights({
         ) : (
           <ul className="divide-y divide-[var(--border)]">
             {visible.map((row) => {
-              const then = before?.get(row.key) ?? null;
+              const then = after?.get(row.key) ?? null;
               const thenParts = then ? recordParts(then) : null;
               return (
                 <li key={row.key} className="flex min-h-[3.25rem] items-center gap-3 px-3 py-2 sm:px-4">
@@ -342,7 +342,7 @@ export function FighterFights({
                   {shown && (
                     <span
                       className="hidden w-16 shrink-0 text-sm tabular-nums text-[var(--muted)] md:block"
-                      aria-label={thenParts ? `Record going into the fight: ${thenParts.main}${thenParts.extra ? ` ${thenParts.extra}` : ""}` : undefined}
+                      aria-label={thenParts ? `Record after the fight: ${thenParts.main}${thenParts.extra ? ` ${thenParts.extra}` : ""}` : undefined}
                     >
                       <span aria-hidden="true">{thenParts ? thenParts.main : ""}</span>
                     </span>
