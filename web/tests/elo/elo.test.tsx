@@ -123,12 +123,12 @@ describe("POST /api/elo", () => {
   });
 });
 
-describe("the spoiler page before the click", () => {
-  it("shows the warning and the closed button and no fighter", () => {
+describe("the Elo page as first rendered", () => {
+  it("holds no fighter and no rating: the list is fetched by the browser, never rendered with the page", () => {
     const html = renderToStaticMarkup(<EloBoard />);
-    expect(html).toContain("Spoilers ahead");
-    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("Loading the list");
     expect(html).not.toContain("<li");
+    expect(html).not.toMatch(/Spoilers ahead|Unlock/);
   });
 
   it("carries no result wording in the page itself", () => {

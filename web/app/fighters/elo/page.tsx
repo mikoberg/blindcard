@@ -4,9 +4,9 @@ import { FighterTabs } from "@/components/FighterTabs";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Strongest fighters (spoilers)",
+  title: "Strongest fighters",
   description:
-    "An Elo leaderboard of the strongest active fighters. It is built from past results, so it sits behind a spoiler warning and a click.",
+    "An Elo leaderboard of the strongest active fighters, built from past results, with the calculation behind every rating.",
   path: "/fighters/elo",
   root: true,
 });
@@ -18,8 +18,8 @@ export default function EloPage() {
       <header className="space-y-4">
         <h1 className="page-title">Strongest fighters</h1>
         <p className="max-w-xl text-lg text-[var(--muted)]">
-          Who is strongest right now, by Elo rating. Unlike the rest of Blindcard this list is about results, not
-          about how fun a fight was.
+          Who is strongest right now, by Elo rating. Unlike the rest of Blindcard this list is built from results, not
+          from how fun a fight was.
         </p>
       </header>
 

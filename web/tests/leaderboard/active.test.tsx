@@ -75,7 +75,7 @@ describe("FighterTabs", () => {
     expect(watch).toContain('href="/fighters"');
     expect(watch).toContain('href="/fighters/elo"');
     expect(watch.match(/aria-current="page"/g)).toHaveLength(1);
-    expect(watch).toContain("spoilers");
+    expect(watch).not.toContain("spoilers"); // no warning on the Elo tab any more
     const elo = renderToStaticMarkup(<FighterTabs active="elo" />);
     expect(elo).toMatch(/<a[^>]*aria-current="page"[^>]*>\s*Strongest/);
     expect(watch).toMatch(/<a[^>]*aria-current="page"[^>]*>\s*Worth watching/);
