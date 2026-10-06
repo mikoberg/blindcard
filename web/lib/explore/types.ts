@@ -29,30 +29,3 @@ export interface EventFacets {
 export interface ExploreEvent extends EventSummary {
   facets: EventFacets | null;
 }
-
-/**
- * What an event's fights turned out to be, added up. RESULT DATA: it is only loaded after a click
- * on a spoiler warning, through `event_result_stats`, never during a page render.
- */
-export interface ResultFacets {
-  fights: number;
-  knockouts: number;
-  submissions: number;
-  decisions: number;
-  splitDecisions: number;
-  roundOneFinishes: number;
-  totalSeconds: number;
-  longestSeconds: number;
-  /** null when no fight of the card was finished. */
-  fastestFinishSeconds: number | null;
-  bonuses: number;
-  upsets: number;
-  knockdowns: number;
-  strikes: number;
-  takedowns: number;
-  subAttempts: number;
-  controlSeconds: number;
-}
-
-/** Result facets by event id. */
-export type ResultsByEvent = Readonly<Record<string, ResultFacets>>;

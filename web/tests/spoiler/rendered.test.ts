@@ -84,16 +84,11 @@ live("the running app serves no result data", () => {
     expect((await fetch(`${BASE}/api/reveal`, { method: "POST" })).status).toBe(404);
   });
 
-  it("the card finder: public data carries no result, result facets are POST only and never cached", async () => {
+  it("the card finder data carries no result", async () => {
     const publicData = await get("/api/explore");
     expect(publicData.status).toBe(200);
     expect(findLeaks(publicData.text, HTML_LEAK_PATTERNS)).toEqual([]);
-    expect(publicData.text).not.toMatch(/knockouts|submissions|totalSeconds|fastestFinish/);
-
-    expect((await fetch(`${BASE}/api/explore/results`)).status).toBe(405);
-    const post = await fetch(`${BASE}/api/explore/results`, { method: "POST" });
-    expect(post.status).toBe(200);
-    expect(post.headers.get("cache-control")).toContain("no-store");
-    expect(Object.keys(((await post.json()) as { results: object }).results).length).toBeGreaterThan(0);
+    // nothing result-based is served at all: there is no route for it
+    expect((await fetch(`${BASE}/api/explore/results`, { method: "POST" })).status).toBe(404);
   });
 });

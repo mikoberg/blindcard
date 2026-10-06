@@ -1,17 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import {
-  FLAGS,
-  METRICS,
-  SORTS,
-  WEIGHT_CLASSES,
-  isMetricId,
-  metricById,
-  sortIsSpoiler,
-  type MetricGroup,
-} from "@/lib/explore/metrics";
-import { DEFAULT_STATE, MAX_RULES, type FinderState, type Rule } from "@/lib/explore/query";
+import { FLAGS, METRICS, SORTS, WEIGHT_CLASSES, isMetricId, metricById, type MetricGroup } from "@/lib/explore/metrics";
+import { MAX_RULES, PRESETS, applyPreset, freshState, pillsOf, type FinderState, type Rule } from "@/lib/explore/query";
 
 const FIELD =
   "min-h-11 w-full border-2 border-[var(--text)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--text)]";
@@ -32,7 +23,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
   );
 }
 
-function countryName(code: string): string {
+export function countryName(code: string): string {
   try {
     return new Intl.DisplayNames(["en"], { type: "region" }).of(code.slice(0, 2).toUpperCase()) ?? code;
   } catch {
@@ -40,64 +31,29 @@ function countryName(code: string): string {
   }
 }
 
-const GROUPS: readonly MetricGroup[] = ["Ratings", "Elo", "UFC ranks", "The card"];
+const SORT_GROUPS = ["Date", "Ratings", "Elo", "UFC ranks", "The card"] as const;
+const METRIC_GROUPS: readonly MetricGroup[] = ["Ratings", "Elo", "UFC ranks", "The card"];
 
-/** The metric picker of one condition: public metrics first, then the locked spoiler ones. */
-function MetricSelect({
-  value,
-  unlocked,
-  onChange,
-  label,
-}: {
-  value: string;
-  unlocked: boolean;
-  onChange: (id: string) => void;
-  label: string;
-}) {
-  return (
-    <select aria-label={label} className={FIELD} value={value} onChange={(e) => onChange(e.target.value)}>
-      {GROUPS.map((group) => (
-        <optgroup key={group} label={group}>
-          {METRICS.filter((m) => m.group === group).map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </optgroup>
-      ))}
-      <optgroup label={unlocked ? "How the fights ended (spoilers)" : "How the fights ended (locked)"}>
-        {METRICS.filter((m) => m.spoiler).map((m) => (
-          <option key={m.id} value={m.id} disabled={!unlocked}>
-            {m.label}
-          </option>
-        ))}
-      </optgroup>
-    </select>
-  );
-}
-
-function RuleRow({
-  rule,
-  unlocked,
-  onChange,
-  onRemove,
-}: {
-  rule: Rule;
-  unlocked: boolean;
-  onChange: (rule: Rule) => void;
-  onRemove: () => void;
-}) {
+function RuleRow({ rule, onChange, onRemove }: { rule: Rule; onChange: (rule: Rule) => void; onRemove: () => void }) {
   const metric = metricById(rule.metric);
   return (
     <li className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[minmax(0,2fr)_9rem_7rem_auto]">
-      <div className="col-span-2 sm:col-span-1">
-        <MetricSelect
-          label="Condition on"
-          value={rule.metric}
-          unlocked={unlocked}
-          onChange={(id) => isMetricId(id) && onChange({ ...rule, metric: id })}
-        />
-      </div>
+      <select
+        aria-label="Condition on"
+        className={`${FIELD} col-span-2 sm:col-span-1`}
+        value={rule.metric}
+        onChange={(e) => isMetricId(e.target.value) && onChange({ ...rule, metric: e.target.value })}
+      >
+        {METRIC_GROUPS.map((group) => (
+          <optgroup key={group} label={group}>
+            {METRICS.filter((m) => m.group === group).map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
       <select
         aria-label="At least or at most"
         className={FIELD}
@@ -129,152 +85,182 @@ function RuleRow({
 }
 
 /**
- * The form of the card finder. Everything here only changes the state; the list below it does the
- * work. Options that need result data are listed but cannot be picked until they are unlocked.
+ * The finder's bar: the order, a Filters button with the number of chosen filters, and under it the
+ * chosen filters as pills. The fields themselves sit in a panel that stays closed until asked for, so
+ * the cards start right under one line.
  */
 export function FinderControls({
   state,
   onChange,
-  unlocked,
   years,
   countries,
+  total,
 }: {
   state: FinderState;
   onChange: (next: FinderState) => void;
-  unlocked: boolean;
   years: readonly number[];
   countries: readonly string[];
+  total: number | null;
 }) {
   const id = useId();
-  const extras =
-    state.flags.length + state.weightClasses.length + state.rules.length > 0 || state.country !== null || state.place !== "";
-  // Open by itself while something in it is chosen (a link, a quick start); the visitor can still fold it.
-  const [folded, setFolded] = useState<boolean | null>(null);
-  const open = folded === null ? extras : !folded;
+  const [open, setOpen] = useState(false);
   const set = (patch: Partial<FinderState>) => onChange({ ...state, ...patch });
   const toggle = <T extends string>(list: readonly T[], item: T): T[] =>
     list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
   const names = new Map(countries.map((code) => [code, countryName(code)]));
   const sortedCountries = [...countries].sort((a, b) => (names.get(a) ?? a).localeCompare(names.get(b) ?? b));
+  const pills = pillsOf(state, (code) => names.get(code) ?? countryName(code));
+  const panelId = `${id}-panel`;
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
-        <div>
-          <label className={LABEL} htmlFor={`${id}-sort`}>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-stretch gap-x-4 gap-y-3 border-2 border-[var(--text)] bg-[var(--surface)] p-2 sm:p-0">
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:px-4">
+          <label htmlFor={`${id}-sort`} className="shrink-0 text-sm font-bold text-[var(--muted)]">
             Order by
           </label>
           <select
             id={`${id}-sort`}
-            className={FIELD}
+            className="min-h-11 min-w-0 flex-1 bg-transparent text-sm font-bold text-[var(--text)]"
             value={state.sort}
             onChange={(e) => set({ sort: e.target.value })}
           >
-            <optgroup label="Spoiler-free">
-              {SORTS.filter((s) => !sortIsSpoiler(s)).map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label={unlocked ? "Spoilers" : "Spoilers (locked)"}>
-              {SORTS.filter((s) => sortIsSpoiler(s)).map((s) => (
-                <option key={s.id} value={s.id} disabled={!unlocked}>
-                  {s.label}
-                </option>
-              ))}
-            </optgroup>
+            {SORT_GROUPS.map((group) => (
+              <optgroup key={group} label={group}>
+                {SORTS.filter((s) => s.group === group).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </select>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:contents">
-          <div>
-            <label className={LABEL} htmlFor={`${id}-from`}>
-              From year
-            </label>
-            <select
-              id={`${id}-from`}
-              className={FIELD}
-              value={state.fromYear ?? ""}
-              onChange={(e) => set({ fromYear: e.target.value === "" ? null : Number(e.target.value) })}
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((v) => !v)}
+          className={`flex min-h-11 items-center gap-2 px-4 text-sm font-bold transition-colors sm:border-l-2 sm:border-[var(--text)] ${
+            open ? "bg-[var(--text)] text-[var(--bg)]" : "hover:bg-[var(--surface-2)]"
+          }`}
+        >
+          Filters
+          {pills.length > 0 && (
+            <span
+              className={`inline-flex h-5 min-w-5 items-center justify-center px-1 text-xs ${
+                open ? "bg-[var(--bg)] text-[var(--text)]" : "bg-[var(--text)] text-[var(--bg)]"
+              }`}
             >
-              <option value="">Any</option>
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={LABEL} htmlFor={`${id}-to`}>
-              To year
-            </label>
-            <select
-              id={`${id}-to`}
-              className={FIELD}
-              value={state.toYear ?? ""}
-              onChange={(e) => set({ toYear: e.target.value === "" ? null : Number(e.target.value) })}
-            >
-              <option value="">Any</option>
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className={LABEL} htmlFor={`${id}-kind`}>
-            Kind of event
-          </label>
-          <select
-            id={`${id}-kind`}
-            className={FIELD}
-            value={state.kind}
-            onChange={(e) => set({ kind: e.target.value === "numbered" || e.target.value === "nights" ? e.target.value : "all" })}
-          >
-            <option value="all">All events</option>
-            <option value="numbered">Numbered events</option>
-            <option value="nights">Fight Nights</option>
-          </select>
-        </div>
+              {pills.length}
+              <span className="sr-only"> chosen</span>
+            </span>
+          )}
+          <span aria-hidden="true" className={`transition-transform ${open ? "rotate-180" : ""}`}>
+            ▾
+          </span>
+        </button>
       </div>
 
-      <details
-        className="group border-2 border-[var(--text)] bg-[var(--surface)]"
-        open={open}
-        onToggle={(e) => setFolded(!e.currentTarget.open)}
-      >
-        <summary className="flex min-h-11 cursor-pointer items-center justify-between px-4 text-sm font-bold">
-          More filters
-          <span aria-hidden="true" className="text-lg transition-transform group-open:rotate-45">
-            +
-          </span>
-        </summary>
-        <div className="space-y-5 border-t-2 border-[var(--text)] p-4">
-          <fieldset>
-            <legend className={LABEL}>The card has</legend>
-            <div className="flex flex-wrap gap-2">
-              {FLAGS.map((flag) => (
-                <Chip key={flag.id} on={state.flags.includes(flag.id)} onClick={() => set({ flags: toggle(state.flags, flag.id) })}>
-                  {flag.label}
-                </Chip>
-              ))}
-            </div>
-          </fieldset>
+      {pills.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2" aria-label="Chosen filters" role="group">
+          {pills.map((pill) => (
+            <button
+              key={pill.key}
+              type="button"
+              onClick={() => onChange(pill.remove(state))}
+              className="inline-flex min-h-8 items-center gap-2 border-2 border-[var(--text)] bg-[var(--surface)] px-2.5 text-sm font-bold hover:bg-[var(--surface-2)]"
+            >
+              {pill.label}
+              <span aria-hidden="true">×</span>
+              <span className="sr-only">Remove</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => onChange(freshState({ sort: state.sort }))}
+            className="min-h-8 px-1 text-sm font-bold underline decoration-2 underline-offset-4 hover:text-[var(--accent)]"
+          >
+            Clear filters
+          </button>
+          {total !== null && (
+            <span className="ml-auto text-sm font-bold">
+              {total} {total === 1 ? "card" : "cards"}
+            </span>
+          )}
+        </div>
+      ) : (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--muted)]">
+          <span>Try</span>
+          {PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onChange(applyPreset(preset))}
+              className="font-bold text-[var(--text)] underline decoration-2 underline-offset-4 hover:text-[var(--accent)]"
+            >
+              {preset.label}
+            </button>
+          ))}
+          {total !== null && <span className="ml-auto font-bold text-[var(--text)]">{total} cards</span>}
+        </p>
+      )}
 
-          <fieldset>
-            <legend className={LABEL}>Includes a fight at</legend>
-            <div className="flex flex-wrap gap-2">
-              {WEIGHT_CLASSES.map((wc) => (
-                <Chip key={wc} on={state.weightClasses.includes(wc)} onClick={() => set({ weightClasses: toggle(state.weightClasses, wc) })}>
-                  {wc}
-                </Chip>
-              ))}
+      {open && (
+        <div id={panelId} className="space-y-5 border-2 border-[var(--text)] bg-[var(--surface)] p-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div>
+              <label className={LABEL} htmlFor={`${id}-from`}>
+                From year
+              </label>
+              <select
+                id={`${id}-from`}
+                className={FIELD}
+                value={state.fromYear ?? ""}
+                onChange={(e) => set({ fromYear: e.target.value === "" ? null : Number(e.target.value) })}
+              >
+                <option value="">Any</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
             </div>
-          </fieldset>
-
-          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className={LABEL} htmlFor={`${id}-to`}>
+                To year
+              </label>
+              <select
+                id={`${id}-to`}
+                className={FIELD}
+                value={state.toYear ?? ""}
+                onChange={(e) => set({ toYear: e.target.value === "" ? null : Number(e.target.value) })}
+              >
+                <option value="">Any</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={LABEL} htmlFor={`${id}-kind`}>
+                Kind of event
+              </label>
+              <select
+                id={`${id}-kind`}
+                className={FIELD}
+                value={state.kind}
+                onChange={(e) =>
+                  set({ kind: e.target.value === "numbered" || e.target.value === "nights" ? e.target.value : "all" })
+                }
+              >
+                <option value="all">All events</option>
+                <option value="numbered">Numbered events</option>
+                <option value="nights">Fight Nights</option>
+              </select>
+            </div>
             <div>
               <label className={LABEL} htmlFor={`${id}-country`}>
                 Has a fighter from
@@ -293,21 +279,48 @@ export function FinderControls({
                 ))}
               </select>
             </div>
-            <div>
-              <label className={LABEL} htmlFor={`${id}-place`}>
-                Place contains
-              </label>
-              <input
-                id={`${id}-place`}
-                type="search"
-                maxLength={60}
-                placeholder="Las Vegas, Abu Dhabi, Rio…"
-                className={FIELD}
-                value={state.place}
-                onChange={(e) => set({ place: e.target.value })}
-              />
-            </div>
           </div>
+
+          <div>
+            <label className={LABEL} htmlFor={`${id}-place`}>
+              Place contains
+            </label>
+            <input
+              id={`${id}-place`}
+              type="search"
+              maxLength={60}
+              placeholder="Las Vegas, Abu Dhabi, Rio…"
+              className={FIELD}
+              value={state.place}
+              onChange={(e) => set({ place: e.target.value })}
+            />
+          </div>
+
+          <fieldset>
+            <legend className={LABEL}>The card has</legend>
+            <div className="flex flex-wrap gap-2">
+              {FLAGS.map((flag) => (
+                <Chip key={flag.id} on={state.flags.includes(flag.id)} onClick={() => set({ flags: toggle(state.flags, flag.id) })}>
+                  {flag.label}
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className={LABEL}>Includes a fight at</legend>
+            <div className="flex flex-wrap gap-2">
+              {WEIGHT_CLASSES.map((wc) => (
+                <Chip
+                  key={wc}
+                  on={state.weightClasses.includes(wc)}
+                  onClick={() => set({ weightClasses: toggle(state.weightClasses, wc) })}
+                >
+                  {wc}
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
 
           <fieldset>
             <legend className={LABEL}>Conditions</legend>
@@ -317,7 +330,6 @@ export function FinderControls({
                   <RuleRow
                     key={index}
                     rule={rule}
-                    unlocked={unlocked}
                     onChange={(next) => set({ rules: state.rules.map((r, i) => (i === index ? next : r)) })}
                     onRemove={() => set({ rules: state.rules.filter((_, i) => i !== index) })}
                   />
@@ -337,17 +349,7 @@ export function FinderControls({
             </p>
           </fieldset>
         </div>
-      </details>
-
-      <div>
-        <button
-          type="button"
-          onClick={() => onChange({ ...DEFAULT_STATE, weightClasses: [], flags: [], rules: [] })}
-          className="min-h-10 text-sm font-bold underline decoration-2 underline-offset-4 hover:text-[var(--accent)]"
-        >
-          Reset everything
-        </button>
-      </div>
+      )}
     </div>
   );
 }

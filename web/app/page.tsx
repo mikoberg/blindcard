@@ -79,8 +79,7 @@ export default async function HomePage() {
           Find a card
         </h2>
         <p className="max-w-2xl text-[var(--muted)]">
-          Order every card by what you care about: ratings, Elo, ranked fighters, title fights, places. Or open the
-          spoiler filters to order by knockouts, submissions or how long the night ran.
+          Order every card by what you care about: ratings, Elo, ranked fighters, title fights, places.
         </p>
         <CardFinder />
       </section>

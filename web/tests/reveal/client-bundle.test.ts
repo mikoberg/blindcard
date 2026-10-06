@@ -22,7 +22,6 @@ const CLIENT_SIDE = [
   "lib/explore/client.ts",
   "lib/explore/metrics.ts",
   "lib/explore/query.ts",
-  "lib/explore/stats.ts",
   "lib/explore/types.ts",
   "components/EloHistory.tsx",
   "lib/elo/board.ts",
@@ -45,7 +44,7 @@ describe("the reveal vocabulary stays on the server", () => {
   });
 
   it("the card finder modules shipped to the browser do not import the server-side facets mapping", () => {
-    for (const path of ["components/CardFinder.tsx", "components/FinderControls.tsx", "lib/explore/stats.ts", "lib/explore/query.ts"]) {
+    for (const path of ["components/CardFinder.tsx", "components/FinderControls.tsx", "lib/explore/query.ts"]) {
       expect(read(path), path).not.toMatch(/from\s+["'](?:@\/lib\/(?:explore\/facets|reveal\/service|data\/)|\.\/facets)/);
     }
   });

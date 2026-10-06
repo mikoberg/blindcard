@@ -2,8 +2,6 @@ import "server-only"; // a client component that imports this fails the build
 import { getSupabase } from "@/lib/supabase/server";
 import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
 import { ELO_ROWS_SHOWN, rowsToEntries, type EloEntry, type EloRow } from "@/lib/elo/board";
-import { rowsToResults as rowsToEventResults, type EventResultRow } from "@/lib/explore/stats";
-import type { ResultsByEvent } from "@/lib/explore/types";
 import { rowsToSteps, type EloStepRow, type EloStepView } from "@/lib/elo/history";
 import { rowsToOthers, rowsToResults, type FighterResultRow, type OtherBoutRow } from "@/lib/fighters/map";
 import type { FighterCareer } from "@/lib/fighters/results";
@@ -72,18 +70,6 @@ export async function revealEloBoard(): Promise<EloEntry[]> {
   if (error) throw new RevealUnavailableError(error.code ?? "unknown");
   if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
   return rowsToEntries(data as EloRow[]);
-}
-
-/**
- * What every completed event's fights turned out to be, added up (knockouts, submissions, how long
- * the card ran and so on). Result data: only called from a POST route after a click on the spoiler
- * warning of the card finder, and the database function (not this code) enforces the row limit.
- */
-export async function revealEventResults(): Promise<ResultsByEvent> {
-  const { data, error } = await getSupabase().rpc("event_result_stats");
-  if (error) throw new RevealUnavailableError(error.code ?? "unknown");
-  if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
-  return rowsToEventResults(data as EventResultRow[]);
 }
 
 /**

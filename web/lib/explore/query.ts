@@ -5,11 +5,10 @@ import {
   isMetricId,
   metricById,
   sortById,
-  sortIsSpoiler,
   type FlagId,
   type MetricId,
 } from "./metrics";
-import type { ExploreEvent, ResultFacets, ResultsByEvent } from "./types";
+import type { ExploreEvent } from "./types";
 
 /** A condition on one metric: at least / at most a number. */
 export interface Rule {
@@ -48,6 +47,11 @@ export const DEFAULT_STATE: FinderState = {
 
 export const MAX_RULES = 6;
 
+/** A fresh default state (the arrays are never shared). */
+export function freshState(patch: Partial<FinderState> = {}): FinderState {
+  return { ...DEFAULT_STATE, weightClasses: [], flags: [], rules: [], ...patch };
+}
+
 const isNumbered = (event: ExploreEvent): boolean => /^UFC\s+\d+/i.test(event.name);
 
 function yearOf(event: ExploreEvent): number {
@@ -58,17 +62,9 @@ export interface FinderOutcome {
   matches: ExploreEvent[];
   /** The metric the list is ordered by, to show its value under each card (null: the date). */
   shown: MetricId | null;
-  /** true when the state asks for result data that has not been unlocked: those parts are ignored. */
-  needsResults: boolean;
 }
 
-/** Does this state use any metric that is computed from results? */
-export function usesResults(state: FinderState): boolean {
-  const sort = sortById(state.sort);
-  return (sort !== null && sortIsSpoiler(sort)) || state.rules.some((rule) => metricById(rule.metric)?.spoiler);
-}
-
-function matchesPublic(event: ExploreEvent, state: FinderState): boolean {
+function matches(event: ExploreEvent, state: FinderState): boolean {
   const year = yearOf(event);
   if (state.fromYear !== null && year < state.fromYear) return false;
   if (state.toYear !== null && year > state.toYear) return false;
@@ -83,65 +79,39 @@ function matchesPublic(event: ExploreEvent, state: FinderState): boolean {
   if (state.country !== null && !(event.facets?.countries ?? []).includes(state.country)) return false;
   for (const id of state.flags) {
     const flag = FLAGS.find((f) => f.id === id);
-    const metric = flag ? metricById(flag.metric) : null;
-    const value = metric ? metric.value(event, undefined) : null;
+    const value = flag ? (metricById(flag.metric)?.value(event) ?? null) : null;
     if (value === null || value < 1) return false;
+  }
+  for (const rule of state.rules) {
+    const value = metricById(rule.metric)?.value(event) ?? null;
+    if (value === null || !Number.isFinite(rule.value)) return false;
+    if (rule.op === "min" ? value < rule.value : value > rule.value) return false;
   }
   return true;
 }
 
-function passes(rule: Rule, value: number | null): boolean {
-  if (value === null) return false;
-  return rule.op === "min" ? value >= rule.value : value <= rule.value;
-}
-
-/**
- * Filters and orders the events. Conditions and orders that need result data are ignored until
- * `results` is given (the visitor has unlocked them); `needsResults` says so.
- */
-export function runFinder(
-  events: readonly ExploreEvent[],
-  results: ResultsByEvent | null,
-  state: FinderState,
-): FinderOutcome {
-  const unlocked = results !== null;
-  const needsResults = !unlocked && usesResults(state);
-  const rules = state.rules.filter((rule) => {
-    const metric = metricById(rule.metric);
-    return metric !== null && (unlocked || !metric.spoiler);
-  });
-  const ruleMetrics = rules.map((rule) => metricById(rule.metric));
-  const filtered = events.filter((event) => {
-    if (!matchesPublic(event, state)) return false;
-    const own: ResultFacets | undefined = results?.[event.id];
-    return rules.every((rule, index) => passes(rule, ruleMetrics[index]?.value(event, own) ?? null));
-  });
-
-  const requested = sortById(state.sort) ?? sortById("cardRating");
-  const usable = requested !== null && (unlocked || !sortIsSpoiler(requested)) ? requested : sortById("newest");
-  if (usable === null) return { matches: filtered, shown: null, needsResults };
-  const metric = usable.metric === null ? null : metricById(usable.metric);
-  const direction = usable.order === "desc" ? -1 : 1;
-  const keyed = filtered.map((event) => ({
-    event,
-    key: metric ? metric.value(event, results?.[event.id]) : null,
-  }));
+/** Filters and orders the events. A card with no value for the order goes last, whichever way it runs. */
+export function runFinder(events: readonly ExploreEvent[], state: FinderState): FinderOutcome {
+  const filtered = events.filter((event) => matches(event, state));
+  const option = sortById(state.sort) ?? sortById("cardRating");
+  if (option === null) return { matches: filtered, shown: null };
+  const metric = option.metric === null ? null : metricById(option.metric);
+  const direction = option.order === "desc" ? -1 : 1;
+  const keyed = filtered.map((event) => ({ event, key: metric ? metric.value(event) : null }));
   keyed.sort((a, b) => {
     if (metric === null) {
       return direction * a.event.eventDate.localeCompare(b.event.eventDate) || a.event.id.localeCompare(b.event.id);
     }
-    // Events without a value go last, whichever way the list runs.
     if (a.key === null && b.key !== null) return 1;
     if (a.key !== null && b.key === null) return -1;
     const byValue = a.key === null || b.key === null ? 0 : direction * (a.key - b.key);
     return byValue || b.event.eventDate.localeCompare(a.event.eventDate) || a.event.id.localeCompare(b.event.id);
   });
-  return { matches: keyed.map((row) => row.event), shown: metric ? metric.id : null, needsResults };
+  return { matches: keyed.map((row) => row.event), shown: metric ? metric.id : null };
 }
 
 // ---------------------------------------------------------------------------------------------
-// The address bar. Only what is not a spoiler goes into it: a link never carries a result-based
-// order or condition, so opening one never asks for result data.
+// The address bar: a link carries the whole state, so a search can be shared.
 
 const FIRST_YEAR = 1993;
 
@@ -154,9 +124,9 @@ function year(value: string | null): number | null {
 /** Reads a finder state from a query string. Anything unknown is ignored, never guessed. */
 export function parseState(search: string): FinderState {
   const params = new URLSearchParams(search);
-  const state: FinderState = { ...DEFAULT_STATE, weightClasses: [], flags: [], rules: [] };
+  const state = freshState();
   const sort = sortById(params.get("sort") ?? "");
-  if (sort !== null && !sortIsSpoiler(sort)) state.sort = sort.id;
+  if (sort !== null) state.sort = sort.id;
   state.fromYear = year(params.get("from"));
   state.toYear = year(params.get("to"));
   const kind = params.get("kind");
@@ -171,18 +141,17 @@ export function parseState(search: string): FinderState {
   for (const part of (params.get("if") ?? "").split(";").slice(0, MAX_RULES)) {
     const [metric, op, raw] = part.split(":");
     const value = Number(raw);
-    if (metric === undefined || !isMetricId(metric) || metricById(metric)?.spoiler) continue;
+    if (metric === undefined || !isMetricId(metric)) continue;
     if ((op !== "min" && op !== "max") || raw === undefined || raw === "" || !Number.isFinite(value)) continue;
     state.rules.push({ metric, op, value });
   }
   return state;
 }
 
-/** The query string of a state (without "?"); empty for the default. Never a result-based part. */
+/** The query string of a state (without "?"); empty for the default. */
 export function stateToSearch(state: FinderState): string {
   const params = new URLSearchParams();
-  const sort = sortById(state.sort);
-  if (sort !== null && !sortIsSpoiler(sort) && sort.id !== DEFAULT_STATE.sort) params.set("sort", sort.id);
+  if (state.sort !== DEFAULT_STATE.sort && sortById(state.sort) !== null) params.set("sort", state.sort);
   if (state.fromYear !== null) params.set("from", String(state.fromYear));
   if (state.toYear !== null) params.set("to", String(state.toYear));
   if (state.kind !== "all") params.set("kind", state.kind);
@@ -190,56 +159,77 @@ export function stateToSearch(state: FinderState): string {
   if (state.flags.length > 0) params.set("has", state.flags.join(","));
   if (state.country !== null) params.set("country", state.country);
   if (state.place.trim() !== "") params.set("place", state.place.trim());
-  const rules = state.rules.filter((rule) => !metricById(rule.metric)?.spoiler);
+  const rules = state.rules.filter((rule) => Number.isFinite(rule.value));
   if (rules.length > 0) params.set("if", rules.map((r) => `${r.metric}:${r.op}:${r.value}`).join(";"));
   return params.toString();
 }
 
-/** A state with every result-based part removed (when the visitor locks the spoilers again). */
-export function withoutSpoilers(state: FinderState): FinderState {
-  const sort = sortById(state.sort);
-  return {
-    ...state,
-    sort: sort !== null && sortIsSpoiler(sort) ? DEFAULT_STATE.sort : state.sort,
-    rules: state.rules.filter((rule) => !metricById(rule.metric)?.spoiler),
-  };
+/** One chosen filter, as shown in the row of pills. `remove` gives the state without it. */
+export interface Pill {
+  key: string;
+  label: string;
+  remove: (state: FinderState) => FinderState;
 }
 
-/** Is anything chosen besides the default order? */
-export function isFiltered(state: FinderState): boolean {
-  return (
-    state.fromYear !== null ||
-    state.toYear !== null ||
-    state.kind !== "all" ||
-    state.weightClasses.length > 0 ||
-    state.flags.length > 0 ||
-    state.country !== null ||
-    state.place.trim() !== "" ||
-    state.rules.length > 0
-  );
+/** The chosen filters (not the order), for the pills under the bar. */
+export function pillsOf(state: FinderState, countryName: (code: string) => string): Pill[] {
+  const pills: Pill[] = [];
+  if (state.fromYear !== null || state.toYear !== null) {
+    const from = state.fromYear ?? "";
+    const to = state.toYear ?? "";
+    pills.push({
+      key: "years",
+      label: state.fromYear !== null && state.toYear !== null ? `${from}–${to}` : state.fromYear !== null ? `From ${from}` : `Until ${to}`,
+      remove: (s) => ({ ...s, fromYear: null, toYear: null }),
+    });
+  }
+  if (state.kind !== "all") {
+    pills.push({
+      key: "kind",
+      label: state.kind === "numbered" ? "Numbered events" : "Fight Nights",
+      remove: (s) => ({ ...s, kind: "all" }),
+    });
+  }
+  for (const id of state.flags) {
+    const flag = FLAGS.find((f) => f.id === id);
+    if (flag) pills.push({ key: `has-${id}`, label: flag.label, remove: (s) => ({ ...s, flags: s.flags.filter((f) => f !== id) }) });
+  }
+  for (const wc of state.weightClasses) {
+    pills.push({ key: `wc-${wc}`, label: wc, remove: (s) => ({ ...s, weightClasses: s.weightClasses.filter((w) => w !== wc) }) });
+  }
+  if (state.country !== null) {
+    const code = state.country;
+    pills.push({ key: "country", label: `Fighter from ${countryName(code)}`, remove: (s) => ({ ...s, country: null }) });
+  }
+  if (state.place.trim() !== "") {
+    pills.push({ key: "place", label: `In ${state.place.trim()}`, remove: (s) => ({ ...s, place: "" }) });
+  }
+  state.rules.forEach((rule, index) => {
+    const metric = metricById(rule.metric);
+    if (!metric || !Number.isFinite(rule.value)) return;
+    pills.push({
+      key: `rule-${index}`,
+      label: `${metric.label} ${rule.op === "min" ? "≥" : "≤"} ${metric.format(rule.value)}`,
+      remove: (s) => ({ ...s, rules: s.rules.filter((_, i) => i !== index) }),
+    });
+  });
+  return pills;
 }
 
-/** Quick starts. A spoiler preset only works once the result filters are unlocked. */
+/** Quick starts, offered while nothing is chosen. */
 export interface Preset {
   id: string;
   label: string;
-  spoiler: boolean;
   state: Partial<FinderState>;
 }
 
 export const PRESETS: readonly Preset[] = [
-  { id: "best", label: "Best rated cards", spoiler: false, state: { sort: "cardRating" } },
-  { id: "stacked", label: "Stacked with ranked fighters", spoiler: false, state: { sort: "top5Fighters" } },
-  { id: "even", label: "Evenly matched on Elo", spoiler: false, state: { sort: "evenFights" } },
-  { id: "titles", label: "Title nights", spoiler: false, state: { sort: "cardRating", flags: ["title"] } },
-  { id: "five", label: "Five-round fights", spoiler: false, state: { sort: "fiveRoundFights" } },
-  { id: "rematches", label: "Rematch cards", spoiler: false, state: { sort: "cardRating", flags: ["rematch"] } },
-  { id: "knockouts", label: "Knockout nights", spoiler: true, state: { sort: "knockouts" } },
-  { id: "submissions", label: "Tapout nights", spoiler: true, state: { sort: "submissions" } },
-  { id: "quick", label: "Quick nights", spoiler: true, state: { sort: "shortestCard" } },
-  { id: "upsets", label: "Upset alerts", spoiler: true, state: { sort: "upsets" } },
+  { id: "titles", label: "Title nights", state: { sort: "cardRating", flags: ["title"] } },
+  { id: "stacked", label: "Stacked with ranked fighters", state: { sort: "top5Fighters" } },
+  { id: "even", label: "Evenly matched on Elo", state: { sort: "evenFights" } },
+  { id: "rematches", label: "Rematch cards", state: { sort: "cardRating", flags: ["rematch"] } },
 ];
 
 export function applyPreset(preset: Preset): FinderState {
-  return { ...DEFAULT_STATE, weightClasses: [], flags: [], rules: [], ...preset.state };
+  return freshState(preset.state);
 }

@@ -643,29 +643,15 @@ begin
 end $$;
 reset role;
 
--- The card finder: public pre-fight facts per event, and result facts behind one function.
+-- The card finder: public pre-fight facts per event; the result facts of 0031 are gone again (0032).
 set local role anon;
 do $$
-declare
-  n integer;
-  r record;
 begin
   perform count(*) from public.event_facets;
   raise notice 'PASS anon can read event_facets';
-  begin
-    perform count(*) from public.event_result_facets;
-    raise exception 'FAIL: anon could read event_result_facets';
-  exception when insufficient_privilege then
-    raise notice 'PASS anon cannot read event_result_facets';
-  end;
-  for r in select * from public.event_result_stats() loop
-    if r.knockouts + r.submissions + r.decisions > r.fights or r.split_decisions > r.decisions then
-      raise exception 'FAIL: event_result_stats counts do not add up for %', r.event_id;
-    end if;
-  end loop;
-  select count(*) into n from public.event_result_stats();
-  if n > 1000 then raise exception 'FAIL: event_result_stats returned more than 1000 rows'; end if;
-  raise notice 'PASS event_result_stats serves consistent counts, capped';
+  assert to_regclass('public.event_result_facets') is null, 'the private result view should be gone';
+  assert to_regprocedure('public.event_result_stats()') is null, 'the result function should be gone';
+  raise notice 'PASS no result facets exist for events';
 end $$;
 reset role;
 
