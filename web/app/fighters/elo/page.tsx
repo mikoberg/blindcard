@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { EloBoard } from "@/components/EloBoard";
+import { FighterTabs } from "@/components/FighterTabs";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -14,12 +14,7 @@ export const metadata: Metadata = pageMetadata({
 export default function EloPage() {
   return (
     <div className="max-w-3xl space-y-8">
-      <Link
-        href="/fighters"
-        className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--muted)] underline underline-offset-4 hover:text-[var(--accent)]"
-      >
-        All fighters
-      </Link>
+      <FighterTabs active="elo" />
       <header className="space-y-4">
         <h1 className="page-title">Strongest fighters</h1>
         <p className="max-w-xl text-lg text-[var(--muted)]">

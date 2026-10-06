@@ -38,6 +38,7 @@ export function rankFighters(rows: readonly FighterRatingRow[]): LeaderboardEntr
       country: r.row.country,
       fights: r.fights,
       average: r.average,
+      lastFight: typeof r.row.last_fight === "string" ? r.row.last_fight : null,
     }));
 }
 

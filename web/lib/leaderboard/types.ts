@@ -7,6 +7,8 @@ export interface FighterRatingRow {
   /** Average of the active version's star ratings of their fights. */
   avg_stars: number | string;
   slug: string;
+  /** ISO date of their latest rated fight. */
+  last_fight?: string | null;
 }
 
 /** One row of the `fighter_fights` view: a rated fight of one fighter. */
@@ -46,6 +48,8 @@ export interface LeaderboardEntry {
   fights: number;
   /** Average of their fights' ratings. */
   average: number;
+  /** ISO date of their latest rated fight; null when unknown. */
+  lastFight: string | null;
 }
 
 /** A fighter found by the search, ranked or not. */

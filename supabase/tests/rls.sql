@@ -224,7 +224,7 @@ begin
   select count(*) into n
   from information_schema.columns
   where table_schema = 'public' and table_name = 'fighter_ratings'
-    and column_name not in ('id', 'name', 'country', 'rated_fights', 'avg_stars', 'slug', 'search_name');
+    and column_name not in ('id', 'name', 'country', 'rated_fights', 'avg_stars', 'slug', 'search_name', 'last_fight');
   if n <> 0 then raise exception 'FAIL: fighter_ratings has unexpected columns'; end if;
   raise notice 'PASS fighter_ratings is public, active version only';
 end $$;

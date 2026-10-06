@@ -51,7 +51,7 @@ Notes:
   applied. `migrate --dry-run` lists what would run. `--baseline-through N` is only for a database
   that was set up by hand before the ledger existed (empty ledger only).
 - Always run `migrate` **before** deploying a web build that depends on a new migration (0019: `upcoming_pick`
-  date guard; 0020 and 0021: the folded search columns, without which `/api/search` and `/api/fighters` return 503).
+  date guard; 0020, 0021 and 0024: the folded search columns and the last-fight date, without which `/api/search`, `/api/fighters` and `/fighters` fail; 0022 and 0023: the Elo tables).
 - Use `ingest-fighters --from 2001 --styles-only` to refresh only the fighting styles.
 - `ingest-ufc-styles --limit 40` drips fighting styles from the official athlete pages (15 s per page,
   the crawl delay); the daily job does this on its own.
