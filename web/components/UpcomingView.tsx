@@ -40,10 +40,23 @@ function Why({ bout }: { bout: UpcomingBout }) {
   if (!prediction) return null;
   const largest = Math.max(0.3, ...prediction.why.map((r) => Math.abs(r.amount)));
   return (
-    <details className="group mt-1 border-t border-[var(--border)] pt-1">
-      <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-bold underline decoration-[var(--accent)] decoration-2 underline-offset-4">
+    <details className="group border-t border-[var(--border)]">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 px-4 text-sm font-bold hover:bg-[var(--surface-2)] focus-visible:outline-offset-[-4px] sm:px-5 [&::-webkit-details-marker]:hidden">
         How we got this
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-open:rotate-180"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
       </summary>
+      <div className="px-4 pb-4 sm:px-5">
       <p className="mt-2 text-sm text-[var(--muted)]">{basisSentence(prediction.basis)}</p>
       {prediction.why.length > 0 && (
         <ul className="mt-3 space-y-2">
@@ -67,6 +80,7 @@ function Why({ bout }: { bout: UpcomingBout }) {
         Each line shows what it adds to or takes off an average fight. The fight itself can still land well
         above or below this.
       </p>
+      </div>
     </details>
   );
 }
@@ -102,12 +116,8 @@ function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
           {bout.weightClass && <p className="sr-only">{bout.weightClass} bout</p>}
         </div>
       </div>
-      {(bout.prediction || bout.hasPick) && (
-        <div className="px-4 pb-3 sm:px-5">
-          <Why bout={bout} />
-          {bout.hasPick && <UpcomingPick boutId={bout.id} nameA={bout.a.name} nameB={bout.b.name} />}
-        </div>
-      )}
+      <Why bout={bout} />
+      {bout.hasPick && <UpcomingPick boutId={bout.id} nameA={bout.a.name} nameB={bout.b.name} />}
     </li>
   );
 }

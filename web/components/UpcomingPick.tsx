@@ -29,7 +29,7 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
 
   const shown = state.status === "shown";
   return (
-    <div className="mt-1 border-t border-[var(--border)] pt-2">
+    <div className="border-t-2 border-[var(--text)]">
       <button
         type="button"
         onClick={shown ? () => setState({ status: "idle" }) : load}
@@ -38,9 +38,9 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
         aria-controls={panelId}
         // Many identical buttons on a card: the name says which bout this one is for.
         aria-label={`${state.status === "loading" ? "Loading…" : shown ? "Hide the model lean" : state.status === "error" ? "Try again" : "Show the model lean"}: ${nameA} versus ${nameB}`}
-        className={`flex min-h-11 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors focus-visible:outline-offset-[-5px] disabled:opacity-70 ${
+        className={`flex min-h-11 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors focus-visible:outline-offset-[-5px] disabled:opacity-70 sm:px-5 ${
           shown
-            ? "border-2 border-[var(--text)] hover:bg-[var(--surface-2)]"
+            ? "bg-[var(--surface-2)] hover:bg-[var(--border)]"
             : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] focus-visible:outline-[var(--accent-ink)]"
         }`}
       >
@@ -63,14 +63,14 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
         )}
       </button>
       {!shown && state.status !== "error" && (
-        <p className="mt-2 text-xs text-[var(--muted)]">
+        <p className="px-4 py-2 text-xs text-[var(--muted)] sm:px-5">
           A statistical lean from the fighters&apos; past results, not betting advice. It can colour how you
           watch, so it stays closed until you open it.
         </p>
       )}
-      <div id={panelId} aria-live="polite" className="mt-3">
+      <div id={panelId} aria-live="polite">
         {state.status === "error" && (
-          <p className="text-sm text-[var(--muted)]">Couldn&apos;t load this. Try again.</p>
+          <p className="px-4 py-2 text-sm text-[var(--muted)] sm:px-5">Couldn&apos;t load this. Try again.</p>
         )}
         {state.status === "shown" && <Panel pick={state.pick} nameA={nameA} nameB={nameB} />}
       </div>
@@ -82,7 +82,7 @@ function Panel({ pick, nameA, nameB }: { pick: Pick; nameA: string; nameB: strin
   const name = pick.favoured === "a" ? nameA : nameB;
   const toss = isTossUp(pick);
   return (
-    <div className="space-y-1 bg-[var(--bg)] p-4">
+    <div className="space-y-1 bg-[var(--bg)] px-4 py-4 sm:px-5">
       <p className="display break-words text-xl">
         {toss ? `Too close to call, slight lean to ${name}` : `Model lean: ${name}`}{" "}
         <span className="text-[var(--accent)]">{percent(pick.probability)}</span>

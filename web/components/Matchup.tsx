@@ -55,7 +55,7 @@ export function FighterBlock({
   const mirrored = side === "right";
   return (
     <span className={`block min-w-0 ${mirrored ? "sm:text-right" : ""}`}>
-      <span className="display-tight block break-words text-xl leading-tight sm:text-2xl">
+      <span className="display-tight block break-words text-balance text-xl leading-tight sm:text-2xl">
         {fighter.slug ? (
           <Link
             href={`/fighters/${fighter.slug}`}
@@ -114,15 +114,15 @@ export function Matchup({
 }) {
   const gap = eloGap(a.elo, b.elo);
   return (
-    <h3 className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-start sm:gap-5">
+    <h3 className="mt-2 grid gap-2 sm:grid-cols-[1fr_6.5rem_1fr] sm:items-start sm:gap-4">
       <FighterBlock fighter={a} side="left" when={when} />
-      <span className="flex items-center gap-2 sm:flex-col sm:gap-0.5 sm:pt-0.5">
+      <span className="flex items-center gap-2 sm:flex-col sm:gap-0.5 sm:self-center">
         <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
         <span className="display-tight text-sm leading-none text-[var(--accent-text)]">vs</span>
         {weightClass && (
           <span
             aria-hidden="true"
-            className="text-center text-[0.7rem] font-bold leading-tight text-[var(--muted)] sm:max-w-[6rem]"
+            className="text-center text-[0.7rem] font-bold leading-tight text-[var(--muted)]"
           >
             {weightClass}
           </span>
