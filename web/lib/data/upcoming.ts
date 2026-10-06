@@ -1,3 +1,4 @@
+import { toFighterElo } from "@/lib/card/elo";
 import { isValidSlug } from "@/lib/slug";
 import { getSupabase } from "@/lib/supabase/server";
 import type {
@@ -46,6 +47,8 @@ interface BoutRow {
   prediction_why: unknown;
   has_pick: boolean | null;
   fighter_a_record: unknown;
+  fighter_a_elo?: unknown;
+  fighter_b_elo?: unknown;
   fighter_b_record: unknown;
   fighter_a_style: unknown;
   fighter_b_style: unknown;
@@ -60,6 +63,7 @@ function fighter(
   joined: FighterJoin | null,
   record: unknown,
   styles: unknown,
+  elo: unknown,
   pages: ReadonlySet<string>,
 ): UpcomingFighter {
   // Only a fighter with a profile page gets a link (a debutant has none).
@@ -69,6 +73,7 @@ function fighter(
     slug,
     country: joined?.country ?? null,
     record: record === null ? null : toRecord(record),
+    elo: toFighterElo(elo),
     // the card's own link gives the style even for a debut; otherwise what is stored on the fighter
     styles: mapStyles(styles).length > 0 ? mapStyles(styles) : mapStyles(joined?.style),
   };
@@ -100,8 +105,8 @@ function bout(row: BoutRow, pages: ReadonlySet<string>): UpcomingBout {
     segment: row.segment !== null && SEGMENTS.includes(row.segment) ? (row.segment as UpcomingSegment) : null,
     weightClass: row.weight_class,
     isTitleFight: row.is_title_fight,
-    a: fighter(row.fighter_a_name, row.fighter_a, row.fighter_a_record, row.fighter_a_style, pages),
-    b: fighter(row.fighter_b_name, row.fighter_b, row.fighter_b_record, row.fighter_b_style, pages),
+    a: fighter(row.fighter_a_name, row.fighter_a, row.fighter_a_record, row.fighter_a_style, row.fighter_a_elo, pages),
+    b: fighter(row.fighter_b_name, row.fighter_b, row.fighter_b_record, row.fighter_b_style, row.fighter_b_elo, pages),
     prediction: mapPrediction(row),
     hasPick: row.has_pick === true,
   };

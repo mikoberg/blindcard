@@ -1,3 +1,5 @@
+import type { FighterElo } from "./elo";
+
 export interface CardFighter {
   id: string;
   name: string;
@@ -64,6 +66,8 @@ export interface CardFight {
   career: FightCareer | null;
   /** Records before the bout, never after it. null = unknown. */
   records: FightRecords | null;
+  /** Elo going into the bout, never after it (see lib/card/elo.ts). null = not computed. */
+  elo?: { a: FighterElo | null; b: FighterElo | null } | null;
   weightClass: string | null;
   isTitleFight: boolean;
   scheduledRounds: number | null;

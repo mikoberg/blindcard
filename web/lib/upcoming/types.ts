@@ -1,3 +1,4 @@
+import type { FighterElo } from "@/lib/card/elo";
 import type { FighterRecord } from "@/lib/card/types";
 
 /** A fighter on an upcoming card. Linked to a stored fighter only when exactly one matched. */
@@ -10,6 +11,8 @@ export interface UpcomingFighter {
   record: FighterRecord | null;
   /** Fighting styles from the fighter's page (Kickboxing, Wrestling, ...); empty when not known. */
   styles: string[];
+  /** Today's Elo rating (see lib/card/elo.ts); null when the fighter has no earlier fight here. */
+  elo?: FighterElo | null;
 }
 
 /** A reason behind an expected rating: what moved it, in stars, against an average fight. */

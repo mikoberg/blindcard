@@ -132,15 +132,6 @@ jobs:
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-bonuses "${args[@]}"
 
-      # Each fighter's Elo rating, for the spoiler leaderboard (private table, served only after a
-      # click on /fighters/elo). Rebuilt in full each run from all decisive results.
-      - name: Elo ratings
-        if: ${{ !cancelled() }}
-        run: |
-          args=()
-          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
-          blindcard-ingest compute-elo "${args[@]}"
-
       # How often each judge scores against the final result (public aggregates only; the
       # scorecards stay private). Rebuilt in full each run: it is a small table.
       - name: Judge statistics
@@ -181,6 +172,16 @@ jobs:
           args=()
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           blindcard-ingest ingest-upcoming "${args[@]}"
+
+      # Elo: the rating of every fighter going into every fight and into every announced bout (shown
+      # on the cards like the record), and the private board and history of /fighters/elo. Runs
+      # after the upcoming cards are stored, because it writes onto them. Rebuilt in full each run.
+      - name: Elo ratings
+        if: ${{ !cancelled() }}
+        run: |
+          args=()
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          blindcard-ingest compute-elo "${args[@]}"
 
       # An expected rating for each announced bout, learned from the public ratings of the
       # fighters' earlier fights and the card's public context (never a result, never who wins).

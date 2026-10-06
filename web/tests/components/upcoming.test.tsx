@@ -266,3 +266,40 @@ describe("fighting styles", () => {
     expect(mapStyles("Judo")).toEqual([]);
   });
 });
+
+describe("Elo on an upcoming card", () => {
+  const fighter = (name: string, rating: number | null, fights = 12) => ({
+    name,
+    slug: null,
+    country: null,
+    record: null,
+    styles: [],
+    elo: rating === null ? null : { rating, fights },
+  });
+  const render = (a: ReturnType<typeof fighter>, b: ReturnType<typeof fighter>) =>
+    renderToStaticMarkup(<UpcomingView event={event({ bouts: [bout({ a, b })] })} today={TODAY} />);
+
+  it("shows each fighter's Elo as of today next to their name", () => {
+    const html = render(fighter("Alan A", 1712.4), fighter("Ben B", 1650.2));
+    expect(html).toContain("Elo 1712");
+    expect(html).toContain("Elo 1650");
+    expect(html).toContain('aria-label="Elo today: 1712"');
+  });
+
+  it("says how far apart they are, and calls a close pair evenly matched", () => {
+    expect(render(fighter("Alan A", 1712), fighter("Ben B", 1650))).toContain("Elo gap 62");
+    expect(render(fighter("Alan A", 1700), fighter("Ben B", 1680))).toContain("Evenly matched");
+  });
+
+  it("marks a rating on few fights as provisional and states no gap from it", () => {
+    const html = render(fighter("Alan A", 1712), fighter("Ben B", 1560, 2));
+    expect(html).toContain("Elo ~1560");
+    expect(html).toContain("provisional");
+    expect(html).not.toMatch(/Elo gap|Evenly matched/);
+  });
+
+  it("shows nothing for a fighter with no earlier fight", () => {
+    const html = render(fighter("Alan A", null), fighter("Ben B", null));
+    expect(html).not.toContain("Elo");
+  });
+});

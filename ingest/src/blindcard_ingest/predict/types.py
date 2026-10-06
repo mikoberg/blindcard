@@ -84,7 +84,8 @@ class EloFight:
     event_date: dt.date
     a_id: str
     b_id: str
-    #: "win" or "draw"
+    #: "win", "draw", or "none" (a no contest or anything else without a result Elo can use: the
+    #: ratings do not move, but the fight still gets its pre-fight ratings)
     outcome: str
     #: Whether the fighter listed first won (meaningless for a draw).
     a_won: bool
@@ -127,3 +128,32 @@ class EloStep:
     k: float
     change: float
     rating_after: float
+
+
+@dataclass(frozen=True)
+class EloBefore:
+    """A fighter's Elo going into a bout: the rating and how many fights it rests on."""
+
+    rating: float
+    fights: int
+
+
+@dataclass(frozen=True)
+class FightElo:
+    """The Elo of both fighters going INTO a completed fight (public, like the record going in).
+
+    Computed from earlier fights only, so it says nothing about this fight's own result. A side is
+    None for a fighter with no earlier fight in our data."""
+
+    fight_id: str
+    a: EloBefore | None
+    b: EloBefore | None
+
+
+@dataclass(frozen=True)
+class UpcomingElo:
+    """The current Elo of both fighters of an announced bout (public, like the current record)."""
+
+    bout_id: str
+    a: EloBefore | None
+    b: EloBefore | None

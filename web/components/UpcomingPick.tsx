@@ -29,7 +29,7 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
 
   const shown = state.status === "shown";
   return (
-    <div className="mt-4 border-t-2 border-[var(--border)] pt-3">
+    <div className="mt-1 border-t border-[var(--border)] pt-2">
       <button
         type="button"
         onClick={shown ? () => setState({ status: "idle" }) : load}

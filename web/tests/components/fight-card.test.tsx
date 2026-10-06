@@ -207,3 +207,40 @@ describe("FightCard fighter links", () => {
     expect(html).not.toContain('href="/fighters/');
   });
 });
+
+describe("FightCard Elo going into the fight", () => {
+  const elo = (a: number | null, b: number | null, an = 12, bn = 12) => ({
+    a: a === null ? null : { rating: a, fights: an },
+    b: b === null ? null : { rating: b, fights: bn },
+  });
+
+  it("shows both ratings next to the records, as they stood before the fight", () => {
+    const html = render(makeFight(2, 4, { elo: elo(1712.4, 1650.2) }));
+    expect(html).toContain("Elo 1712");
+    expect(html).toContain("Elo 1650");
+    expect(html).toContain('aria-label="Elo going into the fight: 1712"');
+    expect(html).toContain("Elo gap 62");
+  });
+
+  it("calls a close pair evenly matched", () => {
+    expect(render(makeFight(2, 4, { elo: elo(1700, 1680) }))).toContain("Evenly matched");
+  });
+
+  it("leaves out the gap and sets the number apart when a rating rests on few fights", () => {
+    const html = render(makeFight(2, 4, { elo: elo(1700, 1540, 12, 1) }));
+    expect(html).toContain("Elo ~1540");
+    expect(html).toContain("provisional, after only 1 fight");
+    expect(html).not.toMatch(/Elo gap|Evenly matched/);
+  });
+
+  it("shows nothing for a fighter without an earlier fight, nor on a card without ratings", () => {
+    const html = render(makeFight(2, 4, { elo: elo(null, 1650) }));
+    expect(html.match(/Elo going into the fight/g)).toHaveLength(1);
+    expect(render(makeFight(2, 4))).not.toContain("Elo");
+  });
+
+  it("shows no rating after the fight and no change, whatever the data holds", () => {
+    const html = render(makeFight(2, 4, { elo: elo(1712, 1650) }));
+    expect(html).not.toMatch(/→|\+\d|−\d|rating after|change/i);
+  });
+});

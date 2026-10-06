@@ -26,3 +26,29 @@ export function ExpectedPlate({ stars, size = "md" }: { stars: number; size?: "m
     </div>
   );
 }
+
+/**
+ * The expected rating in the compact column of an announced bout, drawn like the plate above so it
+ * can never be taken for a real rating: dashed, a tilde, "expected" under it, never gold.
+ */
+export function ExpectedMark({ stars }: { stars: number }) {
+  const hot = stars >= HIGH_EXPECTATION;
+  return (
+    <div
+      className="flex items-center gap-3 px-4 pt-3 sm:w-[6.25rem] sm:shrink-0 sm:flex-col sm:justify-center sm:gap-1 sm:border-r sm:border-[var(--border)] sm:px-0 sm:py-3"
+      role="img"
+      aria-label={`Expected rating ${formatExpected(stars)} out of 5`}
+    >
+      <p
+        aria-hidden="true"
+        className={`scorebox h-10 w-[4.25rem] border-dashed bg-transparent text-xl ${hot ? "border-[var(--accent)] text-[var(--accent)]" : "text-[var(--text)]"}`}
+      >
+        <span className="mr-0.5 text-[0.6em] font-semibold">~</span>
+        {formatExpected(stars)}
+      </p>
+      <p aria-hidden="true" className="text-xs text-[var(--muted)]">
+        expected
+      </p>
+    </div>
+  );
+}

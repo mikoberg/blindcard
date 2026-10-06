@@ -23,10 +23,19 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from dataclasses import dataclass, field
 from itertools import groupby
 
 from blindcard_ingest.db.repository import Repository
-from blindcard_ingest.predict.types import EloFight, EloRow, EloStep
+from blindcard_ingest.predict.types import (
+    EloBefore,
+    EloFight,
+    EloRow,
+    EloStep,
+    FightElo,
+    UpcomingBoutInput,
+    UpcomingElo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,18 +73,37 @@ def _how(fight: EloFight, *, won: bool) -> str:
     return f"{'won' if won else 'lost'} by {fight.how}"
 
 
-def build_ledger(fights: list[EloFight]) -> tuple[dict[str, float], list[EloStep]]:
-    """Final ratings and every step, in date order. Both fighters of a fight are updated from the
-    ratings they had BEFORE it (and a fighter fights at most once a night), so the order of fights
-    within a night does not matter."""
-    ratings: dict[str, float] = {}
-    count: dict[str, int] = defaultdict(int)
-    steps: list[EloStep] = []
+@dataclass
+class Ledger:
+    """Everything one pass over all fights produces."""
+
+    ratings: dict[str, float] = field(default_factory=dict)
+    #: How many rated fights each fighter has (no contests do not count).
+    counts: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    steps: list[EloStep] = field(default_factory=list)
+    #: fight id -> the two fighters' Elo going into it (None: no earlier fight).
+    before: dict[str, tuple[EloBefore | None, EloBefore | None]] = field(default_factory=dict)
+
+
+def build_ledger(fights: list[EloFight]) -> Ledger:
+    """Final ratings, every step and the pre-fight ratings of every fight, in date order. Both
+    fighters of a fight are updated from the ratings they had BEFORE it (a fighter fights at most
+    once a night), so the order of fights within a night does not matter."""
+    ledger = Ledger()
+    ratings, count, steps = ledger.ratings, ledger.counts, ledger.steps
     ordered = sorted(fights, key=lambda f: (f.event_date, f.fight_id))
     for _, group in groupby(ordered, key=lambda f: f.event_date):
         for fight in group:
             a, b = fight.a_id, fight.b_id
             ra, rb = ratings.get(a, START), ratings.get(b, START)
+            # What the two ratings were going in: this is what the cards show, and it is taken
+            # before the fight is added, so it can say nothing about the fight itself.
+            ledger.before[fight.fight_id] = (
+                EloBefore(round(ra, 1), count[a]) if count[a] > 0 else None,
+                EloBefore(round(rb, 1), count[b]) if count[b] > 0 else None,
+            )
+            if fight.outcome == "none":
+                continue
             score_a = score_of(fight)
             ea = expected_score(ra, rb)
             ka, kb = step_size(count[a]), step_size(count[b])
@@ -105,7 +133,23 @@ def build_ledger(fights: list[EloFight]) -> tuple[dict[str, float], list[EloStep
             ratings[a], ratings[b] = ra + change_a, rb + change_b
             count[a] += 1
             count[b] += 1
-    return ratings, steps
+    return ledger
+
+
+def pre_fight_elo(ledger: Ledger) -> list[FightElo]:
+    """The Elo going into every fight, for the public cards."""
+    return [FightElo(fid, a, b) for fid, (a, b) in sorted(ledger.before.items())]
+
+
+def current_elo(ledger: Ledger, bouts: list[UpcomingBoutInput]) -> list[UpcomingElo]:
+    """The Elo of both fighters of every announced bout as of now."""
+
+    def now(fighter: str | None) -> EloBefore | None:
+        if fighter is None or ledger.counts.get(fighter, 0) == 0:
+            return None
+        return EloBefore(round(ledger.ratings[fighter], 1), ledger.counts[fighter])
+
+    return [UpcomingElo(b.bout_id, now(b.a_id), now(b.b_id)) for b in bouts]
 
 
 def build_board(
@@ -113,7 +157,8 @@ def build_board(
 ) -> tuple[list[EloRow], list[EloStep]]:
     """The fighters with at least `min_fights` fights, strongest first, and the steps of exactly
     those fighters."""
-    ratings, steps = build_ledger(fights)
+    ledger = build_ledger(fights)
+    ratings, steps = ledger.ratings, ledger.steps
     last: dict[str, EloStep] = {}
     best: dict[str, EloStep] = {}
     for step in steps:
@@ -141,14 +186,22 @@ def build_board(
 def run_compute_elo(repo: Repository, *, dry_run: bool = False) -> list[EloRow]:
     fights = repo.elo_fights()
     rows, steps = build_board(fights)
+    ledger = build_ledger(fights)
+    before = pre_fight_elo(ledger)
+    upcoming = current_elo(ledger, repo.upcoming_bouts_for_prediction())
     # Logs hold counts only: never a name, a rating or a result.
     logger.info(
-        "compute-elo%s: %d fights, %d fighters on the board, %d steps",
+        "compute-elo%s: %d fights, %d fighters on the board, %d steps, %d fights and %d bouts with"
+        " ratings going in",
         " (dry run)" if dry_run else "",
         len(fights),
         len(rows),
         len(steps),
+        sum(1 for f in before if f.a or f.b),
+        sum(1 for u in upcoming if u.a or u.b),
     )
     if not dry_run:
         repo.set_fighter_elo(rows, steps)
+        repo.set_fight_elo(before)
+        repo.set_upcoming_elo(upcoming)
     return rows

@@ -1,4 +1,5 @@
 import { flagCode } from "@/lib/card/country";
+import { toFighterElo, type FighterElo } from "@/lib/card/elo";
 import { isValidStars } from "@/lib/card/stars";
 import { isVideoId } from "@/lib/card/watch";
 import type {
@@ -29,6 +30,7 @@ export interface FightRow {
   card_segment: string | null;
   career: unknown;
   records?: unknown;
+  elo?: unknown;
   weight_class: string | null;
   is_title_fight: boolean;
   scheduled_rounds: number | null;
@@ -120,6 +122,15 @@ function toRecords(value: unknown): FightRecords | null {
   return a === null && b === null ? null : { a, b };
 }
 
+/** Both sides of `fights.elo`; a side that does not have the expected shape is unknown. */
+function toElo(value: unknown): { a: FighterElo | null; b: FighterElo | null } | null {
+  if (typeof value !== "object" || value === null) return null;
+  const o = value as { a?: unknown; b?: unknown };
+  const a = toFighterElo(o.a);
+  const b = toFighterElo(o.b);
+  return a === null && b === null ? null : { a, b };
+}
+
 const SEGMENTS: readonly CardSegment[] = ["main", "prelim", "early_prelim"];
 
 /** An unknown value is treated as "no segment", never guessed. */
@@ -175,6 +186,7 @@ export function buildCard(
         cardSegment: toSegment(fight),
         career: toCareer(fight.career),
         records: toRecords(fight.records),
+        elo: toElo(fight.elo),
         weightClass: fight.weight_class,
         isTitleFight: fight.is_title_fight,
         scheduledRounds: fight.scheduled_rounds,

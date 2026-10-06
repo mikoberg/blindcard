@@ -196,3 +196,22 @@ describe("fighter styles on a card", () => {
     expect(mapStyles("Judo")).toEqual([]);
   });
 });
+
+describe("buildCard elo", () => {
+  const withElo = (elo: unknown) => buildCard([{ ...fights[1]!, elo }], fighters, [])[0]?.elo;
+
+  it("maps the ratings going in and leaves out a side without an earlier fight", () => {
+    expect(withElo({ a: { r: 1712.4, n: 12 }, b: { r: "1650.2", n: 3 } })).toEqual({
+      a: { rating: 1712.4, fights: 12 },
+      b: { rating: 1650.2, fights: 3 },
+    });
+    expect(withElo({ a: { r: 1712.4, n: 12 } })).toEqual({ a: { rating: 1712.4, fights: 12 }, b: null });
+  });
+
+  it("treats anything unexpected as unknown instead of guessing", () => {
+    expect(withElo(null)).toBeNull();
+    expect(withElo({})).toBeNull();
+    expect(withElo({ a: { r: "high", n: 3 }, b: { r: 1500, n: 0 } })).toBeNull();
+    expect(withElo({ a: { r: 99999, n: 3 }, b: { r: 1500, n: 2.5 } })).toBeNull();
+  });
+});

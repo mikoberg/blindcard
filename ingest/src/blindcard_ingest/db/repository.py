@@ -6,6 +6,7 @@ psycopg 3. Writes are idempotent upserts keyed on natural keys, one transaction 
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
@@ -24,11 +25,14 @@ from blindcard_ingest.judges import JudgeReport
 from blindcard_ingest.models import EventBundle, ParsedFight, ParsedRound, slugify
 from blindcard_ingest.predict.dataset import FightRow
 from blindcard_ingest.predict.types import (
+    EloBefore,
     EloFight,
     EloRow,
     EloStep,
+    FightElo,
     FightOutcome,
     UpcomingBoutInput,
+    UpcomingElo,
     UpcomingPick,
     UpcomingPrediction,
 )
@@ -94,6 +98,23 @@ def _decision_label(method: str | None) -> str:
     if kind is MethodKind.DISQUALIFICATION:
         return "disqualification"
     return "unanimous decision" if kind is MethodKind.DECISION_UNANIMOUS else "other"
+
+
+def _elo_outcome(outcome: str | None, has_winner: bool) -> str:
+    """ "win" / "draw" for a result Elo can use, "none" for anything else (a no contest)."""
+    if outcome == "draw":
+        return "draw"
+    return "win" if outcome == "win" and has_winner else "none"
+
+
+def _side_json(side: EloBefore | None) -> str | None:
+    return None if side is None else json.dumps({"r": side.rating, "n": side.fights})
+
+
+def _elo_json(a: EloBefore | None, b: EloBefore | None) -> str | None:
+    """`fights.elo`: {"a": {"r": rating, "n": fights}, "b": {...}}, a side left out when unknown."""
+    payload = {k: {"r": s.rating, "n": s.fights} for k, s in (("a", a), ("b", b)) if s is not None}
+    return json.dumps(payload) if payload else None
 
 
 @dataclass(frozen=True)
@@ -262,8 +283,16 @@ class Repository(Protocol):
         ...
 
     def elo_fights(self) -> list[EloFight]:
-        """Every completed fight that Elo can use: wins and draws (RESULT DATA: it stays in the
-        ingest process)."""
+        """Every completed fight, with the result Elo can use: a win, a draw, or "none" for a no
+        contest (RESULT DATA: it stays in the ingest process)."""
+        ...
+
+    def set_fight_elo(self, rows: Sequence[FightElo]) -> None:
+        """Store the Elo going into every completed fight (`fights.elo`, public: pre-fight only)."""
+        ...
+
+    def set_upcoming_elo(self, rows: Sequence[UpcomingElo]) -> None:
+        """Store the current Elo of the fighters of each announced bout (public, like records)."""
         ...
 
     def set_fighter_elo(self, rows: Sequence[EloRow], steps: Sequence[EloStep]) -> None:
@@ -929,14 +958,16 @@ class PostgresRepository:
                 )
 
     def elo_fights(self) -> list[EloFight]:
+        # Every fight, also those without a usable result: they still get their pre-fight ratings,
+        # so a no contest looks like every other fight on the card.
         query = """
             select f.id::text as id, e.event_date, f.fighter_a_id::text as a_id,
                    f.fighter_b_id::text as b_id, r.outcome,
-                   coalesce(r.winner_fighter_id = f.fighter_a_id, false) as a_won, r.method
+                   coalesce(r.winner_fighter_id = f.fighter_a_id, false) as a_won, r.method,
+                   (r.winner_fighter_id is not null) as has_winner
             from public.fights f
             join public.events e on e.id = f.event_id
-            join public.fight_results r on r.fight_id = f.id
-            where r.outcome = 'draw' or (r.outcome = 'win' and r.winner_fighter_id is not null)
+            left join public.fight_results r on r.fight_id = f.id
         """
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute(query)
@@ -946,12 +977,39 @@ class PostgresRepository:
                     event_date=row["event_date"],
                     a_id=row["a_id"],
                     b_id=row["b_id"],
-                    outcome=row["outcome"],
+                    outcome=_elo_outcome(row["outcome"], bool(row["has_winner"])),
                     a_won=bool(row["a_won"]),
                     how=_decision_label(row["method"]),
                 )
                 for row in cur.fetchall()
             ]
+
+    def set_fight_elo(self, rows: Sequence[FightElo]) -> None:
+        ids = [r.fight_id for r in rows]
+        payloads = [_elo_json(r.a, r.b) for r in rows]
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(
+                "update public.fights f set elo = v.elo::jsonb"
+                " from unnest(%s::uuid[], %s::text[]) as v(id, elo)"
+                " where f.id = v.id and f.elo is distinct from v.elo::jsonb",
+                (ids, payloads),
+            )
+
+    def set_upcoming_elo(self, rows: Sequence[UpcomingElo]) -> None:
+        ids = [r.bout_id for r in rows]
+        a_side = [_side_json(r.a) for r in rows]
+        b_side = [_side_json(r.b) for r in rows]
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(
+                "update public.upcoming_bouts set fighter_a_elo = null, fighter_b_elo = null"
+            )
+            cur.execute(
+                "update public.upcoming_bouts b"
+                " set fighter_a_elo = v.a::jsonb, fighter_b_elo = v.b::jsonb"
+                " from unnest(%s::uuid[], %s::text[], %s::text[]) as v(id, a, b)"
+                " where b.id = v.id",
+                (ids, a_side, b_side),
+            )
 
     def set_fighter_elo(self, rows: Sequence[EloRow], steps: Sequence[EloStep]) -> None:
         with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:

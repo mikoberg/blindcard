@@ -1,15 +1,13 @@
 import { fightBlurb } from "@/lib/card/blurb";
 import { isClassic } from "@/lib/card/classic";
 import { isHiddenGem } from "@/lib/card/hiddenGem";
-import { recordParts } from "@/lib/card/record";
 import { SEGMENT_LABELS } from "@/lib/card/segments";
 import { formatStars } from "@/lib/card/stars";
 import { fighterNote, pairingLabel } from "@/lib/card/story";
-import type { CardFight, CardFighter, FighterCareer, FighterRecord } from "@/lib/card/types";
-import Link from "next/link";
+import type { CardFight } from "@/lib/card/types";
 import { ClassicBadge, GOLD_FOIL } from "./ClassicBadge";
 import { ClassicSeal } from "./ClassicSeal";
-import { Monogram } from "./Monogram";
+import { Matchup } from "./Matchup";
 import { ShareFightButton } from "./ShareFightButton";
 import { RevealButton } from "./RevealButton";
 import { WatchButton } from "./WatchButton";
@@ -40,65 +38,6 @@ function RatingMark({ stars }: { stars: number | null }) {
         ))}
       <StarRating stars={stars} showNumber={false} small />
     </div>
-  );
-}
-
-/** One fighter: the name, then flag, record going in and style on one line. */
-function FighterBlock({
-  fighter,
-  record,
-  career,
-  side,
-}: {
-  fighter: CardFighter;
-  record: FighterRecord | null;
-  career: FighterCareer | null | undefined;
-  /** On wide screens the second fighter is mirrored, so the pair faces each other across the "vs". */
-  side: "left" | "right";
-}) {
-  const note = fighterNote(career);
-  const parts = record ? recordParts(record) : null;
-  const caption = parts?.extra ?? null;
-  const mirrored = side === "right";
-  return (
-    <span className={`block min-w-0 ${mirrored ? "sm:text-right" : ""}`}>
-      <span className="display-tight block break-words text-xl leading-tight sm:text-2xl">
-        {fighter.slug ? (
-          <Link
-            href={`/fighters/${fighter.slug}`}
-            className="underline decoration-[var(--border)] decoration-2 underline-offset-[5px] transition-colors hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
-          >
-            {fighter.name}
-          </Link>
-        ) : (
-          fighter.name
-        )}
-      </span>
-      <span
-        className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm ${mirrored ? "sm:flex-row-reverse" : ""}`}
-      >
-        <Monogram name={fighter.name} country={fighter.country} size="sm" />
-        {parts && (
-          <span
-            className="leading-none"
-            aria-label={`Record before the fight: ${parts.main}${caption ? ` ${caption}` : ""}`}
-          >
-            <span aria-hidden="true" className="display-tight tabular-nums">
-              {parts.main}
-            </span>
-            {caption && (
-              <span aria-hidden="true" className="ml-1 text-xs font-normal text-[var(--muted)]">
-                {caption}
-              </span>
-            )}
-          </span>
-        )}
-        {fighter.styles && fighter.styles.length > 0 && (
-          <span className="text-xs text-[var(--muted)]">{fighter.styles.join(", ")}</span>
-        )}
-        {note && <span className="text-xs text-[var(--muted)]">{note}</span>}
-      </span>
-    </span>
   );
 }
 
@@ -146,30 +85,12 @@ export function FightCard({
             <ShareFightButton fightId={fight.id} fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} />
           </div>
 
-          <h3 className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-start sm:gap-5">
-            <FighterBlock
-              fighter={fight.fighterA}
-              record={fight.records?.a ?? null}
-              career={fight.career?.a}
-              side="left"
-            />
-            <span className="flex items-center gap-2 sm:flex-col sm:gap-0.5 sm:pt-0.5">
-              <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
-              <span className="display-tight text-sm leading-none text-[var(--accent-text)]">vs</span>
-              {fight.weightClass && (
-                <span aria-hidden="true" className="text-center text-[0.7rem] font-bold leading-tight text-[var(--muted)] sm:max-w-[6rem]">
-                  {fight.weightClass}
-                </span>
-              )}
-              <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
-            </span>
-            <FighterBlock
-              fighter={fight.fighterB}
-              record={fight.records?.b ?? null}
-              career={fight.career?.b}
-              side="right"
-            />
-          </h3>
+          <Matchup
+            a={{ ...fight.fighterA, record: fight.records?.a ?? null, note: fighterNote(fight.career?.a), elo: fight.elo?.a }}
+            b={{ ...fight.fighterB, record: fight.records?.b ?? null, note: fighterNote(fight.career?.b), elo: fight.elo?.b }}
+            weightClass={fight.weightClass}
+            when="before"
+          />
 
           {fight.videoId && (
             <WatchButton fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} videoId={fight.videoId} />

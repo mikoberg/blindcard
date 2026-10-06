@@ -7,11 +7,10 @@ import {
 } from "@/lib/upcoming/prediction";
 import type { UpcomingBout, UpcomingEvent, UpcomingSegment } from "@/lib/upcoming/types";
 import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
-import { ExpectedPlate } from "./ExpectedPlate";
+import { ExpectedMark } from "./ExpectedPlate";
+import { Matchup } from "./Matchup";
 import { headliners } from "./UpcomingCard";
 import { UpcomingPick } from "./UpcomingPick";
-import { recordParts } from "@/lib/card/record";
-import { Monogram } from "./Monogram";
 import { Notice } from "./Notice";
 import { startTimes } from "@/lib/upcoming/time";
 import { PlaceChip } from "./PlaceChip";
@@ -23,9 +22,7 @@ const SEGMENT_LABELS: Record<UpcomingSegment, string> = {
   prelim: "Prelims",
   early_prelim: "Early prelims",
 };
-const TAG = "inline-flex items-center border-2 px-2 py-0.5 text-xs font-bold";
-/** Plate width plus the gap next to it: the divider reaches back under the plate. */
-const PLATE_REACH = "-ml-[5.25rem]";
+const TAG = "inline-flex items-center border-[1.5px] px-1.5 py-px text-[0.7rem] font-bold leading-4";
 
 /** The card split by part when every bout has one (all or nothing, as on completed cards). */
 function groups(bouts: readonly UpcomingBout[]): { label: string | null; bouts: UpcomingBout[] }[] {
@@ -37,59 +34,13 @@ function groups(bouts: readonly UpcomingBout[]): { label: string | null; bouts: 
   })).filter((g) => g.bouts.length > 0);
 }
 
-function FighterName({ fighter }: { fighter: UpcomingBout["a"] }) {
-  const name = <span className="block break-words text-xl font-bold leading-tight sm:text-2xl">{fighter.name}</span>;
-  const parts = fighter.record ? recordParts(fighter.record) : null;
-  return (
-    <span className="flex items-center gap-3">
-      <Monogram name={fighter.name} country={fighter.country} size="lg" />
-      <span className="min-w-0 flex-1">
-        {fighter.slug ? (
-          <Link
-            href={`/fighters/${fighter.slug}`}
-            className="underline decoration-[var(--border)] decoration-2 underline-offset-[5px] transition-colors hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
-          >
-            {name}
-          </Link>
-        ) : (
-          name
-        )}
-        {fighter.styles.length > 0 && (
-          <span className="mt-0.5 block text-sm font-normal text-[var(--muted)]">{fighter.styles.join(", ")}</span>
-        )}
-        {parts && (
-          <span aria-hidden="true" className="mt-0.5 block text-sm font-extrabold tabular-nums sm:hidden">
-            {parts.main}
-            {parts.extra ? ` ${parts.extra}` : ""}
-          </span>
-        )}
-      </span>
-      {parts && (
-        <span
-          className="hidden shrink-0 text-right leading-none sm:block"
-          aria-label={`Record going into the fight: ${parts.main}${parts.extra ? ` ${parts.extra}` : ""}`}
-        >
-          <span aria-hidden="true" className="block text-2xl font-extrabold tabular-nums">
-            {parts.main}
-          </span>
-          {parts.extra && (
-            <span aria-hidden="true" className="mt-1 block text-xs font-normal text-[var(--muted)]">
-              {parts.extra}
-            </span>
-          )}
-        </span>
-      )}
-    </span>
-  );
-}
-
 /** "How we got this": what moved the expectation, in stars, and how much history it rests on. */
 function Why({ bout }: { bout: UpcomingBout }) {
   const prediction = bout.prediction;
   if (!prediction) return null;
   const largest = Math.max(0.3, ...prediction.why.map((r) => Math.abs(r.amount)));
   return (
-    <details className="group mt-4 border-t-2 border-[var(--border)] pt-3">
+    <details className="group mt-1 border-t border-[var(--border)] pt-1">
       <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-bold underline decoration-[var(--accent)] decoration-2 underline-offset-4">
         How we got this
       </summary>
@@ -120,41 +71,43 @@ function Why({ bout }: { bout: UpcomingBout }) {
   );
 }
 
-/** One announced bout: names, weight class and the expected rating. No record, streak or result. */
+/**
+ * One announced bout, laid out like a completed one: the expected rating in a column of its own,
+ * then the matchup with each fighter's record and Elo as of today. No streak, no rating of the
+ * fight itself and no result.
+ */
 function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
-  const plated = bout.prediction !== null;
+  const tags = bout.position === 1 || bout.isTitleFight;
   return (
-    <li className="border-2 border-[var(--text)] bg-[var(--surface)] p-4 sm:p-5">
-      <div className="flex gap-4">
-        {bout.prediction && <ExpectedPlate stars={bout.prediction.stars} />}
-        <div className="min-w-0 flex-1">
-          {(plated || bout.position === 1 || bout.isTitleFight) && (
-            <div className="mb-3 flex min-h-7 flex-wrap items-center gap-2">
+    <li className="overflow-hidden border-2 border-[var(--text)] bg-[var(--surface)]">
+      <div className="sm:flex">
+        {bout.prediction && <ExpectedMark stars={bout.prediction.stars} />}
+        <div className="min-w-0 flex-1 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
+          {tags && (
+            <div className="flex min-h-6 flex-wrap items-center gap-1.5">
               {bout.position === 1 && (
                 <span className={`${TAG} border-[var(--text)] bg-[var(--text)] text-[var(--bg)]`}>Main event</span>
               )}
               {bout.isTitleFight && (
-                <span className={`${TAG} border-[var(--accent)] text-[var(--accent)]`}>Title fight</span>
+                <span className={`${TAG} border-[var(--accent)] text-[var(--accent-text)]`}>Title fight</span>
               )}
             </div>
           )}
-          <h3>
-            <FighterName fighter={bout.a} />
-            <span className={`${plated ? PLATE_REACH : ""} my-3 flex items-center gap-3`}>
-              <span className="h-px flex-1 bg-[var(--border)]" />
-              <span className="display-tight flex items-baseline gap-2 bg-[var(--surface-2)] px-3 py-1 text-base leading-none sm:text-lg">
-                <span className="text-sm font-bold text-[var(--accent)]">vs</span>
-                {bout.weightClass && <span aria-hidden="true">{bout.weightClass}</span>}
-              </span>
-              <span className="h-px flex-1 bg-[var(--border)]" />
-            </span>
-            <FighterName fighter={bout.b} />
-          </h3>
+          <Matchup
+            a={{ ...bout.a, note: null }}
+            b={{ ...bout.b, note: null }}
+            weightClass={bout.weightClass}
+            when="now"
+          />
           {bout.weightClass && <p className="sr-only">{bout.weightClass} bout</p>}
         </div>
       </div>
-      <Why bout={bout} />
-      {bout.hasPick && <UpcomingPick boutId={bout.id} nameA={bout.a.name} nameB={bout.b.name} />}
+      {(bout.prediction || bout.hasPick) && (
+        <div className="px-4 pb-3 sm:px-5">
+          <Why bout={bout} />
+          {bout.hasPick && <UpcomingPick boutId={bout.id} nameA={bout.a.name} nameB={bout.b.name} />}
+        </div>
+      )}
     </li>
   );
 }
