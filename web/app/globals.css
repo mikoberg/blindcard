@@ -19,7 +19,7 @@
   --gold-hi: #fff0b8;
   --gold-mid: #f2b52a;
   --gold-lo: #b97a00;
-  --gold-text: #946400; /* gold for small text on paper: 4.7 to 1 */
+  --gold-text: #c58300; /* gold for the small "Title fight" caption: near the belt, 2.9 to 1 on paper */
   --font-display: var(--font-archivo), system-ui, sans-serif;
   --font-body: var(--font-archivo), system-ui, sans-serif;
   color-scheme: light;
