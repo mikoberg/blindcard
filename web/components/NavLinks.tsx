@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Events", match: (path: string) => path === "/" || path === "/best" || path.startsWith("/events") },
+  { href: "/upcoming", label: "Upcoming", match: (path: string) => path.startsWith("/upcoming") },
   { href: "/fighters", label: "Fighters", match: (path: string) => path.startsWith("/fighters") },
   { href: "/classics", label: "Classics", match: (path: string) => path.startsWith("/classics") },
 ] as const;
@@ -21,7 +22,7 @@ export function NavLinks() {
             key={link.href}
             href={link.href}
             aria-current={current ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center px-2 text-[0.95rem] font-semibold underline-offset-[10px] decoration-[3px] hover:text-[var(--accent)] sm:px-3 ${
+            className={`inline-flex min-h-11 items-center px-2 text-[0.95rem] font-semibold underline-offset-[10px] decoration-[3px] hover:text-[var(--accent)] sm:px-3 max-[359px]:px-1 ${
               current ? "text-[var(--text)] underline" : "text-[var(--muted)]"
             }`}
           >

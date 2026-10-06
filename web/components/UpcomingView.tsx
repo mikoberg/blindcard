@@ -92,7 +92,8 @@ function Why({ bout }: { bout: UpcomingBout }) {
  */
 function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
   return (
-    <li className="relative border-2 border-[var(--text)] bg-[var(--surface)]">
+    <li className="group relative border-2 border-[var(--text)] bg-[var(--surface)]">
+      {/* The expected rating spans the matchup and the "How we got this" row, so it sits in the middle of the card. */}
       <div className={bout.prediction ? "sm:grid sm:grid-cols-[5.5rem_1fr]" : undefined}>
         {bout.prediction && <ExpectedMark stars={bout.prediction.stars} />}
         <div className="min-w-0 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
@@ -108,8 +109,10 @@ function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
           />
           {bout.weightClass && <p className="sr-only">{bout.weightClass} bout</p>}
         </div>
+        <div className="sm:col-start-2">
+          <Why bout={bout} />
+        </div>
       </div>
-      <Why bout={bout} />
       {bout.hasPick && <UpcomingPick boutId={bout.id} nameA={bout.a.name} nameB={bout.b.name} />}
     </li>
   );

@@ -36,7 +36,7 @@ export function ExpectedMark({ stars }: { stars: number }) {
   const hot = stars >= HIGH_EXPECTATION;
   return (
     <div
-      className="flex items-center gap-3 border-b border-dashed border-[var(--border)] px-4 py-2 sm:w-[5.5rem] sm:flex-col sm:justify-center sm:gap-1.5 sm:border-b-0 sm:border-r sm:px-0"
+      className="flex items-center gap-3 border-b border-dashed border-[var(--border)] px-4 py-2 sm:row-span-2 sm:w-[5.5rem] sm:flex-col sm:justify-center sm:gap-1.5 sm:border-b-0 sm:border-r sm:px-0 sm:group-has-[details[open]]:justify-start sm:group-has-[details[open]]:pt-8"
       role="img"
       aria-label={`Expected rating ${formatExpected(stars)} out of 5`}
     >

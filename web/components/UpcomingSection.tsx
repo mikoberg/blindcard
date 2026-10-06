@@ -40,6 +40,12 @@ export function UpcomingSection({ events, today }: { events: readonly UpcomingEv
           ))}
         </ul>
       )}
+      <Link
+        href="/upcoming"
+        className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4 hover:text-[var(--accent)]"
+      >
+        All announced cards
+      </Link>
     </section>
   );
 }

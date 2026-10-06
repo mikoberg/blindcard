@@ -29,7 +29,7 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
 
   const shown = state.status === "shown";
   return (
-    <div className="border-t-2 border-[var(--text)]">
+    <div className="border-t border-[var(--border)]">
       <button
         type="button"
         onClick={shown ? () => setState({ status: "idle" }) : load}
@@ -38,10 +38,10 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
         aria-controls={panelId}
         // Many identical buttons on a card: the name says which bout this one is for.
         aria-label={`${state.status === "loading" ? "Loading…" : shown ? "Hide the model lean" : state.status === "error" ? "Try again" : "Show the model lean"}: ${nameA} versus ${nameB}`}
-        className={`flex min-h-11 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors focus-visible:outline-offset-[-5px] disabled:opacity-70 sm:px-5 ${
+        className={`flex h-9 w-full items-center justify-between gap-4 px-4 text-left text-[0.8rem] font-bold transition-colors focus-visible:-outline-offset-4 disabled:opacity-70 sm:px-5 ${
           shown
             ? "bg-[var(--surface-2)] hover:bg-[var(--border)]"
-            : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] focus-visible:outline-[var(--accent-ink)]"
+            : "hover:bg-[var(--text)] hover:text-[var(--surface)] focus-visible:bg-[var(--text)] focus-visible:text-[var(--surface)]"
         }`}
       >
         <span>
@@ -54,8 +54,9 @@ export function UpcomingPick({ boutId, nameA, nameB }: { boutId: string; nameA: 
                 : "Show the model lean"}
         </span>
         {!shown && (
-          <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center border-2 border-current opacity-70">
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <span aria-hidden="true" className="flex items-center gap-1.5 font-semibold opacity-70">
+            Spoiler
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="5" y="11" width="14" height="10" rx="1" />
               <path d="M8 11V8a4 4 0 018 0v3" />
             </svg>

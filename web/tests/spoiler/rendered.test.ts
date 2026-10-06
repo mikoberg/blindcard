@@ -32,7 +32,7 @@ live("the running app serves no result data", () => {
       .slice(0, 4);
     expect(fighterPaths.length).toBeGreaterThan(0);
 
-    for (const path of ["/", "/best", "/events/year/2024", "/fighters", "/fighters/elo", "/classics", "/judges/sal-damato", ...fighterPaths, ...eventPaths, ...upcomingPaths]) {
+    for (const path of ["/", "/best", "/upcoming", "/events/year/2024", "/fighters", "/fighters/elo", "/classics", "/judges/sal-damato", ...fighterPaths, ...eventPaths, ...upcomingPaths]) {
       const html = await get(path);
       expect(html.status, path).toBe(200);
       // A fighter's own page and the fighters list may name the two bonuses (career totals); nothing else may.
