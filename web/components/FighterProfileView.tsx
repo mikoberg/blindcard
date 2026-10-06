@@ -106,14 +106,23 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-y-2 border-[var(--text)] py-3 sm:grid-cols-3 lg:grid-cols-6">
         {parts && (
           <Figure label="Record">
-            <span aria-label={`Record: ${parts.main}${parts.extra ? ` ${parts.extra}` : ""}`}>
-              <span aria-hidden="true">{parts.main}</span>
+            <a
+              href="#fights"
+              aria-label={`Record: ${parts.main}${parts.extra ? ` ${parts.extra}` : ""}. Go to the full fight history`}
+              className="group block w-fit"
+            >
+              <span aria-hidden="true" className="underline decoration-2 underline-offset-4 group-hover:text-[var(--accent)]">
+                {parts.main}
+              </span>
               {parts.extra && (
                 <span aria-hidden="true" className="ml-1 text-xs font-normal text-[var(--muted)]">
                   {parts.extra}
                 </span>
               )}
-            </span>
+              <span aria-hidden="true" className="mt-0.5 block text-xs font-normal text-[var(--muted)] group-hover:text-[var(--accent)]">
+                Full history ↓
+              </span>
+            </a>
           </Figure>
         )}
         {elo && (

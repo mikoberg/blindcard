@@ -110,8 +110,8 @@ export function FighterFights({
   return (
     <section aria-labelledby="fights">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <h2 id="fights" className="display text-xl sm:text-2xl">
-          Rated UFC fights
+        <h2 id="fights" className="display scroll-mt-20 text-xl sm:text-2xl">
+          Fight history
         </h2>
         {shown && (
           <div role="group" aria-label="Which fights" className="inline-flex border-2 border-[var(--text)]">
@@ -146,7 +146,7 @@ export function FighterFights({
             disabled={state.status === "loading"}
             aria-expanded={shown}
             aria-controls={panelId}
-            aria-label={`${shown ? "Hide the results" : state.status === "error" ? "Try again" : "Show the results"} of ${name}'s fights`}
+            aria-label={`${shown ? "Hide the full fight history" : state.status === "error" ? "Try again" : "Show the full fight history"} of ${name}`}
             className={`flex min-h-11 w-full items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors focus-visible:outline-offset-[-5px] disabled:opacity-70 ${
               shown
                 ? "bg-[var(--surface-2)] hover:bg-[var(--border)]"
@@ -157,10 +157,10 @@ export function FighterFights({
               {state.status === "loading"
                 ? "Loading…"
                 : shown
-                  ? "Hide the results"
+                  ? "Hide the fight history"
                   : state.status === "error"
                     ? "Try again"
-                    : "Show who they beat and lost to (spoilers)"}
+                    : "Show the full fight history (spoilers)"}
             </span>
             {!shown && (
               <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center border-2 border-current opacity-70">
@@ -174,7 +174,7 @@ export function FighterFights({
           <div id={panelId} aria-live="polite">
             {!shown && state.status !== "error" && (
               <p className="px-4 py-2 text-xs text-[var(--muted)]">
-                Spoilers: shows how every fight below ended, win or loss, and how. It stays closed until you open it.
+                Spoilers: shows how every fight ended, win or loss, and how. It stays closed until you open it.
               </p>
             )}
             {state.status === "error" && (
@@ -194,8 +194,8 @@ export function FighterFights({
             )}
             {!shown && state.status !== "error" && (
               <p className="px-4 pb-2 text-xs text-[var(--muted)]">
-                This list holds the UFC fights we have rated. With the results open, the rest of the career (earlier
-                fights and other promotions) appears below it.
+                The list holds the UFC fights we have rated. Opening the history adds who they beat and lost to, and
+                the rest of the career: earlier fights and other promotions.
               </p>
             )}
           </div>
