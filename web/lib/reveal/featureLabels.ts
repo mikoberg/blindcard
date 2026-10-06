@@ -13,6 +13,7 @@ const percent = (raw: number) => `${Math.round(raw * 100)}%`;
 const LABELS: Record<string, FeatureLabel> = {
   pace: { label: "Striking pace", format: perMinute("strikes") },
   min_pace: { label: "Pace of the quieter fighter", format: perMinute("strikes") },
+  min_pace_nofinish: { label: "Pace of the quieter fighter", format: perMinute("strikes") },
   total_pace: { label: "Total strikes", format: perMinute("strikes") },
   takedown_rate: { label: "Takedowns", format: perMinute("takedowns") },
   knockdowns: { label: "Knockdowns", format: count },
