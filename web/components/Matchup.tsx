@@ -39,36 +39,49 @@ function EloChip({ elo, when }: { elo: FighterElo; when: keyof typeof ELO_LABEL 
   );
 }
 
-/** One fighter: the name set large, then flag, record, Elo and style on one line. */
-export function FighterBlock({
+/** The fighter's name, set large and linked to their page when they have one. */
+function FighterName({ fighter, side, className }: { fighter: MatchupFighter; side: "left" | "right"; className: string }) {
+  return (
+    <span
+      data-matchup-name
+      className={`display-tight block min-w-0 break-words text-balance text-xl leading-tight sm:text-2xl ${
+        side === "right" ? "sm:text-right" : ""
+      } ${className}`}
+    >
+      {fighter.slug ? (
+        <Link
+          href={`/fighters/${fighter.slug}`}
+          className="underline decoration-[var(--border)] decoration-2 underline-offset-[5px] transition-colors hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
+        >
+          {fighter.name}
+        </Link>
+      ) : (
+        fighter.name
+      )}
+    </span>
+  );
+}
+
+/** Flag, record, Elo and style on one line, with a short note under it. */
+function FighterMeta({
   fighter,
   side,
   when,
+  className,
 }: {
   fighter: MatchupFighter;
-  /** On wide screens the second fighter is mirrored, so the pair faces each other across the "vs". */
   side: "left" | "right";
   when: keyof typeof ELO_LABEL;
+  className: string;
 }) {
   const parts = fighter.record ? recordParts(fighter.record) : null;
   const caption = parts?.extra ?? null;
   const mirrored = side === "right";
   return (
-    <span className={`block min-w-0 ${mirrored ? "sm:text-right" : ""}`}>
-      <span className="display-tight block break-words text-balance text-xl leading-tight sm:text-2xl">
-        {fighter.slug ? (
-          <Link
-            href={`/fighters/${fighter.slug}`}
-            className="underline decoration-[var(--border)] decoration-2 underline-offset-[5px] transition-colors hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
-          >
-            {fighter.name}
-          </Link>
-        ) : (
-          fighter.name
-        )}
-      </span>
+    <span className={`block min-w-0 ${mirrored ? "sm:text-right" : ""} ${className}`}>
       <span
-        className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm ${mirrored ? "sm:flex-row-reverse" : ""}`}
+        data-matchup-meta
+        className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm ${mirrored ? "sm:flex-row-reverse" : ""}`}
       >
         <Monogram name={fighter.name} country={fighter.country} size="sm" />
         {parts && (
@@ -113,10 +126,15 @@ export function Matchup({
   when: keyof typeof ELO_LABEL;
 }) {
   const gap = eloGap(a.elo, b.elo);
+  // Two rows on wide screens, one for the names and one for the line under them, so that the line
+  // of both fighters sits at the same height however many lines a name takes. The names sit at the
+  // bottom of their row, so the name of the shorter one stands next to the last line of the other.
+  // The middle column spans both rows and is centred on them. On a phone it all stacks in this order.
   return (
-    <h3 className="mt-2 grid gap-2 sm:grid-cols-[1fr_6.5rem_1fr] sm:items-start sm:gap-4">
-      <FighterBlock fighter={a} side="left" when={when} />
-      <span className="flex items-center gap-2 sm:flex-col sm:gap-0.5 sm:self-center">
+    <h3 className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-[1fr_6.5rem_1fr] sm:grid-rows-[auto_auto]">
+      <FighterName fighter={a} side="left" className="sm:col-start-1 sm:row-start-1 sm:self-end" />
+      <FighterMeta fighter={a} side="left" when={when} className="sm:col-start-1 sm:row-start-2" />
+      <span className="my-1 flex items-center gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:my-0 sm:flex-col sm:gap-0.5 sm:self-center">
         <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
         <span className="display-tight text-sm leading-none text-[var(--accent-text)]">vs</span>
         {weightClass && (
@@ -137,7 +155,8 @@ export function Matchup({
         )}
         <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
       </span>
-      <FighterBlock fighter={b} side="right" when={when} />
+      <FighterName fighter={b} side="right" className="sm:col-start-3 sm:row-start-1 sm:self-end" />
+      <FighterMeta fighter={b} side="right" when={when} className="sm:col-start-3 sm:row-start-2" />
     </h3>
   );
 }

@@ -244,3 +244,14 @@ describe("FightCard Elo going into the fight", () => {
     expect(html).not.toMatch(/→|\+\d|−\d|rating after|change/i);
   });
 });
+
+describe("FightCard matchup layout", () => {
+  it("puts the names and the lines under them on two shared rows, so both lines align", () => {
+    const html = render(makeFight(2, 4));
+    // a name on row 1 and a line on row 2, for each side, and the middle column across both rows
+    expect(html.match(/sm:row-start-1/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(html.match(/sm:row-start-2/g)).toHaveLength(2);
+    expect(html).toContain("sm:row-span-2");
+    expect(html).toContain("sm:self-center");
+  });
+});
