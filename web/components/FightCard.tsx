@@ -5,7 +5,7 @@ import { SEGMENT_LABELS } from "@/lib/card/segments";
 import { formatStars } from "@/lib/card/stars";
 import { fighterNote, pairingLabel } from "@/lib/card/story";
 import type { CardFight } from "@/lib/card/types";
-import { ClassicBadge, GOLD_FOIL } from "./ClassicBadge";
+import { ClassicBadge } from "./ClassicBadge";
 import { ClassicSeal } from "./ClassicSeal";
 import { FightTag } from "./FightTag";
 import { Matchup } from "./Matchup";
@@ -23,7 +23,11 @@ function RatingMark({ stars }: { stars: number | null }) {
   const classic = isClassic(stars);
   const hot = stars !== null && stars >= 4;
   return (
-    <div className="flex items-center gap-3 px-4 pt-3 sm:w-[6.25rem] sm:flex-col sm:justify-center sm:gap-1.5 sm:border-r sm:border-[var(--border)] sm:px-0 sm:py-3">
+    <div
+      className={`ticket-stub flex items-center gap-3 px-4 py-2.5 sm:w-[6.25rem] sm:flex-col sm:justify-center sm:gap-1.5 sm:px-0 sm:py-3 ${
+        classic ? "ticket-stub-gold" : ""
+      }`}
+    >
       {stars !== null &&
         (classic ? (
           <ClassicSeal size="sm" value={formatStars(stars)} />
@@ -51,15 +55,12 @@ export function FightCard({
   const pairing = pairingLabel(fight);
   const stars = fight.rating?.stars ?? null;
   const classic = isClassic(stars);
-  // The left edge carries the tier: gold for a classic, red from 4, ink otherwise.
-  const edge = classic ? "border-l-[var(--gold-mid)]" : stars !== null && stars >= 4 ? "border-l-[var(--accent)]" : "border-l-[var(--text)]";
   return (
     <li
       id={`fight-${fight.id}`}
       data-fight-id={fight.id}
-      className={`scroll-mt-20 overflow-hidden border-2 border-l-[6px] border-[var(--text)] bg-[var(--surface)] ${edge}`}
+      className="scroll-mt-20 relative border-2 border-[var(--text)] bg-[var(--surface)]"
     >
-      {classic && <div aria-hidden="true" className="h-1" style={{ backgroundImage: GOLD_FOIL }} />}
       <div className="sm:flex">
         <RatingMark stars={stars} />
         <div className="min-w-0 flex-1 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
@@ -89,9 +90,10 @@ export function FightCard({
           {fight.videoId && (
             <WatchButton fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} videoId={fight.videoId} />
           )}
+
+          <RevealButton fightId={fight.id} fighterA={fight.fighterA} fighterB={fight.fighterB} />
         </div>
       </div>
-      <RevealButton fightId={fight.id} fighterA={fight.fighterA} fighterB={fight.fighterB} />
     </li>
   );
 }

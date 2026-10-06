@@ -225,3 +225,65 @@ body {
 .billing-face-co {
   background-color: var(--surface);
 }
+
+/*
+ * A fight is a slip with a tear-off stub: the rating sits in the stub, cut off from the rest by a
+ * dashed perforation with a bite out of the card's edge at each end. On a phone the stub is a row on
+ * top and the perforation runs across. Tier is told by the numeral (red from 4) and the gold seal,
+ * never by a coloured edge.
+ */
+.ticket-stub {
+  position: relative;
+}
+.ticket-stub-gold {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--gold-mid) 20%, transparent), color-mix(in srgb, var(--gold-mid) 6%, transparent));
+}
+.ticket-stub::before,
+.ticket-stub::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+/* phone: perforation along the bottom of the stub, bites at the left and right edges */
+.ticket-stub {
+  border-bottom: 2px dashed var(--border);
+}
+.ticket-stub::before {
+  left: -2px;
+  bottom: -11px;
+  width: 9px;
+  height: 18px;
+  background: radial-gradient(circle at 2px 50%, var(--bg) 0 5px, var(--text) 5px 7px, transparent 7px);
+}
+.ticket-stub::after {
+  right: -2px;
+  bottom: -11px;
+  width: 9px;
+  height: 18px;
+  background: radial-gradient(circle at calc(100% - 2px) 50%, var(--bg) 0 5px, var(--text) 5px 7px, transparent 7px);
+}
+@media (min-width: 640px) {
+  /* wide: perforation down the right of the stub, bites at the top and bottom edges */
+  .ticket-stub {
+    border-bottom: 0;
+    border-right: 2px dashed var(--border);
+  }
+  .ticket-stub::before {
+    left: auto;
+    right: -11px;
+    top: -2px;
+    bottom: auto;
+    width: 18px;
+    height: 9px;
+    background: radial-gradient(circle at 50% 2px, var(--bg) 0 5px, var(--text) 5px 7px, transparent 7px);
+  }
+  .ticket-stub::after {
+    left: auto;
+    right: -11px;
+    top: auto;
+    bottom: -2px;
+    width: 18px;
+    height: 9px;
+    background: radial-gradient(circle at 50% calc(100% - 2px), var(--bg) 0 5px, var(--text) 5px 7px, transparent 7px);
+  }
+}
