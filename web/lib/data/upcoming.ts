@@ -10,6 +10,7 @@ import type {
 } from "@/lib/upcoming/types";
 import { UPCOMING_BOUT_COLUMNS, UPCOMING_EVENT_COLUMNS } from "./columns";
 import { ensure } from "./ensure";
+import { fighterPageSlugs } from "./leaderboard";
 import { mapStyles, toRecord } from "./map";
 
 export { mapStyles };
@@ -59,8 +60,10 @@ function fighter(
   joined: FighterJoin | null,
   record: unknown,
   styles: unknown,
+  pages: ReadonlySet<string>,
 ): UpcomingFighter {
-  const slug = joined?.slug && isValidSlug(joined.slug) ? joined.slug : null;
+  // Only a fighter with a profile page gets a link (a debutant has none).
+  const slug = joined?.slug && isValidSlug(joined.slug) && pages.has(joined.slug) ? joined.slug : null;
   return {
     name,
     slug,
@@ -90,15 +93,15 @@ export function mapPrediction(row: Pick<BoutRow, "predicted_stars" | "prediction
   return { stars, basis, why: reasons(row.prediction_why) };
 }
 
-function bout(row: BoutRow): UpcomingBout {
+function bout(row: BoutRow, pages: ReadonlySet<string>): UpcomingBout {
   return {
     id: row.id,
     position: row.card_position,
     segment: row.segment !== null && SEGMENTS.includes(row.segment) ? (row.segment as UpcomingSegment) : null,
     weightClass: row.weight_class,
     isTitleFight: row.is_title_fight,
-    a: fighter(row.fighter_a_name, row.fighter_a, row.fighter_a_record, row.fighter_a_style),
-    b: fighter(row.fighter_b_name, row.fighter_b, row.fighter_b_record, row.fighter_b_style),
+    a: fighter(row.fighter_a_name, row.fighter_a, row.fighter_a_record, row.fighter_a_style, pages),
+    b: fighter(row.fighter_b_name, row.fighter_b, row.fighter_b_record, row.fighter_b_style, pages),
     prediction: mapPrediction(row),
     hasPick: row.has_pick === true,
   };
@@ -132,6 +135,9 @@ export async function listUpcomingEvents(now: Date = new Date()): Promise<Upcomi
       .order("card_position", { ascending: true }),
     "list upcoming bouts",
   );
+  const pages = await fighterPageSlugs(
+    bouts.flatMap((row) => [row.fighter_a?.slug, row.fighter_b?.slug].filter((s): s is string => typeof s === "string")),
+  );
   return events.map((event) => ({
     id: event.id,
     slug: event.slug,
@@ -141,7 +147,7 @@ export async function listUpcomingEvents(now: Date = new Date()): Promise<Upcomi
     mainCardAt: event.main_card_at,
     prelimsAt: event.prelims_at,
     earlyPrelimsAt: event.early_prelims_at,
-    bouts: bouts.filter((row) => row.event_id === event.id).map(bout),
+    bouts: bouts.filter((row) => row.event_id === event.id).map((row) => bout(row, pages)),
   }));
 }
 

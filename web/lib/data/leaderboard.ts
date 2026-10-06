@@ -2,7 +2,7 @@ import { buildProfile } from "@/lib/leaderboard/rank";
 import { cleanSearchTerm, containsPattern } from "@/lib/leaderboard/search";
 import type { FighterFightRow, FighterProfile, FighterRatingRow } from "@/lib/leaderboard/types";
 import { getSupabase } from "@/lib/supabase/server";
-import { FIGHTER_FIGHT_COLUMNS, FIGHTER_RATING_COLUMNS } from "./columns";
+import { FIGHTER_FIGHT_COLUMNS, FIGHTER_PAGE_COLUMNS, FIGHTER_RATING_COLUMNS } from "./columns";
 import { ensure, ensureOptional } from "./ensure";
 import { isValidSlug } from "./events";
 
@@ -43,6 +43,29 @@ export async function getFighterProfile(slug: string): Promise<FighterProfile | 
     "load fighter fights",
   );
   return buildProfile(fighter, fights);
+}
+
+const PAGE_LOOKUP_CHUNK = 100; // slugs per request, so the address stays short
+
+/**
+ * Of these fighter slugs, the ones that have a profile page. A fighter's page needs a rated fight,
+ * so a debutant or a fighter whose fights are not rated yet has none, and a name must not link
+ * to a page that is not there. Public data only: a slug and nothing else.
+ */
+export async function fighterPageSlugs(slugs: Iterable<string>): Promise<Set<string>> {
+  const wanted = [...new Set(slugs)].filter(isValidSlug);
+  const found = new Set<string>();
+  for (let i = 0; i < wanted.length; i += PAGE_LOOKUP_CHUNK) {
+    const rows = ensure<{ slug: string }[]>(
+      await getSupabase()
+        .from("fighter_ratings")
+        .select(FIGHTER_PAGE_COLUMNS)
+        .in("slug", wanted.slice(i, i + PAGE_LOOKUP_CHUNK)),
+      "look up fighter pages",
+    );
+    for (const row of rows) found.add(row.slug);
+  }
+  return found;
 }
 
 const SEARCH_LIMIT = 20;

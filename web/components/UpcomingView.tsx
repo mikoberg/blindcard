@@ -45,7 +45,10 @@ function FighterName({ fighter }: { fighter: UpcomingBout["a"] }) {
       <Monogram name={fighter.name} country={fighter.country} size="lg" />
       <span className="min-w-0 flex-1">
         {fighter.slug ? (
-          <Link href={`/fighters/${fighter.slug}`} className="hover:text-[var(--accent)]">
+          <Link
+            href={`/fighters/${fighter.slug}`}
+            className="underline decoration-[var(--border)] decoration-2 underline-offset-[5px] transition-colors hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
+          >
             {name}
           </Link>
         ) : (

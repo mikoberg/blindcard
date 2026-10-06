@@ -8,6 +8,7 @@ import {
   VERSION_COLUMNS,
 } from "./columns";
 import { ensure, ensureOptional } from "./ensure";
+import { fighterPageSlugs } from "./leaderboard";
 import { buildCard, type FightRow, type FighterRow, type ScoreRow, type VideoRow } from "./map";
 
 /** The card of one event: fights, fighters and the active score version's ratings. */
@@ -52,5 +53,6 @@ export async function getCard(eventId: string): Promise<CardFight[]> {
     "load fight videos",
   );
 
-  return buildCard(fights, fighters, scores, videos);
+  const pages = await fighterPageSlugs(fighters.flatMap((row) => (row.slug ? [row.slug] : [])));
+  return buildCard(fights, fighters, scores, videos, pages);
 }

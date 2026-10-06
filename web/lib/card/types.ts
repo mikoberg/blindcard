@@ -5,6 +5,8 @@ export interface CardFighter {
   country?: string | null;
   /** Fighting styles (Kickboxing, Wrestling, ...), at most three; empty or absent = not known. */
   styles?: string[];
+  /** The fighter's profile page, when they have one (they need a rated fight); null = no page. */
+  slug?: string | null;
 }
 
 /** A fighter's professional record going into a bout. */

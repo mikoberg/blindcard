@@ -26,10 +26,24 @@ describe("buildCard", () => {
     const scores: ScoreRow[] = [{ fight_id: "f1", stars: 4.5, percentile: 93.25 }];
     const card = buildCard(fights, fighters, scores);
     expect(card.map((f) => f.id)).toEqual(["f1", "f2"]);
-    expect(card[0]?.fighterA).toEqual({ id: "p1", name: "One", country: null, styles: [] });
+    expect(card[0]?.fighterA).toEqual({ id: "p1", name: "One", country: null, styles: [], slug: null });
     expect(card[0]?.isTitleFight).toBe(true);
     expect(card[0]?.rating).toEqual({ stars: 4.5, percentile: 93.25 });
     expect(card[1]?.rating).toBeNull();
+  });
+
+  it("links only the fighters that have a profile page", () => {
+    const withSlugs: FighterRow[] = [
+      { id: "p1", name: "One", slug: "one" },
+      { id: "p2", name: "Two", slug: "two" },
+      { id: "p3", name: "Three", slug: null },
+      { id: "p4", name: "Four" },
+    ];
+    const card = buildCard(fights, withSlugs, [], [], new Set(["one"]));
+    expect(card[0]?.fighterA.slug).toBe("one");
+    expect(card[0]?.fighterB.slug).toBeNull(); // has a slug but no page (no rated fight yet)
+    expect(card[1]?.fighterA.slug).toBeNull();
+    expect(card[1]?.fighterB.slug).toBeNull();
   });
 
   it("accepts numeric strings from the API", () => {

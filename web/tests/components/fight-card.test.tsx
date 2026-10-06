@@ -181,3 +181,29 @@ describe("FightCard fighting styles", () => {
     expect(html.slice(b)).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
   });
 });
+
+describe("FightCard fighter links", () => {
+  const fight = makeFight(2, 4, {
+    fighterA: { id: "a", name: "Ann One", country: "br", slug: "ann-one" },
+    fighterB: { id: "b", name: "Bea Two", country: "se", slug: null },
+  });
+
+  it("links a name to the profile page when the fighter has one", () => {
+    const html = render(fight);
+    expect(html).toContain('<a class="');
+    expect(html).toContain('href="/fighters/ann-one"');
+    expect(html).toMatch(/href="\/fighters\/ann-one"[^>]*>Ann One<\/a>/);
+  });
+
+  it("leaves a name without a page as plain text, never a link that would not open", () => {
+    const html = render(fight);
+    expect(html).not.toContain("bea-two");
+    expect(html).not.toMatch(/<a [^>]*>Bea Two<\/a>/);
+    expect(html).toContain(">Bea Two<");
+  });
+
+  it("links nothing on a card that was built without page slugs", () => {
+    const html = render(makeFight(2, 4));
+    expect(html).not.toContain('href="/fighters/');
+  });
+});

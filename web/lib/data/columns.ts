@@ -6,7 +6,9 @@
 export const EVENT_COLUMNS = "id, name, slug, event_date, location";
 export const FIGHT_COLUMNS =
   "id, event_id, card_position, card_segment, career, records, weight_class, is_title_fight, scheduled_rounds, fighter_a_id, fighter_b_id";
-export const FIGHTER_COLUMNS = "id, name, country, style";
+export const FIGHTER_COLUMNS = "id, name, country, style, slug";
+/** Which fighters have a profile page: the ones with a rated fight (the `fighter_ratings` view). */
+export const FIGHTER_PAGE_COLUMNS = "slug";
 export const SCORE_COLUMNS = "fight_id, stars, percentile";
 export const VERSION_COLUMNS = "version";
 export const ID_COLUMN = "id";

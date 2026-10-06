@@ -6,6 +6,7 @@ import { SEGMENT_LABELS } from "@/lib/card/segments";
 import { formatStars } from "@/lib/card/stars";
 import { fighterNote, pairingLabel } from "@/lib/card/story";
 import type { CardFight, CardFighter, FighterCareer, FighterRecord } from "@/lib/card/types";
+import Link from "next/link";
 import { ClassicBadge, GOLD_FOIL } from "./ClassicBadge";
 import { ClassicSeal } from "./ClassicSeal";
 import { Monogram } from "./Monogram";
@@ -61,7 +62,18 @@ function FighterBlock({
   const mirrored = side === "right";
   return (
     <span className={`block min-w-0 ${mirrored ? "sm:text-right" : ""}`}>
-      <span className="display-tight block break-words text-xl leading-tight sm:text-2xl">{fighter.name}</span>
+      <span className="display-tight block break-words text-xl leading-tight sm:text-2xl">
+        {fighter.slug ? (
+          <Link
+            href={`/fighters/${fighter.slug}`}
+            className="underline decoration-[var(--border)] decoration-2 underline-offset-[5px] transition-colors hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
+          >
+            {fighter.name}
+          </Link>
+        ) : (
+          fighter.name
+        )}
+      </span>
       <span
         className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm ${mirrored ? "sm:flex-row-reverse" : ""}`}
       >

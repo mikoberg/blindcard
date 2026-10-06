@@ -41,6 +41,7 @@ export interface FighterRow {
   name: string;
   country?: string | null;
   style?: unknown;
+  slug?: string | null;
 }
 
 /** At most three plain labels; anything else is dropped. */
@@ -139,11 +140,19 @@ export function buildCard(
   fighters: readonly FighterRow[],
   scores: readonly ScoreRow[],
   videos: readonly VideoRow[] = [],
+  /** Slugs of the fighters that have a profile page: only those get a link. */
+  pageSlugs: ReadonlySet<string> = new Set(),
 ): CardFight[] {
   const fighterById = new Map(
     fighters.map((row) => [
       row.id,
-      { id: row.id, name: row.name, country: flagCode(row.country), styles: mapStyles(row.style) },
+      {
+        id: row.id,
+        name: row.name,
+        country: flagCode(row.country),
+        styles: mapStyles(row.style),
+        slug: row.slug && pageSlugs.has(row.slug) ? row.slug : null,
+      },
     ]),
   );
   const videoByFight = new Map<string, string>();
