@@ -69,7 +69,11 @@ export function FightCard({
                 <FightTag kind="segment">{SEGMENT_LABELS[fight.cardSegment]}</FightTag>
               )}
               {classic && <ClassicBadge />}
-              {fight.isTitleFight && <FightTag kind="title">Title fight</FightTag>}
+              {fight.isTitleFight && (
+                <span className="sm:hidden">
+                  <FightTag kind="title">Title fight</FightTag>
+                </span>
+              )}
               {isHiddenGem(fight) && <FightTag kind="gem">Hidden gem</FightTag>}
               {pairing && <FightTag kind="pairing">{pairing}</FightTag>}
               {/* For screen readers only: the weight class, the title and the rounds are on the card already. */}
@@ -84,6 +88,7 @@ export function FightCard({
             weightClass={fight.weightClass}
             when="before"
             billing={fight.cardPosition}
+            titleFight={fight.isTitleFight}
           />
 
           {fight.videoId && (

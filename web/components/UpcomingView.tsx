@@ -98,7 +98,11 @@ function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
         {bout.prediction && <ExpectedMark stars={bout.prediction.stars} />}
         <div className="min-w-0 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
           <div className="flex min-h-6 items-center gap-1.5">
-            {bout.isTitleFight && <FightTag kind="title">Title fight</FightTag>}
+            {bout.isTitleFight && (
+              <span className="sm:hidden">
+                <FightTag kind="title">Title fight</FightTag>
+              </span>
+            )}
           </div>
           <Matchup
             a={{ ...bout.a, note: null }}
@@ -106,6 +110,7 @@ function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
             weightClass={bout.weightClass}
             when="now"
             billing={bout.position}
+            titleFight={bout.isTitleFight}
           />
           {bout.weightClass && <p className="sr-only">{bout.weightClass} bout</p>}
         </div>

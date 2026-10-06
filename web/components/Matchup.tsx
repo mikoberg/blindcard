@@ -5,6 +5,7 @@ import { recordParts } from "@/lib/card/record";
 import type { FighterRecord } from "@/lib/card/types";
 import { BillingMark } from "./BillingMark";
 import { FlagChip } from "./FlagChip";
+import { TitleBelt } from "./TitleBelt";
 
 export interface MatchupFighter {
   name: string;
@@ -159,6 +160,7 @@ export function Matchup({
   weightClass,
   when,
   billing = null,
+  titleFight = false,
 }: {
   a: MatchupFighter;
   b: MatchupFighter;
@@ -166,6 +168,8 @@ export function Matchup({
   when: keyof typeof ELO_LABEL;
   /** Card position of the fight: 1 (main event) and 2 (co-main) get a mark above the "vs". */
   billing?: number | null;
+  /** A title fight: the belt stands above the "vs" on wide screens (on a phone it is with the tags). */
+  titleFight?: boolean;
 }) {
   const gap = eloGap(a.elo, b.elo);
   const size = nameSize(Math.max(a.name.length, b.name.length));
@@ -179,6 +183,11 @@ export function Matchup({
       <FighterMeta fighter={a} side="left" when={when} className="sm:col-start-1 sm:row-start-2" />
       <span className="my-1 flex items-center gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:my-0 sm:flex-col sm:gap-0.5 sm:self-center">
         <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
+        {titleFight && (
+          <span className="hidden sm:mb-0.5 sm:inline-flex">
+            <TitleBelt className="h-6 w-[84px]" />
+          </span>
+        )}
         {(billing === 1 || billing === 2) && (
           <span className="sm:mb-0.5">
             <BillingMark position={billing} />
