@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { isProvisional } from "@/lib/card/elo";
-import { recordParts } from "@/lib/card/record";
 import { formatRating, isHighRating } from "@/lib/leaderboard/format";
 import { activeYears } from "@/lib/leaderboard/profile";
 import { MIN_FIGHTS } from "@/lib/leaderboard/rank";
 import type { FighterFight, FighterProfile } from "@/lib/leaderboard/types";
 import { barHeight } from "@/lib/overview/poster";
 import { FighterFights } from "./FighterFights";
+import { RecordButton } from "./RecordButton";
 import { FlagChip } from "./FlagChip";
 
 /** One figure of the strip under the name: a number and what it is. */
@@ -57,7 +57,6 @@ function RatingStrip({ fights }: { fights: readonly FighterFight[] }) {
 /** A fighter's page: who they are, how their fights rate, and every rated fight. Public data only. */
 export function FighterProfileView({ profile }: { profile: FighterProfile }) {
   const { fights, stats, record, elo } = profile;
-  const parts = record ? recordParts(record) : null;
   // One weight class is said once in the line above the list; a column of it would repeat it.
   const showClass = stats.weightClasses.length > 1;
   return (
@@ -104,25 +103,9 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
       </header>
 
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-y-2 border-[var(--text)] py-3 sm:grid-cols-3 lg:grid-cols-6">
-        {parts && (
+        {record && (
           <Figure label="Record">
-            <a
-              href="#fights"
-              aria-label={`Record: ${parts.main}${parts.extra ? ` ${parts.extra}` : ""}. Go to the full fight history`}
-              className="group block w-fit"
-            >
-              <span aria-hidden="true" className="underline decoration-2 underline-offset-4 group-hover:text-[var(--accent)]">
-                {parts.main}
-              </span>
-              {parts.extra && (
-                <span aria-hidden="true" className="ml-1 text-xs font-normal text-[var(--muted)]">
-                  {parts.extra}
-                </span>
-              )}
-              <span aria-hidden="true" className="mt-0.5 block text-xs font-normal text-[var(--muted)] group-hover:text-[var(--accent)]">
-                Full history ↓
-              </span>
-            </a>
+            <RecordButton record={record} />
           </Figure>
         )}
         {elo && (

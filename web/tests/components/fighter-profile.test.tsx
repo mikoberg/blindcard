@@ -61,7 +61,7 @@ describe("FighterProfileView", () => {
         profile={profile({ record: { w: 24, l: 5, d: 1, nc: 1 }, elo: { rating: 1712.4, fights: 12 } })}
       />,
     );
-    expect(html).toContain('aria-label="Record: 24-5-1 (1 NC). Go to the full fight history"');
+    expect(html).toContain('aria-label="Record: 24-5-1 (1 NC). Show the full fight history (spoilers)"');
     expect(html).toContain('aria-label="Elo 1712"');
     expect(html).toContain("Record and Elo are as they stand today");
     const provisional = renderToStaticMarkup(
@@ -109,26 +109,27 @@ describe("FighterProfileView", () => {
     );
     expect(html.match(/24-5/g)).toHaveLength(2); // the aria label and the visible figure, once
     expect(html).toContain("Show the full fight history (spoilers)");
-    expect(html).toContain("Spoilers: shows how every fight ended");
+    expect(html).toContain("Spoilers: shows every fight of the career");
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toMatch(/KO\/TKO|Submission|Decision|Won \d|aria-label="(Won|Lost)|→/);
   });
 });
 
 describe("the record as the way in to the fight history", () => {
-  it("links the record to the history section, which holds the gate", () => {
+  it("is a button that opens the history, with the spoiler warning right next to it", () => {
     const html = renderToStaticMarkup(
       <FighterProfileView profile={profile({ record: { w: 22, l: 7, d: 0, nc: 0 } })} />,
     );
-    expect(html).toMatch(/<a href="#fights"[^>]*aria-label="Record: 22-7\. Go to the full fight history"/);
-    expect(html).toContain("Full history");
-    expect(html).toContain('id="fights"'); // the target
+    expect(html).toMatch(/<button type="button" aria-label="Record: 22-7\. Show the full fight history \(spoilers\)"/);
+    expect(html).toContain("Full history (spoilers)");
+    expect(html).toContain('id="fights"'); // the section it scrolls to
     expect(html).toContain("Fight history");
+    expect(html).not.toContain('href="#fights"');
   });
 
-  it("has no link when no record is known", () => {
+  it("has no button when no record is known", () => {
     const html = renderToStaticMarkup(<FighterProfileView profile={profile({ record: null })} />);
-    expect(html).not.toContain('href="#fights"');
+    expect(html).not.toContain("Full history");
   });
 });
 
