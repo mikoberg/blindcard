@@ -8,21 +8,21 @@ type Size = "sm" | "md" | "lg";
 /** Least height; the poster grows with its type, so the strip never covers a name. */
 const HEIGHT: Record<Size, string> = {
   sm: "min-h-52",
-  md: "min-h-72",
+  md: "min-h-60",
   lg: "min-h-52",
 };
 
 /** The strip sits on the bottom edge at a fixed height, so the type above it never collides. */
 const STRIP_HEIGHT: Record<Size, string> = {
   sm: "h-12",
-  md: "h-16",
+  md: "h-14",
   lg: "h-14",
 };
 
 /** Space kept free under the type for the strip. */
 const STRIP_SPACE: Record<Size, string> = {
   sm: "pb-14",
-  md: "pb-[4.75rem]",
+  md: "pb-[4.25rem]",
   lg: "pb-[4.25rem]",
 };
 
@@ -31,9 +31,9 @@ const CAPITAL_EM = 0.92;
 const LABEL_EM = 0.7;
 
 /** Largest size of the matchup type, in cqw (1% of the poster's width). */
-const TYPE_CQW: Record<Size, number> = { sm: 9, md: 11.5, lg: 7.5 };
+const TYPE_CQW: Record<Size, number> = { sm: 9, md: 9.5, lg: 7.5 };
 /** Largest size of the event label line above the names, in cqw. */
-const LABEL_CQW: Record<Size, number> = { sm: 5.4, md: 5.4, lg: 3.2 };
+const LABEL_CQW: Record<Size, number> = { sm: 5.4, md: 4.2, lg: 3.2 };
 
 /**
  * A typographic bill for one event: the main event's two family names set large in ink on the

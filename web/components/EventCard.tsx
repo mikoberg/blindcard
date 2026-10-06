@@ -49,7 +49,7 @@ export function EventCard({ event, featured = false }: { event: EventSummary; fe
           >
             <p
               aria-hidden="true"
-              className={`scorebox ${cardRating >= 3.5 ? "scorebox-hot" : ""} ${featured ? "h-14 w-[4.25rem] text-3xl" : "h-12 w-14 text-2xl"}`}
+              className={`scorebox ${cardRating >= 3.5 ? "scorebox-hot" : ""} ${featured ? "h-12 w-14 text-2xl" : "h-11 w-12 text-xl"}`}
             >
               {cardRating.toFixed(1)}
             </p>

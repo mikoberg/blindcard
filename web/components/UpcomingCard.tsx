@@ -22,9 +22,9 @@ export function DateBlock({ isoDate }: { isoDate: string }) {
   return (
     <div
       aria-hidden="true"
-      className="redact flex w-[4.25rem] shrink-0 flex-col items-center justify-center py-3 text-center"
+      className="redact flex w-14 shrink-0 flex-col items-center justify-center py-2 text-center"
     >
-      <span className="display text-3xl leading-none">{Number(isoDate.slice(8, 10))}</span>
+      <span className="display text-2xl leading-none">{Number(isoDate.slice(8, 10))}</span>
       <span className="mt-1 text-xs font-extrabold">{month}</span>
     </div>
   );
@@ -39,12 +39,12 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
   return (
     <Link
       href={`/upcoming/${event.slug}`}
-      className="slip group flex h-full gap-4 border-2 border-[var(--text)] bg-[var(--surface)] p-4"
+      className="slip group flex h-full gap-3 border-2 border-[var(--text)] bg-[var(--surface)] p-3"
     >
       <DateBlock isoDate={event.eventDate} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-extrabold text-[var(--muted)]">{eventLabel(event.name)}</p>
-        <h3 className="display-tight break-words text-xl leading-tight group-hover:text-[var(--accent)] sm:text-2xl">
+        <h3 className="display-tight break-words text-lg leading-tight group-hover:text-[var(--accent)] sm:text-xl">
           {names ? (
             <>
               {names[0]} <span className="text-base font-bold text-[var(--accent-text)]">vs</span> {names[1]}
@@ -56,10 +56,9 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
         <p className="sr-only">
           {event.name}, {formatEventDate(event.eventDate)}
         </p>
-        {event.location && <p className="mt-1 text-sm text-[var(--muted)]">{event.location}</p>}
-        <PlaceChip location={event.location} />
+        <PlaceChip location={event.location} detail={event.location} />
         <StartTimes times={startTimes(event)} variant="tile" />
-        <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span className="font-bold text-[var(--accent)]">{countdownLabel(days)}</span>
           <span className="text-[var(--muted)]">
             {event.bouts.length > 0 ? `${event.bouts.length} bouts announced` : "Card not announced yet"}
@@ -67,7 +66,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
           {title && <span className="redact px-1.5 text-xs font-bold leading-5">Title fight</span>}
         </p>
         {watch.length > 0 && (
-          <p className="mt-3 text-sm">
+          <p className="mt-1.5 text-sm">
             <span className="text-[var(--muted)]">Look out for </span>
             {watch.map((bout, index) => {
               const [a, b] = posterNames(event.name, bout.a.name, bout.b.name);

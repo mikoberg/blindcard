@@ -28,14 +28,15 @@ export function StartTimes({ times, variant }: { times: readonly StartTime[]; va
   if (variant === "tile") {
     const rest = shown.slice(1);
     return (
-      <p className="mt-2 text-sm">
+      <p className="mt-1.5 text-sm">
         <span className="text-[var(--muted)]">{main.label} </span>
         <span className="font-bold">
           {main.at.weekday} {main.at.time}
         </span>{" "}
         <span className="text-[var(--muted)]">{main.at.zone}</span>
         {rest.length > 0 && (
-          <span className="block text-[var(--muted)]">
+          <span className="text-[var(--muted)]">
+            {" · "}
             {rest.map((t, i) => (
               <span key={t.label}>
                 {i > 0 ? ", " : ""}

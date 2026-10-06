@@ -10,15 +10,15 @@ function Pin() {
 
 /**
  * Where the event is. Outside the Americas the chip is marked, because such a card starts at a
- * very different time from a US one.
+ * very different time from a US one. `detail` (the venue) sits beside the chip in muted type.
  */
-export function PlaceChip({ location }: { location: string | null }) {
+export function PlaceChip({ location, detail }: { location: string | null; detail?: string | null }) {
   const info = placeInfo(location);
   if (!info) return null;
   return (
-    <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+    <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 font-bold ${
+        className={`inline-flex shrink-0 items-center gap-1 px-1.5 py-px font-bold ${
           info.away
             ? "border-2 border-[var(--accent)] text-[var(--accent)]"
             : "border-2 border-[var(--text)]/35 text-[var(--text)]"
@@ -27,6 +27,7 @@ export function PlaceChip({ location }: { location: string | null }) {
         <Pin />
         {info.city}
       </span>
+      {detail && <span className="min-w-0 text-[var(--muted)] sm:truncate">{detail}</span>}
     </p>
   );
 }
