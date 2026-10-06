@@ -225,3 +225,16 @@ Honest limit: this fight goes from the 17th to the 24th percentile and stays at 
 28th). Fixing that one fight outright would need a rule that lifts every one-sided KO, which the labels
 do not support (the Fight of the Night AUC already gives up 0.017 here). Raising `--finish-leak` is the
 other lever: more credit for every finish, at the cost of the Fight of the Night ranking.
+
+## Score v25: a real knockout is never rated below 3 stars
+
+v24 lifted knockouts without a rule, and a first-round TKO of 4:59 still came out at 2.0 (24th
+percentile). The product decision is that a knockout is entertainment in itself: a real KO/TKO (not an
+injury stoppage, `ko_finish` and `real_finish` both 1) never gets fewer than 3 stars. It is an editorial
+rule in the config (`stars.knockout_min_stars = 3.0`), set by hand like the weight of `cut_short`: the bonus labels
+cannot teach it, and it is not a fit. v25 has v24's weights to the digit.
+
+Effect on dev: KO/TKOs rated 2.5 or lower went from 290 to 47 (of 2,741); those 47 are the stoppages for
+an injury ("toLeg Injury" and the like), which are not knockouts. The percentile of a fight is not changed,
+only the stars. Rated 3.0: 1,551 fights (1,299 in v24). `audit-scores --strict` clean. Submissions get no
+floor (not asked for).

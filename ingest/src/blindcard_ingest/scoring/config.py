@@ -38,6 +38,9 @@ class ScoringConfig:
     #: A fight shorter than this many seconds cannot reach the top star level (a "classic" needs
     #: some fight in it). 0 = no such rule.
     classic_min_seconds: float = 0.0
+    #: A real knockout (KO/TKO, not stopped by an injury) is never rated below this many stars: the
+    #: entertainment of a knockout is worth that much whatever else the fight held. 0 = no rule.
+    knockout_min_stars: float = 0.0
 
     def to_json(self) -> dict[str, Any]:
         """JSON snapshot stored in `scoring_versions.config` for reproducibility."""
@@ -55,6 +58,8 @@ class ScoringConfig:
             snapshot["era_adjusted"] = list(self.era_adjusted)
         if self.classic_min_seconds:
             snapshot["classic_min_seconds"] = self.classic_min_seconds
+        if self.knockout_min_stars:
+            snapshot["knockout_min_stars"] = self.knockout_min_stars
         return snapshot
 
     @classmethod
@@ -74,6 +79,7 @@ class ScoringConfig:
             },
             era_adjusted=tuple(str(name) for name in data.get("era_adjusted", ())),
             classic_min_seconds=float(data.get("classic_min_seconds", 0.0)),
+            knockout_min_stars=float(data.get("knockout_min_stars", 0.0)),
         )
 
 
@@ -119,6 +125,13 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
         raise ScoringConfigError("stars.classic_min_seconds must be a number >= 0")
     thresholds = tuple(_parse_threshold(entry) for entry in raw_thresholds)
     _validate_thresholds(thresholds)
+    knockout_min_stars = data["stars"].get("knockout_min_stars", 0)
+    if (
+        not isinstance(knockout_min_stars, int | float)
+        or isinstance(knockout_min_stars, bool)
+        or not (knockout_min_stars == 0 or knockout_min_stars in {t.stars for t in thresholds})
+    ):
+        raise ScoringConfigError("stars.knockout_min_stars must be 0 or one of the star levels")
 
     return ScoringConfig(
         version=version,
@@ -130,6 +143,7 @@ def parse_scoring_config(data: Mapping[str, Any]) -> ScoringConfig:
         performance_weights=performance_weights,
         era_adjusted=era_adjusted,
         classic_min_seconds=float(classic_min_seconds),
+        knockout_min_stars=float(knockout_min_stars),
     )
 
 

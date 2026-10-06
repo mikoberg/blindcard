@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CardFinder } from "@/components/CardFinder";
 import { EventCard } from "@/components/EventCard";
 import { Notice } from "@/components/Notice";
 import { SiteSearch } from "@/components/SiteSearch";
@@ -73,11 +74,21 @@ export default async function HomePage() {
         </ul>
       </section>
 
+      <section aria-labelledby="find" className="space-y-5">
+        <h2 id="find" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
+          Find a card
+        </h2>
+        <p className="max-w-2xl text-[var(--muted)]">
+          Order every card by what you care about: ratings, Elo, ranked fighters, title fights, places. Or open the
+          spoiler filters to order by knockouts, submissions or how long the night ran.
+        </p>
+        <CardFinder />
+      </section>
+
       <section aria-labelledby="browse" className="space-y-4">
         <h2 id="browse" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
-          All events
+          Browse by year
         </h2>
-        <p className="max-w-xl text-[var(--muted)]">Pick a year, or see which cards rate best.</p>
         <SortToggle active="newest" />
         <YearNav years={years.map((group) => group.year)} base="/events/year" sticky={false} />
       </section>

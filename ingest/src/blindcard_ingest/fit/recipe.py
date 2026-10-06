@@ -48,6 +48,8 @@ STAR_CURVE: tuple[tuple[float, float], ...] = (
 
 #: A fight shorter than this cannot be a five-star classic (a 13-second knockout is a moment).
 CLASSIC_MIN_SECONDS = 120
+#: A real knockout is never rated below this (set by hand: the labels cannot teach it).
+KNOCKOUT_MIN_STARS = 3.0
 
 #: Candidates. time_fraction and finish lateness are left out: early_finish says the same.
 #: close_decision is left out too: how the judges split says how the fight ended, and a close,
@@ -480,6 +482,7 @@ def render_config_toml(
         "# Percentile (0-100) -> stars, same curve as v1.",
         "[stars]",
         f"classic_min_seconds = {CLASSIC_MIN_SECONDS}  # shorter fights top out one level lower",
+        f"knockout_min_stars = {KNOCKOUT_MIN_STARS}  # a real KO/TKO is never rated below this",
         "thresholds = [",
         *(f"    [{_number(t.min_percentile)}, {t.stars}]," for t in star_thresholds),
         "]",

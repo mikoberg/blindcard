@@ -319,3 +319,19 @@ def test_only_missing_looks_up_a_fighters_missing_bouts_even_if_other_bouts_have
         use_wikipedia=False,
     )
     assert repo.records["f2"][ann_side] == {"w": 1, "l": 0, "d": 0, "nc": 0}
+
+
+def test_a_fighter_found_on_sherdog_also_gets_the_rest_of_the_career() -> None:
+    repo, wiki = setup()
+    bouts = [
+        (DAY2, "Ann One", "loss"),
+        (dt.date(2020, 1, 1), "A", "win"),
+        (dt.date(2019, 1, 1), "B", "win"),
+    ]
+    sherdog = FakeSherdog({"Cat Three": [sherdog_page("pl", bouts)]})
+    run_ingest_fighters(wiki, repo, source_name=SOURCE, from_year=2015, sherdog=sherdog)
+    career = repo.fighter_bouts["id-cat-three"]
+    assert [(r.date, r.opponent) for r in career] == [
+        (dt.date(2019, 1, 1), "B"),
+        (dt.date(2020, 1, 1), "A"),
+    ]  # the bout we store ourselves is not repeated

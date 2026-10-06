@@ -23,7 +23,7 @@ from urllib.parse import quote_plus, unquote
 from blindcard_ingest.bonus_matching import EventIndex, FightNames
 from blindcard_ingest.http.client import PoliteClient
 from blindcard_ingest.sources.wikipedia.countries import COUNTRIES
-from blindcard_ingest.sources.wikipedia.fighter_record import DEBUT, Record
+from blindcard_ingest.sources.wikipedia.fighter_record import DEBUT, Record, RecordRow
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,11 @@ class SherdogBout:
     date: dt.date
     opponent: str
     result: str  # win / loss / draw / no_contest
+    #: How it ended, the event and the round: read only for the career list of a fighter's page
+    #: (result data kept privately, shown behind a click); never for the record going in.
+    method: str | None = None
+    event: str | None = None
+    round: int | None = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +125,49 @@ def _country(html: str) -> str | None:
     return COUNTRIES.get(_text(match.group(1)).lower()) if match else None
 
 
+def _short(text: str, limit: int = 80) -> str | None:
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit] if text else None
+
+
+def _round(cell: str) -> int | None:
+    match = re.match(r"\s*(\d{1,2})", _text(cell))
+    found = int(match.group(1)) if match else None
+    return found if found is not None and 1 <= found <= 25 else None
+
+
+def career_rows(
+    bouts: tuple[SherdogBout, ...] | list[SherdogBout],
+    own_dates: set[dt.date],
+    *,
+    tolerance_days: int = 1,
+) -> list[RecordRow]:
+    """The bouts of the history that are not in our own data (the rule of the Wikipedia table's
+    `career_bouts`): earlier fights and other promotions of a fighter without a Wikipedia page."""
+    own = sorted(own_dates)
+    rows: list[RecordRow] = []
+    wins = losses = draws = no_contests = 0
+    for bout in sorted(bouts, key=lambda b: b.date):
+        wins += bout.result == "win"
+        losses += bout.result == "loss"
+        draws += bout.result == "draw"
+        no_contests += bout.result == "no_contest"
+        if any(abs((bout.date - day).days) <= tolerance_days for day in own):
+            continue
+        rows.append(
+            RecordRow(
+                date=bout.date,
+                opponent=bout.opponent,
+                after=Record(wins, losses, draws, no_contests),
+                result=bout.result,
+                method=bout.method,
+                event=bout.event,
+                round=bout.round,
+            )
+        )
+    return rows
+
+
 def parse_fighter_page(html: str, url: str = "") -> SherdogPage:
     """The pro fight history and the country of a Sherdog fighter page."""
     start = html.find("FIGHT HISTORY - PRO")
@@ -134,7 +182,16 @@ def parse_fighter_page(html: str, url: str = "") -> SherdogPage:
         date = _date(cells[2])
         opponent = _text(cells[1])
         if date is not None and opponent:
-            bouts.append(SherdogBout(date=date, opponent=opponent, result=result.group(1)))
+            bouts.append(
+                SherdogBout(
+                    date=date,
+                    opponent=opponent,
+                    result=result.group(1),
+                    method=_short(_text(cells[3])) if len(cells) > 3 else None,
+                    event=_short(_text(cells[2].split("<br")[0])),
+                    round=_round(cells[4]) if len(cells) > 4 else None,
+                )
+            )
     return SherdogPage(url=url, country=_country(html), bouts=tuple(bouts))
 
 

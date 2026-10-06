@@ -13,6 +13,9 @@ export const SCORE_COLUMNS = "fight_id, stars, percentile";
 export const VERSION_COLUMNS = "version";
 export const ID_COLUMN = "id";
 export const OVERVIEW_COLUMNS = "id, slug, name, event_date, location, ratings, main_event_a, main_event_b, main_event_title";
+/** Public, pre-fight sums per event (see migration 0031). */
+export const EVENT_FACET_COLUMNS =
+  "event_id, title_fights, five_round_fights, womens_fights, rematches, longest_streak, even_fights, elo_gap_avg, elo_avg, elo_peak, ranked_fighters, champions, top5_fighters, ranked_bouts, weight_classes, countries";
 export const FIGHTER_RATING_COLUMNS = "id, name, country, rated_fights, avg_stars, slug, last_fight";
 export const FIGHTER_FIGHT_COLUMNS =
   "event_slug, event_name, event_date, opponent_name, stars, fight_id, weight_class, is_title_fight, opponent_slug";

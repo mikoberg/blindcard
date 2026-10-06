@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from blindcard_ingest.db.repository import FightSides, Repository
-from blindcard_ingest.sources.sherdog import SherdogPage, record_before_bout
+from blindcard_ingest.sources.sherdog import SherdogPage, career_rows, record_before_bout
 from blindcard_ingest.sources.wikipedia.countries import country_code
 from blindcard_ingest.sources.wikipedia.fighter_record import (
     Record,
@@ -194,6 +194,9 @@ def run_ingest_fighters(
                     report.fighters_with_country += 1
                 for fight_source_id, (side, record) in found.items():
                     records[fight_source_id][side] = record_json(record)
+                careers[fighter] = career_rows(
+                    page.bouts, {a.event_date for a in appearances[fighter]}
+                )
                 break
 
     # Fighters without an article of their own: Wikidata's one-line description names the country.

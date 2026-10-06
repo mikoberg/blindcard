@@ -643,6 +643,32 @@ begin
 end $$;
 reset role;
 
+-- The card finder: public pre-fight facts per event, and result facts behind one function.
+set local role anon;
+do $$
+declare
+  n integer;
+  r record;
+begin
+  perform count(*) from public.event_facets;
+  raise notice 'PASS anon can read event_facets';
+  begin
+    perform count(*) from public.event_result_facets;
+    raise exception 'FAIL: anon could read event_result_facets';
+  exception when insufficient_privilege then
+    raise notice 'PASS anon cannot read event_result_facets';
+  end;
+  for r in select * from public.event_result_stats() loop
+    if r.knockouts + r.submissions + r.decisions > r.fights or r.split_decisions > r.decisions then
+      raise exception 'FAIL: event_result_stats counts do not add up for %', r.event_id;
+    end if;
+  end loop;
+  select count(*) into n from public.event_result_stats();
+  if n > 1000 then raise exception 'FAIL: event_result_stats returned more than 1000 rows'; end if;
+  raise notice 'PASS event_result_stats serves consistent counts, capped';
+end $$;
+reset role;
+
 rollback;
 
 \echo 'rls.sql: all assertions passed'

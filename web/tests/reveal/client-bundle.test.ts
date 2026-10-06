@@ -17,6 +17,13 @@ const CLIENT_SIDE = [
   "components/FighterFights.tsx",
   "lib/fighters/results.ts",
   "components/EloBoard.tsx",
+  "components/CardFinder.tsx",
+  "components/FinderControls.tsx",
+  "lib/explore/client.ts",
+  "lib/explore/metrics.ts",
+  "lib/explore/query.ts",
+  "lib/explore/stats.ts",
+  "lib/explore/types.ts",
   "components/EloHistory.tsx",
   "lib/elo/board.ts",
   "lib/elo/history.ts",
@@ -35,6 +42,12 @@ describe("the reveal vocabulary stays on the server", () => {
   it("the fighter results module is shipped to the browser, so it must not import its server-side mapping", () => {
     expect(read("lib/fighters/results.ts")).not.toMatch(/from\s+["']\.\/map["']/);
     expect(read("components/FighterFights.tsx")).not.toMatch(/fighters\/map["']/);
+  });
+
+  it("the card finder modules shipped to the browser do not import the server-side facets mapping", () => {
+    for (const path of ["components/CardFinder.tsx", "components/FinderControls.tsx", "lib/explore/stats.ts", "lib/explore/query.ts"]) {
+      expect(read(path), path).not.toMatch(/from\s+["'](?:@\/lib\/(?:explore\/facets|reveal\/service|data\/)|\.\/facets)/);
+    }
   });
 
   it("only the server-side breakdown names result-like features", () => {

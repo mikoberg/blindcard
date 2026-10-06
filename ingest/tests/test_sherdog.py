@@ -96,3 +96,22 @@ def test_queries_try_the_name_without_suffix_and_with_split_words() -> None:
     assert _queries("Michael Aswell Jr.") == ["Michael Aswell Jr.", "Michael Aswell"]
     assert _queries("JooSang Yoo") == ["JooSang Yoo", "Joo Sang Yoo"]
     assert _queries("Ann Lee") == ["Ann Lee"]
+
+
+def test_the_method_event_and_round_of_each_bout_are_read_for_the_career_list() -> None:
+    first = PAGE.bouts[0]
+    assert first.method == "Submission (Guillotine Choke)"
+    assert first.event == "UFC Fight Night 289 - Rosas Jr. vs. Barcelos"
+    assert first.round == 1
+
+
+def test_the_career_leaves_out_the_bouts_we_store_ourselves() -> None:
+    from blindcard_ingest.sources.sherdog import career_rows
+
+    rows = career_rows(PAGE.bouts, {dt.date(2026, 9, 26), dt.date(2026, 4, 25)})
+    assert [(r.date, r.result) for r in rows] == [
+        (dt.date(2020, 9, 24), "win"),
+        (dt.date(2025, 3, 3), "draw"),
+        (dt.date(2025, 11, 1), "win"),
+    ]
+    assert rows[-1].after == Record(2, 0, 1, 0) and rows[-1].method == "KO"
