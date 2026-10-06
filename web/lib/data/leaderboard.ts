@@ -1,8 +1,14 @@
-import { buildProfile } from "@/lib/leaderboard/rank";
+import { buildProfile, toAwards } from "@/lib/leaderboard/rank";
 import { cleanSearchTerm, containsPattern } from "@/lib/leaderboard/search";
-import type { FighterFightRow, FighterNowRow, FighterProfile, FighterRatingRow } from "@/lib/leaderboard/types";
+import type {
+  FighterAwards,
+  FighterFightRow,
+  FighterNowRow,
+  FighterProfile,
+  FighterRatingRow,
+} from "@/lib/leaderboard/types";
 import { getSupabase } from "@/lib/supabase/server";
-import { FIGHTER_FIGHT_COLUMNS, FIGHTER_NOW_COLUMNS, FIGHTER_PAGE_COLUMNS, FIGHTER_RATING_COLUMNS } from "./columns";
+import { FIGHTER_AWARD_COLUMNS, FIGHTER_FIGHT_COLUMNS, FIGHTER_NOW_COLUMNS, FIGHTER_PAGE_COLUMNS, FIGHTER_RATING_COLUMNS } from "./columns";
 import { ensure, ensureOptional } from "./ensure";
 import { isValidSlug } from "./events";
 
@@ -27,6 +33,30 @@ export async function listFighterRatings(): Promise<FighterRatingRow[]> {
     from += page.length;
   }
   return rows;
+}
+
+/** The night-bonus totals by fighter slug, for the fighters that have any (public, as of today). */
+export async function listFighterAwards(): Promise<Map<string, FighterAwards>> {
+  const db = getSupabase();
+  const byslug = new Map<string, FighterAwards>();
+  for (let from = 0; ; ) {
+    const page = ensure<{ slug: string; awards: unknown }[]>(
+      await db
+        .from("fighters")
+        .select(FIGHTER_AWARD_COLUMNS)
+        .not("awards", "is", null)
+        .order("slug")
+        .range(from, from + PAGE - 1),
+      "list fighter awards",
+    );
+    if (page.length === 0) break;
+    for (const row of page) {
+      const awards = toAwards(row.awards);
+      if (awards) byslug.set(row.slug, awards);
+    }
+    from += page.length;
+  }
+  return byslug;
 }
 
 /** A fighter's page data: who they are and the rated fights behind their average. */

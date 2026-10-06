@@ -15,6 +15,7 @@ const entry = (id: string, rank: number, lastFight: string | null): LeaderboardE
   fights: 10,
   average: 4,
   lastFight,
+  awards: null,
 });
 
 describe("isActive", () => {

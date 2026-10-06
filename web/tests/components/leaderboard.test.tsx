@@ -4,8 +4,8 @@ import { FighterLeaderboard } from "@/components/FighterLeaderboard";
 
 describe("FighterLeaderboard", () => {
   const entries = [
-    { rank: 1, id: "a", slug: "ann-one", name: "Ann One", country: "nl", fights: 12, average: 4.25, lastFight: "2026-05-01" },
-    { rank: 2, id: "b", slug: "Bad Slug!", name: "<img src=x onerror=alert(1)>", country: null, fights: 7, average: 3.9, lastFight: null },
+    { rank: 1, id: "a", slug: "ann-one", name: "Ann One", country: "nl", fights: 12, average: 4.25, lastFight: "2026-05-01", awards: null },
+    { rank: 2, id: "b", slug: "Bad Slug!", name: "<img src=x onerror=alert(1)>", country: null, fights: 7, average: 3.9, lastFight: null, awards: null },
   ];
 
   it("shows rank, name, number of fights and the average rating", () => {

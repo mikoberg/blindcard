@@ -105,6 +105,8 @@ export interface LeaderboardEntry {
   average: number;
   /** ISO date of their latest rated fight; null when unknown. */
   lastFight: string | null;
+  /** Night-bonus totals, when we hold awards for them. */
+  awards: FighterAwards | null;
 }
 
 /** A fighter found by the search, ranked or not. */

@@ -37,8 +37,8 @@ export const HTML_LEAK_PATTERNS: readonly RegExp[] = [
 const BONUS_WORDING = HTML_LEAK_PATTERNS.find((pattern) => pattern.source.includes("Fight of the Night"));
 
 /**
- * The same patterns for a fighter's own page: it may carry the bonus wording, because it shows the two
- * career totals of one fighter (CLAUDE.md). Everything else is still checked; no other page may use it.
+ * The same patterns for a fighter's own page and the fighters list: they may carry the bonus wording,
+ * because they show the career totals of the two bonuses and can order by them (CLAUDE.md). Everything else is still checked; no other page may use it.
  */
 export const FIGHTER_PAGE_HTML_LEAK_PATTERNS: readonly RegExp[] = HTML_LEAK_PATTERNS.filter(
   (pattern) => pattern !== BONUS_WORDING,

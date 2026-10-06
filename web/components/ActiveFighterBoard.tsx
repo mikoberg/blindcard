@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { activeOnly } from "@/lib/leaderboard/active";
+import { BOARD_ORDERS, orderById, orderEntries, type BoardOrder } from "@/lib/leaderboard/order";
 import type { LeaderboardEntry } from "@/lib/leaderboard/types";
 import { FighterLeaderboard } from "./FighterLeaderboard";
 
@@ -15,10 +16,13 @@ const SHOWN = 100;
  */
 export function ActiveFighterBoard({ entries, today }: { entries: readonly LeaderboardEntry[]; today: string }) {
   const [activeFilter, setActiveFilter] = useState(true);
+  const [order, setOrder] = useState<BoardOrder>("rating");
+  const orderId = useId();
   const active = activeOnly(entries, today);
-  const shown = (activeFilter ? active : entries).slice(0, SHOWN);
+  const option = orderById(order);
+  const shown = orderEntries(activeFilter ? active : entries, order).slice(0, SHOWN);
 
-  const option = (on: boolean, label: string, count: number, onClick: () => void) => (
+  const choice = (on: boolean, label: string, count: number, onClick: () => void) => (
     <button
       type="button"
       aria-pressed={on}
@@ -35,8 +39,25 @@ export function ActiveFighterBoard({ entries, today }: { entries: readonly Leade
   return (
     <div className="space-y-4">
       <div role="group" aria-label="Which fighters" className="inline-flex border-2 border-[var(--text)]">
-        {option(activeFilter, "Active", active.length, () => setActiveFilter(true))}
-        {option(!activeFilter, "All since 2001", entries.length, () => setActiveFilter(false))}
+        {choice(activeFilter, "Active", active.length, () => setActiveFilter(true))}
+        {choice(!activeFilter, "All since 2001", entries.length, () => setActiveFilter(false))}
+      </div>
+      <div className="flex max-w-md items-center gap-3 border-2 border-[var(--text)] bg-[var(--surface)] px-3">
+        <label htmlFor={orderId} className="shrink-0 text-sm font-bold text-[var(--muted)]">
+          Order by
+        </label>
+        <select
+          id={orderId}
+          value={order}
+          onChange={(e) => setOrder(orderById(e.target.value).id)}
+          className="min-h-11 min-w-0 flex-1 bg-transparent text-sm font-bold text-[var(--text)]"
+        >
+          {BOARD_ORDERS.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       </div>
       <p className="text-sm text-[var(--muted)]">
         {activeFilter
@@ -46,7 +67,10 @@ export function ActiveFighterBoard({ entries, today }: { entries: readonly Leade
       {shown.length === 0 ? (
         <p className="text-[var(--muted)]">No active fighters to rank yet.</p>
       ) : (
-        <FighterLeaderboard entries={shown} />
+        <FighterLeaderboard
+          entries={shown}
+          extra={option.column ? { label: option.column, value: option.value } : null}
+        />
       )}
     </div>
   );

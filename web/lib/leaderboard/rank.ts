@@ -23,7 +23,10 @@ export const MIN_FIGHTS = 8;
  * Fighters ranked by the plain average of their fights' ratings (best first; ties go to the
  * fighter with more fights). Only public, active-version ratings.
  */
-export function rankFighters(rows: readonly FighterRatingRow[]): LeaderboardEntry[] {
+export function rankFighters(
+  rows: readonly FighterRatingRow[],
+  awards: ReadonlyMap<string, FighterAwards> = new Map(),
+): LeaderboardEntry[] {
   return rows
     .map((row) => ({ row, average: Number(row.avg_stars), fights: row.rated_fights }))
     .filter(
@@ -46,6 +49,7 @@ export function rankFighters(rows: readonly FighterRatingRow[]): LeaderboardEntr
       fights: r.fights,
       average: r.average,
       lastFight: typeof r.row.last_fight === "string" ? r.row.last_fight : null,
+      awards: awards.get(r.row.slug) ?? null,
     }));
 }
 

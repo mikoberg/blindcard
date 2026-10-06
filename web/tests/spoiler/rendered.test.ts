@@ -35,8 +35,8 @@ live("the running app serves no result data", () => {
     for (const path of ["/", "/best", "/events/year/2024", "/fighters", "/fighters/elo", "/classics", "/judges/sal-damato", ...fighterPaths, ...eventPaths, ...upcomingPaths]) {
       const html = await get(path);
       expect(html.status, path).toBe(200);
-      // A fighter's own page may name the two bonuses (it shows their career totals); nothing else may.
-      const patterns = /^\/fighters\/(?!elo$)[a-z0-9-]+$/.test(path) ? FIGHTER_PAGE_HTML_LEAK_PATTERNS : HTML_LEAK_PATTERNS;
+      // A fighter's own page and the fighters list may name the two bonuses (career totals); nothing else may.
+      const patterns = /^\/fighters(?:\/(?!elo$)[a-z0-9-]+)?$/.test(path) ? FIGHTER_PAGE_HTML_LEAK_PATTERNS : HTML_LEAK_PATTERNS;
       expect(findLeaks(html.text, patterns), `HTML ${path}`).toEqual([]);
 
       const payload = await get(path, { RSC: "1" });
