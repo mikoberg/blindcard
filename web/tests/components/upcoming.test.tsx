@@ -137,7 +137,8 @@ describe("expected ratings", () => {
 
   it("draws the expectation dashed, with a tilde and the word expected, never as a gold plate", () => {
     const html = renderToStaticMarkup(
-      <UpcomingView event={event({ bouts: [predicted(4.34)] })} today={TODAY} />,
+      // not a title fight: the title belt is gold, the expectation never is
+      <UpcomingView event={event({ bouts: [predicted(4.34, { isTitleFight: false })] })} today={TODAY} />,
     );
     expect(html).toContain('aria-label="Expected rating 4.3 out of 5"');
     expect(html).toContain("border-dashed");
