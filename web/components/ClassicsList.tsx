@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatEventDate } from "@/lib/format";
 import { isValidSlug } from "@/lib/slug";
 import type { ClassicYear } from "@/lib/classics/types";
+import { FightTag } from "./FightTag";
 import { WatchButton } from "./WatchButton";
 import { YearNav } from "./YearNav";
 
@@ -65,9 +66,7 @@ export function ClassicsList({ years }: { years: readonly ClassicYear[] }) {
                       <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-[var(--muted)]">
                         {fight.weightClass && <span>{fight.weightClass}</span>}
                         {fight.isTitleFight && (
-                          <span className="bg-[var(--text)] px-1.5 text-xs font-bold leading-5 text-[var(--bg)]">
-                            Title fight
-                          </span>
+                          <FightTag kind="title">Title fight</FightTag>
                         )}
                       </p>
                     </div>

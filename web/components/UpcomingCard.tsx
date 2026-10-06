@@ -7,6 +7,7 @@ import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 import { startTimes } from "@/lib/upcoming/time";
 import { PlaceChip } from "./PlaceChip";
 import { StartTimes } from "./StartTimes";
+import { TitleBelt } from "./TitleBelt";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 
@@ -39,8 +40,13 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
   return (
     <Link
       href={`/upcoming/${event.slug}`}
-      className="slip group flex h-full gap-3 border-2 border-[var(--text)] bg-[var(--surface)] p-3"
+      className="slip group relative flex h-full gap-3 border-2 border-[var(--text)] bg-[var(--surface)] p-3"
     >
+      {title && (
+        <span className="absolute right-0 top-3 bg-[var(--text)] px-2 py-1 text-[var(--bg)]">
+          <TitleBelt className="h-4 w-11" />
+        </span>
+      )}
       <DateBlock isoDate={event.eventDate} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-extrabold text-[var(--muted)]">{eventLabel(event.name)}</p>
@@ -63,7 +69,6 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
           <span className="text-[var(--muted)]">
             {event.bouts.length > 0 ? `${event.bouts.length} bouts announced` : "Card not announced yet"}
           </span>
-          {title && <span className="redact px-1.5 text-xs font-bold leading-5">Title fight</span>}
         </p>
         {watch.length > 0 && (
           <p className="mt-1.5 text-sm">

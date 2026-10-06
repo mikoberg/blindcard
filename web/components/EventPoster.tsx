@@ -2,6 +2,7 @@ import { eventLabel, labelFontSize, matchupFontSize, posterNames } from "@/lib/o
 import { barHeight } from "@/lib/overview/poster";
 import { stripLabel } from "@/lib/overview/summary";
 import type { EventSummary } from "@/lib/overview/types";
+import { TitleBelt } from "./TitleBelt";
 
 type Size = "sm" | "md" | "lg";
 
@@ -88,8 +89,8 @@ export function EventPoster({
         {footer}
       </div>
       {main?.title && (
-        <span className="absolute right-0 top-4 bg-[var(--text)] px-2.5 py-1 text-xs font-bold text-[var(--bg)] sm:top-5">
-          Title fight
+        <span className="absolute right-0 top-4 bg-[var(--text)] px-2.5 py-1.5 text-[var(--bg)] sm:top-5">
+          <TitleBelt className="h-5 w-14" />
         </span>
       )}
       <div

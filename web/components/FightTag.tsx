@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { TitleBelt } from "./TitleBelt";
 
 /**
  * The small marks on a fight: where on the card, a title, a hidden gem, a rematch.
@@ -19,6 +20,14 @@ const LOOK: Record<FightTagKind, string> = {
   pairing: "border border-[var(--text)] px-1.5 text-[var(--text)]",
 };
 
+/** The title tag is a belt, not words: `children` is not shown for it (the belt says "Title fight" to screen readers). */
 export function FightTag({ kind, children }: { kind: FightTagKind; children: ReactNode }) {
+  if (kind === "title") {
+    return (
+      <span className={`${BASE} ${LOOK.title}`}>
+        <TitleBelt className="h-4 w-11" />
+      </span>
+    );
+  }
   return <span className={`${BASE} ${LOOK[kind]}`}>{children}</span>;
 }
