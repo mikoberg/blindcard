@@ -139,7 +139,10 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
         <Figure label="Rated fights">{stats.rated}</Figure>
         {age !== null && profile.born && (
           <Figure label="Age">
-            <span title={`Born ${formatEventDate(profile.born)}`}>{age}</span>
+            {age}
+            <span className="mt-0.5 block text-xs font-normal text-[var(--muted)]">
+              Born {formatEventDate(profile.born)}
+            </span>
           </Figure>
         )}
         {profile.awards && (

@@ -193,11 +193,10 @@ describe("the peak Elo on the fighter page", () => {
 });
 
 describe("the age on the fighter page", () => {
-  it("shows the age with the date of birth as the tooltip", () => {
+  it("shows the age with the date of birth under it", () => {
     const html = renderToStaticMarkup(<FighterProfileView profile={profile({ born: "1990-02-13" })} />);
     expect(html).toContain("Age");
-    expect(html).toContain("Born ");
-    expect(html).toMatch(/title="Born [^"]*1990"/);
+    expect(html).toMatch(/Born [^<]*1990/);
   });
 
   it("shows no age without a date of birth", () => {
