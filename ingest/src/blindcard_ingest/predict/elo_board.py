@@ -33,6 +33,7 @@ from blindcard_ingest.predict.types import (
     EloRow,
     EloStep,
     FightElo,
+    FighterNow,
     UpcomingBoutInput,
     UpcomingElo,
 )
@@ -141,6 +142,23 @@ def pre_fight_elo(ledger: Ledger) -> list[FightElo]:
     return [FightElo(fid, a, b) for fid, (a, b) in sorted(ledger.before.items())]
 
 
+def fighters_now(
+    ledger: Ledger,
+    fighter_ids: list[str],
+    records: dict[str, dict[str, int]],
+) -> list[FighterNow]:
+    """Every fighter's record and Elo as of today, for their page. A fighter with neither is left
+    out (and loses any old values when stored)."""
+    rows: list[FighterNow] = []
+    for fighter in sorted(set(fighter_ids)):
+        n = ledger.counts.get(fighter, 0)
+        elo = EloBefore(round(ledger.ratings[fighter], 1), n) if n > 0 else None
+        record = records.get(fighter)
+        if elo is not None or record is not None:
+            rows.append(FighterNow(fighter, record, elo))
+    return rows
+
+
 def current_elo(ledger: Ledger, bouts: list[UpcomingBoutInput]) -> list[UpcomingElo]:
     """The Elo of both fighters of every announced bout as of now."""
 
@@ -189,19 +207,23 @@ def run_compute_elo(repo: Repository, *, dry_run: bool = False) -> list[EloRow]:
     ledger = build_ledger(fights)
     before = pre_fight_elo(ledger)
     upcoming = current_elo(ledger, repo.upcoming_bouts_for_prediction())
+    fighter_ids = [f for fight in fights for f in (fight.a_id, fight.b_id)]
+    now = fighters_now(ledger, fighter_ids, repo.fighter_current_records(set(fighter_ids)))
     # Logs hold counts only: never a name, a rating or a result.
     logger.info(
         "compute-elo%s: %d fights, %d fighters on the board, %d steps, %d fights and %d bouts with"
-        " ratings going in",
+        " ratings going in, %d fighters with a standing",
         " (dry run)" if dry_run else "",
         len(fights),
         len(rows),
         len(steps),
         sum(1 for f in before if f.a or f.b),
         sum(1 for u in upcoming if u.a or u.b),
+        len(now),
     )
     if not dry_run:
         repo.set_fighter_elo(rows, steps)
         repo.set_fight_elo(before)
         repo.set_upcoming_elo(upcoming)
+        repo.set_fighters_now(now)
     return rows

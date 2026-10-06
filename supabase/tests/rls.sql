@@ -242,7 +242,8 @@ begin
   select count(*) into n
   from information_schema.columns
   where table_schema = 'public' and table_name = 'fighter_fights'
-    and column_name not in ('fighter_slug', 'event_slug', 'event_name', 'event_date', 'opponent_name', 'stars');
+    and column_name not in ('fighter_slug', 'event_slug', 'event_name', 'event_date', 'opponent_name', 'stars',
+                         'fight_id', 'weight_class', 'is_title_fight', 'opponent_slug');
   if n <> 0 then raise exception 'FAIL: fighter_fights has unexpected columns'; end if;
   raise notice 'PASS fighter_fights is public, active version only';
 end $$;

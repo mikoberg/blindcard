@@ -1,5 +1,11 @@
+import { toFighterElo } from "@/lib/card/elo";
+import { mapStyles, toRecord } from "@/lib/data/map";
+import { isValidSlug } from "@/lib/slug";
+import { profileStats } from "./profile";
 import type {
   FighterFightRow,
+  FighterNowRow,
+  ProfileStats,
   FighterProfile,
   FighterRatingRow,
   FighterSearchResult,
@@ -55,6 +61,7 @@ function toStars(value: number | string): number | null {
 export function buildProfile(
   fighter: Pick<FighterRatingRow, "name" | "country" | "slug">,
   rows: readonly FighterFightRow[],
+  now: FighterNowRow = {},
 ): FighterProfile | null {
   const fights = rows
     .flatMap((row) => {
@@ -67,7 +74,11 @@ export function buildProfile(
               eventName: row.event_name,
               eventDate: row.event_date,
               opponent: row.opponent_name,
+              opponentSlug: row.opponent_slug && isValidSlug(row.opponent_slug) ? row.opponent_slug : null,
               stars,
+              fightId: row.fight_id ?? null,
+              weightClass: row.weight_class ?? null,
+              isTitleFight: row.is_title_fight === true,
             },
           ];
     })
@@ -82,6 +93,10 @@ export function buildProfile(
     country: fighter.country,
     slug: fighter.slug,
     average: Math.round((total / fights.length) * 100) / 100,
+    styles: mapStyles(now.style),
+    record: now.record == null ? null : toRecord(now.record),
+    elo: toFighterElo(now.elo),
+    stats: profileStats(fights) as ProfileStats,
     fights,
   };
 }

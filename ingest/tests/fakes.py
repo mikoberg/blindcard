@@ -324,6 +324,9 @@ class FakeRepository:
     def elo_fights(self):  # type: ignore[no-untyped-def]
         return list(self.elo_fight_rows)
 
+    def set_fighters_now(self, rows) -> None:  # type: ignore[no-untyped-def]
+        self.fighters_now_rows = list(rows)
+
     def set_fight_elo(self, rows) -> None:  # type: ignore[no-untyped-def]
         self.fight_elo_rows = list(rows)
 

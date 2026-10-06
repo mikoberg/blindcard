@@ -73,7 +73,41 @@ describe("buildProfile", () => {
 
   it("carries only what the page shows", () => {
     const profile = buildProfile(fighter, [fight("a", "2024-01-01", 4)])!;
-    expect(Object.keys(profile).sort()).toEqual(["average", "country", "fights", "name", "slug"]);
-    expect(Object.keys(profile.fights[0]!).sort()).toEqual(["eventDate", "eventName", "eventSlug", "opponent", "stars"]);
+    expect(Object.keys(profile).sort()).toEqual([
+      "average",
+      "country",
+      "elo",
+      "fights",
+      "name",
+      "record",
+      "slug",
+      "stats",
+      "styles",
+    ]);
+    expect(Object.keys(profile.fights[0]!).sort()).toEqual([
+      "eventDate",
+      "eventName",
+      "eventSlug",
+      "fightId",
+      "isTitleFight",
+      "opponent",
+      "opponentSlug",
+      "stars",
+      "weightClass",
+    ]);
+  });
+
+  it("adds the standing as of today when it is reliable, and nothing otherwise", () => {
+    const withNow = buildProfile(fighter, [fight("a", "2024-01-01", 4)], {
+      style: ["Judo"],
+      record: { w: 10, l: 2, d: 0, nc: 0 },
+      elo: { r: 1650.5, n: 9 },
+    })!;
+    expect(withNow.styles).toEqual(["Judo"]);
+    expect(withNow.record).toEqual({ w: 10, l: 2, d: 0, nc: 0 });
+    expect(withNow.elo).toEqual({ rating: 1650.5, fights: 9 });
+    const without = buildProfile(fighter, [fight("a", "2024-01-01", 4)], { record: { w: "x" }, elo: { r: 5 } })!;
+    expect(without.record).toBeNull();
+    expect(without.elo).toBeNull();
   });
 });

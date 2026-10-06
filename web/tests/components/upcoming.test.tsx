@@ -254,7 +254,7 @@ describe("fighting styles", () => {
       <UpcomingView event={styled(["Kickboxing", "Brazilian jiu-jitsu"], [])} today={TODAY} />,
     );
     expect(html).toContain("Kickboxing, Brazilian jiu-jitsu");
-    expect(html.match(/Kickboxing/g)).toHaveLength(1);
+    expect(html.match(/>Kickboxing, Brazilian jiu-jitsu</g)).toHaveLength(1); // the title attribute repeats it for a truncated line
     const none = renderToStaticMarkup(<UpcomingView event={styled([], [])} today={TODAY} />);
     expect(none).not.toMatch(/Kickboxing|jiu-jitsu|Wrestling/);
   });

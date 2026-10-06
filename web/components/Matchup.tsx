@@ -16,6 +16,16 @@ export interface MatchupFighter {
   elo?: FighterElo | null;
 }
 
+/**
+ * The size of both names on wide screens, from the longer of the two, so that a long name does not
+ * wrap onto a second line and make its card taller than the others. Both fighters share one size.
+ */
+export function nameSize(longest: number): string {
+  if (longest <= 16) return "sm:text-2xl";
+  if (longest <= 19) return "sm:text-xl";
+  return "sm:text-lg";
+}
+
 /** Said to assistive tech, in front of the number: what the rating is the rating OF. */
 const ELO_LABEL = { before: "Elo going into the fight", now: "Elo today" } as const;
 
@@ -40,11 +50,21 @@ function EloChip({ elo, when }: { elo: FighterElo; when: keyof typeof ELO_LABEL 
 }
 
 /** The fighter's name, set large and linked to their page when they have one. */
-function FighterName({ fighter, side, className }: { fighter: MatchupFighter; side: "left" | "right"; className: string }) {
+function FighterName({
+  fighter,
+  side,
+  size,
+  className,
+}: {
+  fighter: MatchupFighter;
+  side: "left" | "right";
+  size: string;
+  className: string;
+}) {
   return (
     <span
       data-matchup-name
-      className={`display-tight block min-w-0 break-words text-balance text-xl leading-tight sm:text-2xl ${
+      className={`display-tight block min-w-0 break-words text-balance text-xl leading-tight ${size} ${
         side === "right" ? "sm:text-right" : ""
       } ${className}`}
     >
@@ -81,7 +101,7 @@ function FighterMeta({
     <span className={`block min-w-0 ${mirrored ? "sm:text-right" : ""} ${className}`}>
       <span
         data-matchup-meta
-        className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm ${mirrored ? "sm:flex-row-reverse" : ""}`}
+        className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm sm:flex-nowrap ${mirrored ? "sm:flex-row-reverse" : ""}`}
       >
         <Monogram name={fighter.name} country={fighter.country} size="sm" />
         {parts && (
@@ -100,10 +120,12 @@ function FighterMeta({
           </span>
         )}
         {fighter.elo && <EloChip elo={fighter.elo} when={when} />}
+        {fighter.note && <span className="whitespace-nowrap text-xs text-[var(--muted)]">{fighter.note}</span>}
         {fighter.styles && fighter.styles.length > 0 && (
-          <span className="text-xs text-[var(--muted)]">{fighter.styles.join(", ")}</span>
+          <span title={fighter.styles.join(", ")} className="min-w-0 truncate text-xs text-[var(--muted)]">
+            {fighter.styles.join(", ")}
+          </span>
         )}
-        {fighter.note && <span className="text-xs text-[var(--muted)]">{fighter.note}</span>}
       </span>
     </span>
   );
@@ -126,13 +148,14 @@ export function Matchup({
   when: keyof typeof ELO_LABEL;
 }) {
   const gap = eloGap(a.elo, b.elo);
+  const size = nameSize(Math.max(a.name.length, b.name.length));
   // Two rows on wide screens, one for the names and one for the line under them, so that the line
   // of both fighters sits at the same height however many lines a name takes. The names sit at the
   // bottom of their row, so the name of the shorter one stands next to the last line of the other.
   // The middle column spans both rows and is centred on them. On a phone it all stacks in this order.
   return (
     <h3 className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-[1fr_6.5rem_1fr] sm:grid-rows-[auto_auto]">
-      <FighterName fighter={a} side="left" className="sm:col-start-1 sm:row-start-1 sm:self-end" />
+      <FighterName fighter={a} side="left" size={size} className="sm:col-start-1 sm:row-start-1 sm:self-end" />
       <FighterMeta fighter={a} side="left" when={when} className="sm:col-start-1 sm:row-start-2" />
       <span className="my-1 flex items-center gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:my-0 sm:flex-col sm:gap-0.5 sm:self-center">
         <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
@@ -155,7 +178,7 @@ export function Matchup({
         )}
         <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
       </span>
-      <FighterName fighter={b} side="right" className="sm:col-start-3 sm:row-start-1 sm:self-end" />
+      <FighterName fighter={b} side="right" size={size} className="sm:col-start-3 sm:row-start-1 sm:self-end" />
       <FighterMeta fighter={b} side="right" when={when} className="sm:col-start-3 sm:row-start-2" />
     </h3>
   );

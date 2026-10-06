@@ -1,8 +1,8 @@
 import { buildProfile } from "@/lib/leaderboard/rank";
 import { cleanSearchTerm, containsPattern } from "@/lib/leaderboard/search";
-import type { FighterFightRow, FighterProfile, FighterRatingRow } from "@/lib/leaderboard/types";
+import type { FighterFightRow, FighterNowRow, FighterProfile, FighterRatingRow } from "@/lib/leaderboard/types";
 import { getSupabase } from "@/lib/supabase/server";
-import { FIGHTER_FIGHT_COLUMNS, FIGHTER_PAGE_COLUMNS, FIGHTER_RATING_COLUMNS } from "./columns";
+import { FIGHTER_FIGHT_COLUMNS, FIGHTER_NOW_COLUMNS, FIGHTER_PAGE_COLUMNS, FIGHTER_RATING_COLUMNS } from "./columns";
 import { ensure, ensureOptional } from "./ensure";
 import { isValidSlug } from "./events";
 
@@ -42,7 +42,11 @@ export async function getFighterProfile(slug: string): Promise<FighterProfile | 
     await db.from("fighter_fights").select(FIGHTER_FIGHT_COLUMNS).eq("fighter_slug", slug),
     "load fighter fights",
   );
-  return buildProfile(fighter, fights);
+  const now = ensureOptional<FighterNowRow>(
+    await db.from("fighters").select(FIGHTER_NOW_COLUMNS).eq("slug", slug).maybeSingle(),
+    "load fighter standing",
+  );
+  return buildProfile(fighter, fights, now ?? {});
 }
 
 const PAGE_LOOKUP_CHUNK = 100; // slugs per request, so the address stays short

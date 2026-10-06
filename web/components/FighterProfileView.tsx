@@ -1,81 +1,245 @@
 import Link from "next/link";
-import { formatEventDate } from "@/lib/format";
+import { isProvisional } from "@/lib/card/elo";
+import { recordParts } from "@/lib/card/record";
+import { formatMonthYear } from "@/lib/format";
 import { formatRating, isHighRating } from "@/lib/leaderboard/format";
+import { activeYears } from "@/lib/leaderboard/profile";
 import { MIN_FIGHTS } from "@/lib/leaderboard/rank";
-import type { FighterProfile } from "@/lib/leaderboard/types";
-import { Monogram } from "./Monogram";
+import type { FighterFight, FighterProfile } from "@/lib/leaderboard/types";
+import { barHeight } from "@/lib/overview/poster";
+import { FlagChip } from "./FlagChip";
+
+/** One figure of the strip under the name: a number and what it is. */
+function Figure({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--muted)]">{label}</dt>
+      <dd className="display-tight mt-0.5 text-2xl tabular-nums">{children}</dd>
+    </div>
+  );
+}
 
 /**
- * A fighter's average rating and the rated fights it is made of, newest first, so the number can
- * be checked by hand. Only public ratings: no results, no records.
+ * The ratings of all rated fights from the oldest to the newest, one bar each, like the strip on
+ * an event poster. Public ratings only.
  */
+function RatingStrip({ fights }: { fights: readonly FighterFight[] }) {
+  const ordered = [...fights].reverse(); // the profile lists newest first
+  const first = ordered[0]?.eventDate.slice(0, 4);
+  const last = ordered[ordered.length - 1]?.eventDate.slice(0, 4);
+  return (
+    <figure className="min-w-0 max-w-sm">
+      <div
+        role="img"
+        aria-label={`Ratings of ${ordered.length} fights, oldest to newest: ${ordered.map((f) => formatRating(f.stars)).join(", ")}`}
+        className="flex h-14 items-end gap-[3px] border-b-2 border-[var(--text)]"
+      >
+        {ordered.map((fight) => (
+          <span
+            key={`${fight.eventSlug}-${fight.opponent}`}
+            aria-hidden="true"
+            title={`${formatRating(fight.stars)} vs ${fight.opponent}`}
+            className={`bar${fight.stars >= 4 ? " bar-hi" : ""}`}
+            style={{ height: `${barHeight(fight.stars)}%` }}
+          />
+        ))}
+      </div>
+      {first && last && (
+        <figcaption aria-hidden="true" className="mt-1 flex justify-between text-xs text-[var(--muted)]">
+          <span>{first}</span>
+          {first !== last && <span>{last}</span>}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
+/** A fighter's page: who they are, how their fights rate, and every rated fight. Public data only. */
 export function FighterProfileView({ profile }: { profile: FighterProfile }) {
-  const { fights } = profile;
+  const { fights, stats, record, elo } = profile;
+  const parts = record ? recordParts(record) : null;
+  // One weight class is said once in the line above the list; a column of it would repeat it.
+  const showClass = stats.weightClasses.length > 1;
   return (
     <div className="space-y-6">
-      <Link
-        href="/fighters"
-        className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--muted)] underline underline-offset-4 hover:text-[var(--accent)]"
-      >
-        All fighters
-      </Link>
-
-      {/* Narrow screens: flag and rating share the first row, the name gets the full width below. */}
-      <section aria-labelledby="fighter" className="flex flex-wrap items-center gap-4">
-        <Monogram name={profile.name} country={profile.country} size="lg" />
-        <div className="order-last min-w-0 basis-full sm:order-none sm:basis-0 sm:flex-1">
-          <h1
-            id="fighter"
-            className="page-title break-words"
-          >
-            {profile.name}
-          </h1>
-          <p className="text-[var(--muted)]">
-            Average of {fights.length} rated {fights.length === 1 ? "fight" : "fights"}
-          </p>
-        </div>
-        <p
-          role="img"
-          aria-label={`Average rating ${formatRating(profile.average)} out of 5`}
-          className={`scorebox ml-auto h-20 w-24 shrink-0 text-5xl sm:ml-0 ${isHighRating(profile.average) ? "scorebox-hot" : ""}`}
+      <header>
+        <Link
+          href="/fighters"
+          className="inline-flex min-h-9 items-center text-sm font-semibold text-[var(--muted)] underline underline-offset-4 hover:text-[var(--accent)]"
         >
-          <span aria-hidden="true">{formatRating(profile.average)}</span>
+          All fighters
+        </Link>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 id="fighter" className="display flex flex-wrap items-center gap-x-3 text-4xl leading-none sm:text-5xl">
+              <FlagChip country={profile.country} />
+              <span className="min-w-0 break-words">{profile.name}</span>
+            </h1>
+            {profile.styles.length > 0 && (
+              <p className="mt-2 flex flex-wrap gap-1.5">
+                {profile.styles.map((style) => (
+                  <span key={style} className="border-[1.5px] border-[var(--text)]/35 px-1.5 py-px text-xs font-bold">
+                    {style}
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
+          <div
+            className="shrink-0 text-center"
+            role="img"
+            aria-label={`Average rating ${formatRating(profile.average)} out of 5`}
+          >
+            <p
+              aria-hidden="true"
+              className={`scorebox h-14 w-[4.5rem] text-3xl ${isHighRating(profile.average) ? "scorebox-hot" : ""}`}
+            >
+              {formatRating(profile.average)}
+            </p>
+            <p aria-hidden="true" className="mt-1 text-xs text-[var(--muted)]">
+              average
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 border-y-2 border-[var(--text)] py-3 sm:grid-cols-3 lg:grid-cols-6">
+        {parts && (
+          <Figure label="Record">
+            <span aria-label={`Record: ${parts.main}${parts.extra ? ` ${parts.extra}` : ""}`}>
+              <span aria-hidden="true">{parts.main}</span>
+              {parts.extra && (
+                <span aria-hidden="true" className="ml-1 text-xs font-normal text-[var(--muted)]">
+                  {parts.extra}
+                </span>
+              )}
+            </span>
+          </Figure>
+        )}
+        {elo && (
+          <Figure label="Elo">
+            <span
+              aria-label={`Elo ${Math.round(elo.rating)}${isProvisional(elo) ? ", provisional" : ""}`}
+              className={isProvisional(elo) ? "italic text-[var(--muted)]" : ""}
+              title={
+                isProvisional(elo)
+                  ? `Provisional: based on ${elo.fights} ${elo.fights === 1 ? "fight" : "fights"}`
+                  : undefined
+              }
+            >
+              <span aria-hidden="true">
+                {isProvisional(elo) ? "~" : ""}
+                {Math.round(elo.rating)}
+              </span>
+            </span>
+          </Figure>
+        )}
+        <Figure label="Rated fights">{stats.rated}</Figure>
+        <Figure label="Best rated">{formatRating(stats.best)}</Figure>
+        <Figure label="Rated 4.0 or higher">
+          {stats.fourPlus}
+          <span className="ml-1 text-xs font-normal text-[var(--muted)]">of {stats.rated}</span>
+        </Figure>
+        <Figure label="Rated fights from">
+          <span className="text-xl">{activeYears(stats)}</span>
+        </Figure>
+      </dl>
+
+      {(stats.weightClasses.length > 0 || stats.titleFights > 0) && (
+        <p className="text-sm text-[var(--muted)]">
+          {stats.weightClasses.length > 0 && <>Fought at {stats.weightClasses.join(", ")}. </>}
+          {stats.titleFights > 0 && (
+            <>
+              {stats.titleFights} {stats.titleFights === 1 ? "title fight" : "title fights"}.
+            </>
+          )}
         </p>
+      )}
+
+      {fights.length > 1 && <RatingStrip fights={fights} />}
+
+      <section aria-labelledby="fights">
+        <h2 id="fights" className="display text-xl sm:text-2xl">
+          Rated fights
+        </h2>
+        <div className="mt-3 border-2 border-[var(--text)] bg-[var(--surface)]">
+          <div
+            aria-hidden="true"
+            className="hidden items-center gap-3 border-b border-[var(--border)] px-4 py-2 text-xs font-semibold text-[var(--muted)] sm:flex"
+          >
+            <span className="w-16 shrink-0">Date</span>
+            <span className="min-w-0 flex-1">Opponent</span>
+            <span className="hidden min-w-0 flex-1 md:block">Event</span>
+            {showClass && <span className="hidden w-36 shrink-0 lg:block">Weight class</span>}
+            <span className="w-12 shrink-0 text-center">Rating</span>
+          </div>
+          <ul className="divide-y divide-[var(--border)]">
+            {fights.map((fight) => {
+              const eventHref = fight.fightId
+                ? `/events/${fight.eventSlug}#fight-${fight.fightId}`
+                : `/events/${fight.eventSlug}`;
+              return (
+                <li
+                  key={`${fight.eventSlug}-${fight.opponent}`}
+                  className="flex min-h-[3.25rem] items-center gap-3 px-3 py-2 sm:px-4"
+                >
+                  <span className="w-16 shrink-0 text-sm tabular-nums text-[var(--muted)]">
+                    {formatMonthYear(fight.eventDate)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block break-words font-extrabold leading-tight sm:text-lg">
+                      <span className="mr-1 text-sm font-bold text-[var(--accent-text)]">vs</span>
+                      {fight.opponentSlug ? (
+                        <Link
+                          href={`/fighters/${fight.opponentSlug}`}
+                          className="underline decoration-[var(--border)] decoration-2 underline-offset-[5px] hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
+                        >
+                          {fight.opponent}
+                        </Link>
+                      ) : (
+                        fight.opponent
+                      )}
+                      {fight.isTitleFight && (
+                        <span className="ml-2 inline-block border-[1.5px] border-[var(--text)] bg-[var(--text)] px-1.5 py-px align-middle text-[0.7rem] font-bold leading-4 text-[var(--bg)]">
+                          Title
+                        </span>
+                      )}
+                    </span>
+                    <Link href={eventHref} className="block text-xs text-[var(--muted)] hover:text-[var(--accent)] md:hidden">
+                      {fight.eventName}
+                    </Link>
+                  </span>
+                  <Link
+                    href={eventHref}
+                    className="hidden min-w-0 flex-1 truncate text-sm text-[var(--muted)] hover:text-[var(--accent)] md:block"
+                    title={fight.eventName}
+                  >
+                    {fight.eventName}
+                  </Link>
+                  {showClass && (
+                    <span className="hidden w-36 shrink-0 truncate text-sm text-[var(--muted)] lg:block">
+                      {fight.weightClass ?? ""}
+                    </span>
+                  )}
+                  <span
+                    role="img"
+                    aria-label={`Rated ${formatRating(fight.stars)} out of 5`}
+                    className={`scorebox h-8 w-12 shrink-0 text-base ${isHighRating(fight.stars) ? "scorebox-hot" : ""}`}
+                  >
+                    <span aria-hidden="true">{formatRating(fight.stars)}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </section>
 
-      <p className="max-w-xl text-[var(--muted)]">
-        This average is the total of the ratings below divided by the number of fights.
-        {fights.length < MIN_FIGHTS && (
-          <> A fighter is listed on the leaderboard from {MIN_FIGHTS} rated fights.</>
-        )}
+      <p className="max-w-2xl text-xs text-[var(--muted)]">
+        The average is the total of these ratings divided by the number of fights
+        {fights.length < MIN_FIGHTS && <>; a fighter is listed on the leaderboard from {MIN_FIGHTS} rated fights</>}.
+        {record || elo ? " Record and Elo are as they stand today." : ""}
       </p>
-
-      <ul className="divide-y-2 divide-[var(--text)] border-2 border-[var(--text)] bg-[var(--surface)]">
-        {fights.map((fight) => (
-          <li key={`${fight.eventSlug}-${fight.opponent}`}>
-            <Link
-              href={`/events/${fight.eventSlug}`}
-              className="flex items-center gap-3 px-3 py-3 hover:bg-[var(--surface-2)] sm:px-4"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block break-words text-lg font-extrabold leading-tight sm:text-xl">
-                  vs {fight.opponent}
-                </span>
-                <span className="block break-words text-sm text-[var(--muted)]">
-                  {fight.eventName}, {formatEventDate(fight.eventDate)}
-                </span>
-              </span>
-              <span
-                role="img"
-                aria-label={`Rated ${formatRating(fight.stars)} out of 5`}
-                className={`scorebox h-11 w-14 shrink-0 text-2xl ${isHighRating(fight.stars) ? "scorebox-hot" : ""}`}
-              >
-                <span aria-hidden="true">{formatRating(fight.stars)}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

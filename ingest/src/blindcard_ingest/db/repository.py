@@ -30,6 +30,7 @@ from blindcard_ingest.predict.types import (
     EloRow,
     EloStep,
     FightElo,
+    FighterNow,
     FightOutcome,
     UpcomingBoutInput,
     UpcomingElo,
@@ -293,6 +294,11 @@ class Repository(Protocol):
 
     def set_upcoming_elo(self, rows: Sequence[UpcomingElo]) -> None:
         """Store the current Elo of the fighters of each announced bout (public, like records)."""
+        ...
+
+    def set_fighters_now(self, rows: Sequence[FighterNow]) -> None:
+        """Store each fighter's record and Elo as of today (`fighters.record` / `fighters.elo`).
+        Fighters not in `rows` lose any old values."""
         ...
 
     def set_fighter_elo(self, rows: Sequence[EloRow], steps: Sequence[EloStep]) -> None:
@@ -1009,6 +1015,19 @@ class PostgresRepository:
                 " from unnest(%s::uuid[], %s::text[], %s::text[]) as v(id, a, b)"
                 " where b.id = v.id",
                 (ids, a_side, b_side),
+            )
+
+    def set_fighters_now(self, rows: Sequence[FighterNow]) -> None:
+        ids = [r.fighter_id for r in rows]
+        records = [None if r.record is None else json.dumps(r.record) for r in rows]
+        elos = [_side_json(r.elo) for r in rows]
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("update public.fighters set record = null, elo = null")
+            cur.execute(
+                "update public.fighters f set record = v.record::jsonb, elo = v.elo::jsonb"
+                " from unnest(%s::uuid[], %s::text[], %s::text[]) as v(id, record, elo)"
+                " where f.id = v.id",
+                (ids, records, elos),
             )
 
     def set_fighter_elo(self, rows: Sequence[EloRow], steps: Sequence[EloStep]) -> None:

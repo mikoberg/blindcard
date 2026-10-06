@@ -157,3 +157,13 @@ class UpcomingElo:
     bout_id: str
     a: EloBefore | None
     b: EloBefore | None
+
+
+@dataclass(frozen=True)
+class FighterNow:
+    """A fighter's standing as of today, shown on their page: the record (w/l/d/nc) and the Elo.
+    Public, of the same kind as the record and Elo on an announced bout; None = not reliable."""
+
+    fighter_id: str
+    record: dict[str, int] | None
+    elo: EloBefore | None

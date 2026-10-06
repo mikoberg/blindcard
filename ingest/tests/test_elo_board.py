@@ -215,3 +215,36 @@ def test_run_stores_pre_fight_and_upcoming_ratings_too_and_a_dry_run_none() -> N
     assert not hasattr(repo, "fight_elo_rows") and not hasattr(repo, "upcoming_elo_rows")
     run_compute_elo(repo)
     assert len(repo.fight_elo_rows) == MIN_FIGHTS and repo.upcoming_elo_rows == []
+
+
+# --- the standing shown on a fighter's page: record and Elo as of today --------------------------
+
+
+def test_each_fighters_standing_has_the_current_elo_and_the_stored_record() -> None:
+    from blindcard_ingest.predict.elo_board import fighters_now
+
+    ledger = build_ledger([fight(1, "a", "b"), fight(2, "a", "c")])
+    record = {"w": 12, "l": 3, "d": 0, "nc": 1}
+    rows = {r.fighter_id: r for r in fighters_now(ledger, ["a", "b", "c", "debut"], {"a": record})}
+    assert rows["a"].record == record and rows["a"].elo is not None and rows["a"].elo.fights == 2
+    assert rows["b"].record is None and rows["b"].elo is not None  # an Elo without a record
+    assert "debut" not in rows  # nothing to show for a fighter without a fight or a record
+
+
+def test_a_record_alone_is_kept_for_a_fighter_whose_fights_are_not_all_rated() -> None:
+    from blindcard_ingest.predict.elo_board import fighters_now
+
+    ledger = build_ledger([])
+    rows = fighters_now(ledger, ["x"], {"x": {"w": 1, "l": 0, "d": 0, "nc": 0}})
+    assert [r.fighter_id for r in rows] == ["x"] and rows[0].elo is None
+
+
+def test_run_stores_the_standings_too_and_a_dry_run_does_not() -> None:
+    repo = FakeRepository()
+    repo.elo_fight_rows = wins("champ", "x", MIN_FIGHTS)
+    repo.current_records = {"champ": {"w": 8, "l": 0, "d": 0, "nc": 0}}
+    run_compute_elo(repo, dry_run=True)
+    assert not hasattr(repo, "fighters_now_rows")
+    run_compute_elo(repo)
+    champ = next(r for r in repo.fighters_now_rows if r.fighter_id == "champ")
+    assert champ.record == {"w": 8, "l": 0, "d": 0, "nc": 0} and champ.elo is not None

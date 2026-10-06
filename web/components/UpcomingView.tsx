@@ -93,20 +93,21 @@ function Why({ bout }: { bout: UpcomingBout }) {
 function UpcomingBoutCard({ bout }: { bout: UpcomingBout }) {
   const tags = bout.position === 1 || bout.isTitleFight;
   return (
-    <li className="overflow-hidden border-2 border-[var(--text)] bg-[var(--surface)]">
-      <div className="sm:flex">
+    <li className="relative border-2 border-[var(--text)] bg-[var(--surface)]">
+      {tags && (
+        // Sits on the top border like a label, so the card is no taller for it.
+        <div className="absolute -top-3 left-4 z-10 flex flex-wrap items-center gap-1.5 sm:left-[7.25rem]">
+          {bout.position === 1 && (
+            <span className={`${TAG} border-[var(--text)] bg-[var(--text)] text-[var(--bg)]`}>Main event</span>
+          )}
+          {bout.isTitleFight && (
+            <span className={`${TAG} border-[var(--accent)] bg-[var(--surface)] text-[var(--accent-text)]`}>Title fight</span>
+          )}
+        </div>
+      )}
+      <div className="sm:flex sm:min-h-[5.875rem]">
         {bout.prediction && <ExpectedMark stars={bout.prediction.stars} />}
         <div className="min-w-0 flex-1 px-4 pb-3 pt-2 sm:px-5 sm:pt-3">
-          {tags && (
-            <div className="flex min-h-6 flex-wrap items-center gap-1.5">
-              {bout.position === 1 && (
-                <span className={`${TAG} border-[var(--text)] bg-[var(--text)] text-[var(--bg)]`}>Main event</span>
-              )}
-              {bout.isTitleFight && (
-                <span className={`${TAG} border-[var(--accent)] text-[var(--accent-text)]`}>Title fight</span>
-              )}
-            </div>
-          )}
           <Matchup
             a={{ ...bout.a, note: null }}
             b={{ ...bout.b, note: null }}
