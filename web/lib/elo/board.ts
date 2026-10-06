@@ -15,6 +15,9 @@ export interface EloEntry {
   fights: number;
   /** ISO date of their latest fight. */
   lastFight: string;
+  /** The highest rating they reached, and the ISO date of the fight that got them there. */
+  peak: number;
+  peakDate: string;
 }
 
 /** A row of `elo_leaderboard`. */
@@ -26,6 +29,8 @@ export interface EloRow {
   rating: unknown;
   fights: unknown;
   last_fight: unknown;
+  peak: unknown;
+  peak_date: unknown;
 }
 
 /** At most this many rows are ever served (also enforced in the database). */
@@ -63,14 +68,22 @@ export function rowToEntry(row: EloRow): EloEntry {
   if (typeof row.last_fight !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(row.last_fight)) {
     throw new EloParseError("last_fight");
   }
+  if (typeof row.peak_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(row.peak_date)) {
+    throw new EloParseError("peak_date");
+  }
+  const rating = number(row.rating, "rating");
+  const peak = number(row.peak, "peak");
+  if (peak < rating) throw new EloParseError("peak");
   return {
     rank,
     name: row.name,
     slug: typeof row.slug === "string" && isValidSlug(row.slug) ? row.slug : null,
     country: typeof row.country === "string" ? row.country : null,
-    rating: number(row.rating, "rating"),
+    rating,
     fights,
     lastFight: row.last_fight,
+    peak,
+    peakDate: row.peak_date,
   };
 }
 
@@ -91,7 +104,7 @@ export function parseBoard(json: unknown): EloEntry[] {
   return rowsToEntries(
     board.map((item) => {
       const e = (item ?? {}) as Record<string, unknown>;
-      return { ...e, last_fight: e.lastFight } as EloRow;
+      return { ...e, last_fight: e.lastFight, peak_date: e.peakDate } as EloRow;
     }),
   );
 }

@@ -140,3 +140,23 @@ def test_logs_carry_counts_only(caplog) -> None:  # type: ignore[no-untyped-def]
     with caplog.at_level("INFO"):
         run_compute_elo(repo)
     assert "secret-name" not in caplog.text and "1 fighters" in caplog.text
+
+
+def test_the_peak_is_the_highest_rating_reached_and_when() -> None:
+    # win, win, then losses: the peak is after the second win, not the final rating
+    games = [
+        fight(1, "a", "x1"),
+        fight(2, "a", "x2"),
+        *[fight(i, "z", "a") for i in range(3, 3 + MIN_FIGHTS)],
+    ]
+    rows, steps = build_board(games, min_fights=3)
+    a = next(r for r in rows if r.fighter_id == "a")
+    mine = [s for s in steps if s.fighter_id == "a"]
+    assert a.peak == max(s.rating_after for s in mine) and a.peak > a.rating
+    assert a.peak_date == next(s.fight_date for s in mine if s.rating_after == a.peak)
+    assert a.peak_date == dt.date(2020, 1, 1) + dt.timedelta(days=60)
+
+
+def test_a_fighter_who_only_rises_has_the_current_rating_as_the_peak() -> None:
+    rows, _ = build_board(wins("champ", "x", MIN_FIGHTS))
+    assert rows[0].peak == rows[0].rating and rows[0].peak_date == rows[0].last_fight

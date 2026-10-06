@@ -100,6 +100,7 @@ export function EloBoard() {
                 <span className="flex-1">Fighter</span>
                 <span className={FIGHTS_COL}>Fights</span>
                 <span className="hidden w-24 shrink-0 text-right sm:block">Last fought</span>
+                <span className="hidden w-14 shrink-0 text-right sm:block">Peak</span>
                 <span className="w-14 shrink-0 text-right">Elo</span>
                 <span className="w-4 shrink-0" />
               </ListHeader>
@@ -123,6 +124,12 @@ export function EloBoard() {
                       </span>
                       <span className="hidden w-24 shrink-0 text-right text-sm font-normal tabular-nums text-[var(--muted)] sm:block">
                         {lastFought(entry.lastFight)}
+                      </span>
+                      <span
+                        className="hidden w-14 shrink-0 text-right text-sm font-normal tabular-nums text-[var(--muted)] sm:block"
+                        title={`Highest rating, reached ${lastFought(entry.peakDate)}`}
+                      >
+                        {Math.round(entry.peak)}
                       </span>
                       <span
                         role="img"
@@ -167,7 +174,7 @@ export function EloBoard() {
                       )}
                       {open && entry.slug && (
                         <div id={`${panelId}-${entry.slug}`}>
-                          <EloHistory slug={entry.slug} name={entry.name} />
+                          <EloHistory slug={entry.slug} name={entry.name} rating={entry.rating} peak={entry.peak} peakDate={entry.peakDate} />
                         </div>
                       )}
                     </li>

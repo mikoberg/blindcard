@@ -26,6 +26,8 @@ const row = {
   rating: "1712.4",
   fights: 12,
   last_fight: "2026-08-15",
+  peak: "1750.2",
+  peak_date: "2025-03-01",
 };
 
 describe("rowToEntry", () => {
@@ -38,6 +40,8 @@ describe("rowToEntry", () => {
       rating: 1712.4,
       fights: 12,
       lastFight: "2026-08-15",
+      peak: 1750.2,
+      peakDate: "2025-03-01",
     });
   });
 
@@ -54,6 +58,8 @@ describe("rowToEntry", () => {
       { ...row, rating: "high" },
       { ...row, fights: 0 },
       { ...row, last_fight: "yesterday" },
+      { ...row, peak: "1000" }, // a peak below the current rating cannot be
+      { ...row, peak_date: "someday" },
     ]) {
       expect(() => rowToEntry(bad)).toThrow(EloParseError);
     }

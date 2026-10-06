@@ -101,6 +101,9 @@ class EloRow:
     rating: float
     fights: int
     last_fight: dt.date
+    #: The highest rating after any of their fights, and the date of that fight.
+    peak: float
+    peak_date: dt.date
     version: int = ELO_VERSION
 
 

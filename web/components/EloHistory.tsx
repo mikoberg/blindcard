@@ -31,7 +31,19 @@ function Figure({ label, value, strong = false }: { label: string; value: string
  * opponent's, the expected score, K, what the fight counted as, the change and the rating after.
  * It names fights and how they were decided, so it loads only when its fighter is opened.
  */
-export function EloHistory({ slug, name }: { slug: string; name: string }) {
+export function EloHistory({
+  slug,
+  name,
+  rating,
+  peak,
+  peakDate,
+}: {
+  slug: string;
+  name: string;
+  rating: number;
+  peak: number;
+  peakDate: string;
+}) {
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
@@ -51,6 +63,17 @@ export function EloHistory({ slug, name }: { slug: string; name: string }) {
 
   return (
     <div className="border-t border-[var(--border)] bg-[var(--bg)] px-3 py-4 sm:px-4">
+      <p className="mb-3 text-sm">
+        <span className="font-bold">Now {Math.round(rating)}.</span>{" "}
+        {Math.round(peak) > Math.round(rating) ? (
+          <>
+            Highest ever <span className="font-bold">{Math.round(peak)}</span>, reached {day(peakDate)} (
+            {Math.round(peak - rating)} points above now).
+          </>
+        ) : (
+          <>At the highest rating {name} has reached.</>
+        )}
+      </p>
       <p className="max-w-2xl text-sm text-[var(--muted)]">
         Every fight moves the rating by <strong className="text-[var(--text)]">K × (score − expected)</strong>. Expected
         is the chance the rating predicts, 1 / (1 + 10^((opponent − own) / 400)). Score is 1 for a win and 0 for a loss;

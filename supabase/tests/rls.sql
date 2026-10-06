@@ -551,7 +551,7 @@ begin
   select count(*) into n from public.elo_leaderboard();
   if n <> 1 then raise exception 'FAIL: elo_leaderboard should list only the active fighter, got %', n; end if;
   select * into r from public.elo_leaderboard(1000);
-  if r.rank <> 1 or r.name <> 'Fighter A' or r.fights <> 9 then
+  if r.rank <> 1 or r.name <> 'Fighter A' or r.fights <> 9 or r.peak <> 1620.0 then
     raise exception 'FAIL: elo_leaderboard returned the wrong row';
   end if;
   select count(*) into n from public.elo_leaderboard(0);

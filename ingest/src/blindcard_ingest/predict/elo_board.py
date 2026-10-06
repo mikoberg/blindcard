@@ -115,14 +115,20 @@ def build_board(
     those fighters."""
     ratings, steps = build_ledger(fights)
     last: dict[str, EloStep] = {}
+    best: dict[str, EloStep] = {}
     for step in steps:
         last[step.fighter_id] = step
+        # The earliest fight at the highest rating counts as the peak.
+        if step.fighter_id not in best or step.rating_after > best[step.fighter_id].rating_after:
+            best[step.fighter_id] = step
     rows = [
         EloRow(
             fighter_id=fighter,
             rating=round(rating, 1),
             fights=last[fighter].seq,
             last_fight=last[fighter].fight_date,
+            peak=best[fighter].rating_after,
+            peak_date=best[fighter].fight_date,
         )
         for fighter, rating in ratings.items()
         if last[fighter].seq >= min_fights

@@ -960,9 +960,17 @@ class PostgresRepository:
             for r in rows:
                 cur.execute(
                     "insert into public.fighter_elo"
-                    " (fighter_id, rating, fights, last_fight, version)"
-                    " values (%s::uuid, %s, %s, %s, %s)",
-                    (r.fighter_id, r.rating, r.fights, r.last_fight, r.version),
+                    " (fighter_id, rating, fights, last_fight, peak, peak_date, version)"
+                    " values (%s::uuid, %s, %s, %s, %s, %s, %s)",
+                    (
+                        r.fighter_id,
+                        r.rating,
+                        r.fights,
+                        r.last_fight,
+                        r.peak,
+                        r.peak_date,
+                        r.version,
+                    ),
                 )
             for s in steps:
                 cur.execute(
