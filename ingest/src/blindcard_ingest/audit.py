@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import datetime as dt
 import math
-from collections.abc import Sequence
+import tomllib
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 
 #: A run this unlikely (by chance) is worth a look / is an alert.
 NOTE_BELOW = 0.05
@@ -129,3 +131,70 @@ def audit(events: Sequence[ScoredEvent]) -> AuditReport:
             if check:
                 report.checks.append(check)
     return report
+
+
+@dataclass(frozen=True)
+class RegressionCase:
+    """A fight the product owner said was rated too low, and the least it may get."""
+
+    fighters: tuple[str, str]
+    date: dt.date
+    min_stars: float
+    why: str
+
+
+def load_regression_cases(path: Path) -> list[RegressionCase]:
+    """The cases of `config/regression_fights.toml`; a malformed entry is an error, not skipped."""
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    cases: list[RegressionCase] = []
+    for entry in data.get("fight", []):
+        names = entry.get("fighters")
+        if not (
+            isinstance(names, list) and len(names) == 2 and all(isinstance(n, str) for n in names)
+        ):
+            raise ValueError("regression fight: 'fighters' must be two names")
+        minimum = entry.get("min_stars")
+        if (
+            isinstance(minimum, bool)
+            or not isinstance(minimum, int | float)
+            or not 1 <= minimum <= 5
+        ):
+            raise ValueError("regression fight: 'min_stars' must be between 1 and 5")
+        cases.append(
+            RegressionCase(
+                fighters=(names[0], names[1]),
+                date=dt.date.fromisoformat(str(entry.get("date"))),
+                min_stars=float(minimum),
+                why=str(entry.get("why", "")),
+            )
+        )
+    return cases
+
+
+@dataclass(frozen=True)
+class RegressionResult:
+    case: RegressionCase
+    #: None: the fight is not in the data (or not scored by the active version).
+    stars: float | None
+
+    @property
+    def failed(self) -> bool:
+        return self.stars is None or self.stars < self.case.min_stars
+
+    def line(self) -> str:
+        names = " vs ".join(self.case.fighters)
+        if self.stars is None:
+            return f"FAIL  {names} ({self.case.date}): not found or not scored"
+        verdict = "ok   " if not self.failed else "FAIL "
+        return (
+            f"{verdict} {names} ({self.case.date}): {self.stars:.1f} stars, at least "
+            f"{self.case.min_stars:.1f} agreed"
+        )
+
+
+def check_regressions(
+    cases: Sequence[RegressionCase],
+    stars_of: Callable[[tuple[str, str], dt.date], float | None],
+) -> list[RegressionResult]:
+    """Each agreed fight against its current stars."""
+    return [RegressionResult(case, stars_of(case.fighters, case.date)) for case in cases]

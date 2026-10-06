@@ -313,6 +313,11 @@ class Repository(Protocol):
         """Every event with the public stars of its fights, by the active score version."""
         ...
 
+    def stars_of_fight(self, fighters: tuple[str, str], on: date) -> float | None:
+        """The active version's stars of the fight between these two fighters on that date, or None
+        when there is no such fight or it is not scored."""
+        ...
+
     def winner_outcomes(self) -> list[FightOutcome]:
         """Every decisive completed fight (RESULT DATA: it stays in the ingest process)."""
         ...
@@ -1137,6 +1142,23 @@ class PostgresRepository:
                         p.bout_id,
                     ),
                 )
+
+    def stars_of_fight(self, fighters: tuple[str, str], on: date) -> float | None:
+        query = """
+            select s.stars::float as stars
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fighters a on a.id = f.fighter_a_id
+            join public.fighters b on b.id = f.fighter_b_id
+            join public.excitement_scores s
+              on s.fight_id = f.id
+             and s.version = (select v.version from public.scoring_versions v where v.is_active)
+            where e.event_date = %s and a.name = any(%s) and b.name = any(%s)
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (on, list(fighters), list(fighters)))
+            rows = cur.fetchall()
+        return float(rows[0]["stars"]) if len(rows) == 1 else None
 
     def scored_events(self) -> list[ScoredEvent]:
         query = """

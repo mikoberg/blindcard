@@ -7,13 +7,12 @@ import { fighterNote, pairingLabel } from "@/lib/card/story";
 import type { CardFight } from "@/lib/card/types";
 import { ClassicBadge, GOLD_FOIL } from "./ClassicBadge";
 import { ClassicSeal } from "./ClassicSeal";
+import { FightTag } from "./FightTag";
 import { Matchup } from "./Matchup";
 import { ShareFightButton } from "./ShareFightButton";
 import { RevealButton } from "./RevealButton";
 import { WatchButton } from "./WatchButton";
 import { StarRating } from "./StarRating";
-
-const TAG = "inline-flex items-center border-[1.5px] px-1.5 py-px text-[0.7rem] font-bold leading-4";
 
 /**
  * The rating, kept small: the number in the display type (the gold seal for a classic) with the
@@ -68,18 +67,12 @@ export function FightCard({
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-h-6 flex-wrap items-center gap-1.5">
               {showSegment && fight.cardSegment && (
-                <span className={`${TAG} border-[var(--border)] text-[var(--muted)]`}>
-                  {SEGMENT_LABELS[fight.cardSegment]}
-                </span>
+                <FightTag kind="segment">{SEGMENT_LABELS[fight.cardSegment]}</FightTag>
               )}
               {classic && <ClassicBadge />}
-              {fight.isTitleFight && (
-                <span className={`${TAG} border-[var(--text)] bg-[var(--text)] text-[var(--bg)]`}>Title fight</span>
-              )}
-              {isHiddenGem(fight) && (
-                <span className={`${TAG} border-[var(--accent)] text-[var(--accent-text)]`}>Hidden gem</span>
-              )}
-              {pairing && <span className={`${TAG} border-[var(--text)]/35`}>{pairing}</span>}
+              {fight.isTitleFight && <FightTag kind="title">Title fight</FightTag>}
+              {isHiddenGem(fight) && <FightTag kind="gem">Hidden gem</FightTag>}
+              {pairing && <FightTag kind="pairing">{pairing}</FightTag>}
               <span className={`text-xs text-[var(--muted)] ${hasTags ? "ml-1" : ""}`}>{fightBlurb(fight)}</span>
             </div>
             <ShareFightButton fightId={fight.id} fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} />

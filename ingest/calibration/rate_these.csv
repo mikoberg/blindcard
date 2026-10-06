@@ -1,0 +1,34 @@
+﻿nr,date,event,fighter_a,fighter_b,weight_class,rounds,your_stars_1_to_5,fight_id
+1,2019-09-07,UFC 242: Khabib vs. Poirier,Edson Barboza,Paul Felder,Lightweight,3,,4fb3103f-bd22-4178-899c-82350944333e
+2,2021-06-12,UFC 263: Adesanya vs. Vettori 2,Brad Riddell,Drew Dober,Lightweight,3,,b788764e-a0e2-4bd7-8826-1cc35ee5bc7d
+3,2018-11-03,UFC 230: Cormier vs. Lewis,Daniel Cormier,Derrick Lewis,Heavyweight,5,,2345f514-9307-4368-bfdf-bbd700499e84
+4,2025-11-08,UFC Fight Night: Bonfim vs. Brown,Chris Padilla,Ismael Bonfim,Lightweight,3,,684f4728-af76-495e-83fe-03228cab8086
+5,2018-05-27,UFC Fight Night: Thompson vs. Till,Arnold Allen,Mads Burnell,Featherweight,3,,4edc7340-4fd3-4441-a0c8-7cb1f9f00518
+6,2025-08-09,UFC Fight Night: Dolidze vs. Hernandez,Christian Leroy Duncan,Eryk Anders,Middleweight,3,,593bee65-fa62-46a5-be28-ed0c6559095d
+7,2020-10-03,UFC Fight Night: Holm vs. Aldana,Carlos Condit,Court McGee,Welterweight,3,,d6e79f63-1685-4ae1-9dc5-ae14bcf4722e
+8,2023-07-15,UFC Fight Night: Holm vs. Bueno Silva,Albert Duraev,JunYong Park,Middleweight,3,,4d2623eb-face-40d1-9f8c-0510022a6a6d
+9,2026-10-03,UFC 332: Silva vs. Wang,Esteban Ribovics,King Green,Lightweight,3,,3d8299bd-9444-4c99-a28c-a3284ba1671f
+10,2020-11-21,UFC 255: Figueiredo vs. Perez,Mike Perry,Tim Means,Welterweight,3,,a761fd94-196e-4b55-afde-7ef3fabfee66
+11,2020-11-07,UFC Fight Night: Santos vs. Teixeira,Glover Teixeira,Thiago Santos,Light Heavyweight,5,,242a426b-596e-4429-a125-e68c3c993a33
+12,2022-06-18,UFC Fight Night: Kattar vs. Emmett,Adrian Yanez,Tony Kelley,Bantamweight,3,,16ce3445-3207-4ba6-b2d4-fb779f25c409
+13,2019-08-10,UFC Fight Night: Shevchenko vs. Carmouche 2,Mike Perry,Vicente Luque,Welterweight,3,,ee8c79b0-f25a-4469-8e89-a6a48462a12c
+14,2021-08-21,UFC Fight Night: Cannonier vs. Gastelum,Alexandre Pantoja,Brandon Royval,Flyweight,3,,700765fe-fb12-4fe3-8413-e7335e8df5c8
+15,2018-04-21,UFC Fight Night: Barboza vs. Lee,Cub Swanson,Frankie Edgar,Featherweight,3,,274571ff-a09e-41be-bc36-34e021c416c5
+16,2020-09-19,UFC Fight Night: Covington vs. Woodley,Colby Covington,Tyron Woodley,Welterweight,5,,9bb52a5a-cb9d-41fc-aa49-6583fe0d3637
+17,2024-07-27,UFC 304: Edwards vs. Muhammad 2,King Green,Paddy Pimblett,Lightweight,3,,bbfcdaa1-d83a-420c-a925-c1b69bc41105
+18,2018-09-22,UFC Fight Night: Marreta vs. Anders,Alex Oliveira,Carlo Pedersoli Jr.,Welterweight,3,,9e7374f5-945b-4482-b61f-5c47faf73f6e
+19,2023-06-17,UFC Fight Night: Vettori vs. Cannonier,Muslim Salikhov,Nicolas Dalby,Welterweight,3,,2a4bf10a-d3ac-4c27-a4c8-36a9b683f009
+20,2026-05-09,UFC 328: Chimaev vs. Strickland,Ateba Gautier,Ozzy Diaz,Middleweight,3,,3b4df3bd-f767-4647-aa05-b4c748ec965e
+21,2025-02-22,UFC Fight Night: Cejudo vs. Song,Ibo Aslan,Ion Cutelaba,Light Heavyweight,3,,c8be306e-f297-4696-bd26-fd8efa410165
+22,2020-10-31,UFC Fight Night: Hall vs. Silva,Charlie Ontiveros,Kevin Holland,Middleweight,3,,ee209a74-dfe0-42d0-833b-e49daa27bed4
+23,2022-04-16,UFC Fight Night: Luque vs. Muhammad,Ange Loosa,Mounir Lazzez,Welterweight,3,,12b3f1f1-1220-4080-abee-b21957409cd8
+24,2020-10-17,UFC Fight Night: Ortega vs. The Korean Zombie,Jimmy Crute,Modestas Bukauskas,Light Heavyweight,3,,ca6afb0f-3150-44c9-b4d0-6fb867c8a26d
+25,2024-03-30,UFC Fight Night: Blanchfield vs. Fiorot,Joaquin Buckley,Vicente Luque,Welterweight,3,,dbf82170-3eb4-4cac-b0f9-9e4a1550fbea
+26,2022-10-29,UFC Fight Night: Kattar vs. Allen,Arnold Allen,Calvin Kattar,Featherweight,5,,4b47636d-3ad2-46f5-a14f-ff6f5bda3b59
+27,2021-07-17,UFC Fight Night: Makhachev vs. Moises,Dustin Stoltzfus,Rodolfo Vieira,Middleweight,3,,01cc67c8-dd0d-49d4-89cd-6a9c9ce1f9de
+28,2021-09-18,UFC Fight Night: Smith vs. Spann,Devin Clark,Ion Cutelaba,Light Heavyweight,3,,43bc964f-529a-4836-96bc-0316d0e8c49c
+29,2025-03-22,UFC Fight Night: Edwards vs. Brady,Carlos Ulberg,Jan Blachowicz,Light Heavyweight,3,,68e28e67-5a8c-4bd6-8835-f4a63cfc5e17
+30,2021-04-17,UFC Fight Night: Whittaker vs. Gastelum,Abdul Razak Alhassan,Jacob Malkoun,Middleweight,3,,78c340dd-79f3-4957-a2a0-b55cbf39b567
+31,2023-09-23,UFC Fight Night: Fiziev vs. Gamrot,Mateusz Gamrot,Rafael Fiziev,Lightweight,5,,64cd0d77-c4cc-4a3c-8fc2-567bf2320ff7
+32,2021-04-24,UFC 261: Usman vs. Masvidal 2,Chris Weidman,Uriah Hall,Middleweight,3,,f3f17262-c3bd-4fc0-9943-f8df1047eeaf
+33,2018-08-25,UFC Fight Night: Gaethje vs. Vick,Angela Hill,Cortney Casey,Women's Strawweight,3,,b29ce204-f23b-4f82-b84b-1a3ee4ae4c74

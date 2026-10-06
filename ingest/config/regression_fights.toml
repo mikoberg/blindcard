@@ -1,0 +1,24 @@
+# Fights the product owner has said are rated too low, each with the least it may ever get.
+# `audit-scores` checks them against the ACTIVE score version, so a new fit cannot quietly undo a
+# decision. Add a fight here when a rating was agreed to be wrong; never lower a minimum without
+# the product owner saying so.
+#
+# A fight is found by its two fighters and its date (a rematch has the same names).
+
+[[fight]]
+fighters = ["Denzel Freeman", "Josh Hokit"]
+date = "2026-01-24"
+min_stars = 3.0
+why = "First-round TKO after 4:59, rated 2.0 by v23: a real knockout is never below 3 stars."
+
+[[fight]]
+fighters = ["Luis Hernandez", "Sedriques Dumas"]
+date = "2026-09-26"
+min_stars = 3.0
+why = "Standing guillotine after 0:57, rated 2.0 by v25: a real submission is never below 3 stars."
+
+[[fight]]
+fighters = ["Arman Tsarukyan", "Charles Oliveira"]
+date = "2024-04-13"
+min_stars = 2.5
+why = "Three-round decision with 4 submission attempts and 2 reversals, rated 2.0 by v22: grappling action is not stalling."

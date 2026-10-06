@@ -330,6 +330,9 @@ class FakeRepository:
     def scored_events(self):  # type: ignore[no-untyped-def]
         return list(self.event_stars)
 
+    def stars_of_fight(self, fighters, on):  # type: ignore[no-untyped-def]
+        return getattr(self, "fight_stars", {}).get((tuple(sorted(fighters)), on))
+
     def set_upcoming_picks(self, picks) -> None:  # type: ignore[no-untyped-def]
         self.picks = list(picks)
 

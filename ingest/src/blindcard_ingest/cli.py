@@ -436,17 +436,25 @@ def _run(args: argparse.Namespace, settings: Settings) -> int:
         return EXIT_OK
 
     if args.command == "audit-scores":
-        from blindcard_ingest.audit import audit
+        from blindcard_ingest.audit import audit, check_regressions, load_regression_cases
 
+        cases = load_regression_cases(settings.scoring_config_dir / "regression_fights.toml")
         with _open_repository(settings) as repo:
             audit_report = audit(repo.scored_events())
+            regressions = check_regressions(cases, repo.stars_of_fight)
         for line in audit_report.lines():
             print(line)
+        print("fights agreed to be rated at least so high:")
+        for result in regressions:
+            print("  " + result.line())
+        failed = [result for result in regressions if result.failed]
         if audit_report.alerts:
             logger.error(
                 "score audit: %d stretch(es) too unlikely to be luck", len(audit_report.alerts)
             )
-        return EXIT_RUN_ERRORS if (args.strict and audit_report.alerts) else EXIT_OK
+        if failed:
+            logger.error("score audit: %d agreed fight(s) rated below their minimum", len(failed))
+        return EXIT_RUN_ERRORS if (args.strict and (audit_report.alerts or failed)) else EXIT_OK
 
     if args.command == "evaluate-predictions":
         from blindcard_ingest.predict.dataset import build_examples

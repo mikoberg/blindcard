@@ -43,7 +43,7 @@ From `ingest/` with the virtualenv (see the root README for the install):
 .\.venv\Scripts\blindcard-ingest compute-elo                  # Elo on the cards (going in) and the Elo page; after ingest-upcoming
 .\.venv\Scripts\blindcard-ingest predict-upcoming
 .\.venv\Scripts\blindcard-ingest predict-picks
-.\.venv\Scripts\blindcard-ingest audit-scores --strict
+.\.venv\Scripts\blindcard-ingest audit-scores --strict             # also checks config/regression_fights.toml: fights agreed to be rated at least so high
 ```
 
 Notes:
