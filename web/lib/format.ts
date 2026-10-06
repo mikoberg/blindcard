@@ -33,3 +33,9 @@ export function groupEventsByYear(
   }
   return groups;
 }
+
+/** "2026-09-26" -> "Sep 2026": when the day does not matter. */
+export function formatMonthYear(isoDate: string): string {
+  const full = formatEventDate(isoDate); // validates the date
+  return full.split(" ").slice(2).join(" ");
+}

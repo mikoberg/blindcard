@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { formatRating, isHighRating } from "@/lib/leaderboard/format";
 import { isValidSlug } from "@/lib/slug";
-import { Monogram } from "./Monogram";
+import { FlagChip } from "./FlagChip";
 
-const ROW = "flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-4";
+/** The columns every list of fighters shares, so the header and the rows line up. */
+export const RANK_COL = "w-7 shrink-0 text-right";
+export const FIGHTS_COL = "hidden w-20 shrink-0 text-right sm:block";
+const ROW = "flex min-h-[3.25rem] items-center gap-3 px-3 py-2 sm:px-4";
 
 interface FighterRowProps {
   /** The place on the leaderboard; left out for a search result. */
@@ -13,29 +16,28 @@ interface FighterRowProps {
   country: string | null;
   fights: number;
   average: number;
-  /** A short line under the number of fights, e.g. why the fighter is not ranked. */
+  /** A short line under the name, e.g. why the fighter is not ranked. */
   note?: string;
 }
 
-/** One fighter: rank, flag, name, number of rated fights and the average rating in its box. Opens their fights. */
+/** One fighter: rank, flag, name, number of rated fights and the average rating. Opens their fights. */
 export function FighterRow({ rank, slug, name, country, fights, average, note }: FighterRowProps) {
   const content = (
     <>
       {rank !== undefined && (
-        <span className="display-tight w-9 shrink-0 text-right text-2xl tabular-nums text-[var(--muted)]">
-          {rank}
-        </span>
+        <span className={`${RANK_COL} text-sm font-bold tabular-nums text-[var(--muted)]`}>{rank}</span>
       )}
-      <Monogram name={name} country={country} size="md" />
+      <FlagChip country={country} />
       <span className="min-w-0 flex-1">
-        <span className="block break-words text-lg font-extrabold leading-tight sm:text-xl">{name}</span>
-        <span className="block text-sm text-[var(--muted)]">
+        <span className="block break-words font-extrabold leading-tight sm:text-lg">{name}</span>
+        <span className={`block text-xs text-[var(--muted)] ${note ? "" : "sm:hidden"}`}>
           {fights} rated {fights === 1 ? "fight" : "fights"}
           {note ? `, ${note}` : ""}
         </span>
       </span>
+      <span className={`${FIGHTS_COL} text-sm tabular-nums text-[var(--muted)]`}>{fights}</span>
       <span
-        className={`scorebox h-11 w-14 shrink-0 text-2xl ${isHighRating(average) ? "scorebox-hot" : ""}`}
+        className={`scorebox h-8 w-12 shrink-0 text-base ${isHighRating(average) ? "scorebox-hot" : ""}`}
         role="img"
         aria-label={`Average rating ${formatRating(average)} out of 5`}
       >

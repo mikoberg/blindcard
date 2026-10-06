@@ -2,9 +2,11 @@
 
 import { useId, useState } from "react";
 import { fetchEloBoard, type EloEntry } from "@/lib/elo/board";
-import { formatEventDate } from "@/lib/format";
+import { formatMonthYear } from "@/lib/format";
 import { EloHistory } from "./EloHistory";
-import { Monogram } from "./Monogram";
+import { FlagChip } from "./FlagChip";
+import { FIGHTS_COL, RANK_COL } from "./FighterRow";
+import { ListHeader } from "./FighterLeaderboard";
 
 type State =
   | { status: "idle" }
@@ -14,7 +16,7 @@ type State =
 
 function lastFought(iso: string): string {
   try {
-    return formatEventDate(iso);
+    return formatMonthYear(iso);
   } catch {
     return iso;
   }
@@ -54,10 +56,10 @@ export function EloBoard() {
         disabled={state.status === "loading"}
         aria-expanded={shown}
         aria-controls={panelId}
-        className={`mt-4 flex min-h-12 w-full max-w-md items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors focus-visible:outline-offset-[-5px] disabled:opacity-70 ${
+        className={`mt-4 flex items-center justify-between gap-4 px-4 text-left text-sm font-bold transition-colors focus-visible:outline-offset-[-5px] disabled:opacity-70 ${
           shown
-            ? "border-2 border-[var(--text)] hover:bg-[var(--surface-2)]"
-            : "redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] focus-visible:outline-[var(--accent-ink)]"
+            ? "min-h-10 border-2 border-[var(--text)] hover:bg-[var(--surface-2)]"
+            : "min-h-12 w-full max-w-md redact hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] focus-visible:outline-[var(--accent-ink)]"
         }`}
       >
         <span>
@@ -91,71 +93,88 @@ export function EloBoard() {
             <p className="mb-3 max-w-xl text-sm text-[var(--muted)]">
               Open a fighter to see exactly how the rating was built, fight by fight.
             </p>
-            <ol className="divide-y-2 divide-[var(--text)] border-2 border-[var(--text)] bg-[var(--surface)]">
-              {state.board.map((entry) => {
-                const open = entry.slug !== null && openSlug === entry.slug;
-                const row = (
-                  <>
-                    <span className="display-tight w-9 shrink-0 text-right text-2xl tabular-nums text-[var(--muted)]">
-                      {entry.rank}
-                    </span>
-                    <Monogram name={entry.name} country={entry.country} size="md" />
-                    <span className="min-w-0 flex-1 text-left">
-                      <span className="block break-words text-lg font-extrabold leading-tight sm:text-xl">
-                        {entry.name}
+            <div className="border-2 border-[var(--text)] bg-[var(--surface)]">
+              <ListHeader>
+                <span className={RANK_COL}>#</span>
+                <span className="w-6 shrink-0" />
+                <span className="flex-1">Fighter</span>
+                <span className={FIGHTS_COL}>Fights</span>
+                <span className="hidden w-24 shrink-0 text-right sm:block">Last fought</span>
+                <span className="w-14 shrink-0 text-right">Elo</span>
+                <span className="w-4 shrink-0" />
+              </ListHeader>
+              <ol className="divide-y divide-[var(--border)]">
+                {state.board.map((entry) => {
+                  const open = entry.slug !== null && openSlug === entry.slug;
+                  const row = (
+                    <>
+                      <span className={`${RANK_COL} text-sm font-bold tabular-nums text-[var(--muted)]`}>
+                        {entry.rank}
                       </span>
-                      <span className="block text-sm font-normal text-[var(--muted)]">
-                        {entry.fights} fights, last fought {lastFought(entry.lastFight)}
+                      <FlagChip country={entry.country} />
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block break-words font-extrabold leading-tight sm:text-lg">{entry.name}</span>
+                        <span className="block text-xs font-normal text-[var(--muted)] sm:hidden">
+                          {entry.fights} fights &middot; {lastFought(entry.lastFight)}
+                        </span>
                       </span>
-                    </span>
-                    <span
-                      role="img"
-                      aria-label={`Elo rating ${Math.round(entry.rating)}`}
-                      className="scorebox h-11 w-[4.5rem] shrink-0 text-xl"
-                    >
-                      <span aria-hidden="true">{Math.round(entry.rating)}</span>
-                    </span>
-                    {entry.slug && (
-                      <svg
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                        className={`h-5 w-5 shrink-0 text-[var(--muted)] transition-transform ${open ? "rotate-180" : ""}`}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                      <span className={`${FIGHTS_COL} text-sm font-normal tabular-nums text-[var(--muted)]`}>
+                        {entry.fights}
+                      </span>
+                      <span className="hidden w-24 shrink-0 text-right text-sm font-normal tabular-nums text-[var(--muted)] sm:block">
+                        {lastFought(entry.lastFight)}
+                      </span>
+                      <span
+                        role="img"
+                        aria-label={`Elo rating ${Math.round(entry.rating)}`}
+                        className="display-tight w-14 shrink-0 text-right text-lg tabular-nums"
                       >
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    )}
-                  </>
-                );
-                const rowClass = "flex w-full items-center gap-3 px-3 py-3 sm:gap-4 sm:px-4";
-                return (
-                  <li key={`${entry.rank}-${entry.name}`}>
-                    {entry.slug ? (
-                      <button
-                        type="button"
-                        aria-expanded={open}
-                        aria-controls={`${panelId}-${entry.slug}`}
-                        onClick={() => setOpenSlug(open ? null : entry.slug)}
-                        className={`${rowClass} hover:bg-[var(--surface-2)] focus-visible:outline-offset-[-4px]`}
-                      >
-                        {row}
-                      </button>
-                    ) : (
-                      <div className={rowClass}>{row}</div>
-                    )}
-                    {open && entry.slug && (
-                      <div id={`${panelId}-${entry.slug}`}>
-                        <EloHistory slug={entry.slug} name={entry.name} />
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
+                        <span aria-hidden="true">{Math.round(entry.rating)}</span>
+                      </span>
+                      <span className="flex w-4 shrink-0 justify-end">
+                        {entry.slug && (
+                          <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            className={`h-4 w-4 text-[var(--muted)] transition-transform ${open ? "rotate-180" : ""}`}
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M6 9l6 6 6-6" />
+                          </svg>
+                        )}
+                      </span>
+                    </>
+                  );
+                  const rowClass = "flex min-h-[3.25rem] w-full items-center gap-3 px-3 py-2 sm:px-4";
+                  return (
+                    <li key={`${entry.rank}-${entry.name}`}>
+                      {entry.slug ? (
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          aria-controls={`${panelId}-${entry.slug}`}
+                          onClick={() => setOpenSlug(open ? null : entry.slug)}
+                          className={`${rowClass} hover:bg-[var(--surface-2)] focus-visible:outline-offset-[-4px] ${open ? "bg-[var(--surface-2)]" : ""}`}
+                        >
+                          {row}
+                        </button>
+                      ) : (
+                        <div className={rowClass}>{row}</div>
+                      )}
+                      {open && entry.slug && (
+                        <div id={`${panelId}-${entry.slug}`}>
+                          <EloHistory slug={entry.slug} name={entry.name} />
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
           </>
         )}
       </div>

@@ -97,7 +97,7 @@ export function FighterSearch({ children }: { children: ReactNode }) {
       {term === null ? (
         children
       ) : results !== null && results.length > 0 ? (
-        <ul className="divide-y-2 divide-[var(--text)] border-2 border-[var(--text)] bg-[var(--surface)]">
+        <ul className="divide-y divide-[var(--border)] border-2 border-[var(--text)] bg-[var(--surface)]">
           {results.map((result) => (
             <li key={result.slug}>
               <FighterRow
