@@ -1,15 +1,14 @@
 import Link from "next/link";
-import { formatEventDate } from "@/lib/format";
 import type { UpcomingEvent } from "@/lib/upcoming/types";
 import { UpcomingCard } from "./UpcomingCard";
 
-/** Cards shown in full on the home page; later events are listed under them. */
+/** Cards shown in full on the home page; the rest is on the Upcoming tab. */
 const SHOWN = 2;
 
-/** The coming events, soonest first. Renders nothing when none is announced. */
+/** The next events, soonest first, with a link to all of them. Renders nothing when none is announced. */
 export function UpcomingSection({ events, today }: { events: readonly UpcomingEvent[]; today: Date }) {
   if (events.length === 0) return null;
-  const later = events.slice(SHOWN);
+  const more = events.length - SHOWN;
   return (
     <section aria-labelledby="upcoming">
       <h2 id="upcoming" className="display border-t-2 border-[var(--text)] pt-3 text-2xl sm:text-3xl">
@@ -25,26 +24,11 @@ export function UpcomingSection({ events, today }: { events: readonly UpcomingEv
           </li>
         ))}
       </ul>
-      {later.length > 0 && (
-        <ul className="mt-4 divide-y divide-[var(--border)] border-y border-[var(--border)]">
-          {later.map((event) => (
-            <li key={event.id}>
-              <Link
-                href={`/upcoming/${event.slug}`}
-                className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 py-2 hover:text-[var(--accent)]"
-              >
-                <span className="font-bold">{event.name}</span>
-                <span className="text-sm text-[var(--muted)]">{formatEventDate(event.eventDate)}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
       <Link
         href="/upcoming"
         className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4 hover:text-[var(--accent)]"
       >
-        All announced cards
+        {more > 0 ? `All ${events.length} announced cards` : "All announced cards"}
       </Link>
     </section>
   );
