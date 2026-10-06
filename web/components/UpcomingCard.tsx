@@ -43,8 +43,8 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
       className="slip group relative flex h-full gap-3 border-2 border-[var(--text)] bg-[var(--surface)] p-3"
     >
       {title && (
-        <span className="absolute right-0 top-3 bg-[var(--text)] px-2 py-1 text-[var(--bg)]">
-          <TitleBelt className="h-4 w-11" />
+        <span className="absolute right-3 top-3">
+          <TitleBelt className="h-6 w-[84px]" />
         </span>
       )}
       <DateBlock isoDate={event.eventDate} />

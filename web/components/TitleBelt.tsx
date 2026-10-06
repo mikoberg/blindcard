@@ -1,22 +1,45 @@
 /**
- * A championship belt as a plain silhouette (strap, two side plates, a large centre plate with a
- * star cut out of it) in the colour of the text around it. It stands for "Title fight" wherever
- * that label used to be; the words stay for screen readers and as the tooltip.
+ * A championship belt as a small label: a dark strap with gold studs, a large gold plate with a star
+ * in the middle and a smaller plate on each side, all drawn here (no lettering, no promotion's mark).
+ * It stands for "Title fight" wherever that label used to be; the words stay for screen readers and
+ * as the tooltip. Draw it about 3.5 times as wide as it is high.
  */
-const CENTRE_PLATE = [
-  "M19 12a13 11 0 1 0 26 0a13 11 0 1 0 -26 0z", // the plate
-  "M32.0 4.8L33.8 9.5L38.8 9.8L34.9 13.0L36.2 17.8L32.0 15.1L27.8 17.8L29.1 13.0L25.2 9.8L30.2 9.5z", // a star cut out of it
-].join("");
+const octagon = (cx: number, cy: number, halfW: number, halfH: number, cut: number): string => {
+  const [l, r, t, b] = [cx - halfW, cx + halfW, cy - halfH, cy + halfH];
+  return `M${l + cut} ${t}L${r - cut} ${t}L${r} ${t + cut}L${r} ${b - cut}L${r - cut} ${b}L${l + cut} ${b}L${l} ${b - cut}L${l} ${t + cut}z`;
+};
 
-export function TitleBelt({ className = "h-4 w-11" }: { className?: string }) {
+const STUDS_LEFT = [9, 14.5, 20];
+const STUDS_RIGHT = [92, 97.5, 103];
+const STAR = (() => {
+  const points = Array.from({ length: 10 }, (_, i) => {
+    const r = i % 2 === 0 ? 5.2 : 2.3;
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+    return `${(56 + r * Math.cos(angle)).toFixed(1)} ${(16 + r * Math.sin(angle)).toFixed(1)}`;
+  });
+  return `M${points.join("L")}z`;
+})();
+
+export function TitleBelt({ className = "h-5 w-[70px]" }: { className?: string }) {
+  const ink = { fill: "var(--ink)" };
+  const gold = { fill: "var(--gold-mid)" };
+  const rim = { fill: "var(--gold-hi)" };
   return (
     <span className="inline-flex shrink-0" title="Title fight">
-      <svg viewBox="0 0 64 24" aria-hidden="true" className={className} fill="currentColor">
-        <rect x="0" y="9" width="21" height="6" />
-        <rect x="43" y="9" width="21" height="6" />
-        <rect x="6" y="4.5" width="9" height="15" rx="2" />
-        <rect x="49" y="4.5" width="9" height="15" rx="2" />
-        <path d={CENTRE_PLATE} fillRule="evenodd" />
+      <svg viewBox="0 0 112 32" aria-hidden="true" className={className}>
+        <rect x="0" y="9" width="112" height="14" rx="3" style={ink} />
+        {[12.5, 19.5].flatMap((y) =>
+          [...STUDS_LEFT, ...STUDS_RIGHT].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.3" style={gold} />),
+        )}
+        {[34, 78].map((x) => (
+          <g key={x}>
+            <path d={octagon(x, 16, 8, 8, 2.8)} style={rim} stroke="var(--ink)" strokeWidth="1" />
+            <path d={octagon(x, 16, 5.2, 5.2, 1.8)} style={gold} />
+          </g>
+        ))}
+        <path d={octagon(56, 16, 17, 14, 7)} style={rim} stroke="var(--ink)" strokeWidth="1.2" />
+        <path d={octagon(56, 16, 13.5, 10.8, 5.2)} style={gold} stroke="var(--ink)" strokeWidth="0.8" />
+        <path d={STAR} style={ink} />
       </svg>
       <span className="sr-only">Title fight</span>
     </span>

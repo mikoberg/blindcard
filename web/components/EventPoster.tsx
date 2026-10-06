@@ -89,8 +89,8 @@ export function EventPoster({
         {footer}
       </div>
       {main?.title && (
-        <span className="absolute right-0 top-4 bg-[var(--text)] px-2.5 py-1.5 text-[var(--bg)] sm:top-5">
-          <TitleBelt className="h-5 w-14" />
+        <span className="absolute right-4 top-4 sm:right-5 sm:top-5">
+          <TitleBelt className="h-8 w-28" />
         </span>
       )}
       <div
