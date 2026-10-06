@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { activeOnly } from "@/lib/leaderboard/active";
-import { BOARD_ORDERS, orderById, orderEntries, type BoardOrder } from "@/lib/leaderboard/order";
+import { BOARD_GROUPS, BOARD_ORDERS, orderById, orderEntries, type BoardOrder } from "@/lib/leaderboard/order";
 import type { LeaderboardEntry } from "@/lib/leaderboard/types";
 import { FighterLeaderboard } from "./FighterLeaderboard";
 
@@ -52,10 +52,14 @@ export function ActiveFighterBoard({ entries, today }: { entries: readonly Leade
           onChange={(e) => setOrder(orderById(e.target.value).id)}
           className="min-h-11 min-w-0 flex-1 bg-transparent text-sm font-bold text-[var(--text)]"
         >
-          {BOARD_ORDERS.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-            </option>
+          {BOARD_GROUPS.map((group) => (
+            <optgroup key={group} label={group}>
+              {BOARD_ORDERS.filter((o) => o.group === group).map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
@@ -69,7 +73,7 @@ export function ActiveFighterBoard({ entries, today }: { entries: readonly Leade
       ) : (
         <FighterLeaderboard
           entries={shown}
-          extra={option.column ? { label: option.column, value: option.value } : null}
+          extra={option.column ? { label: option.column, value: option.value, format: option.format } : null}
         />
       )}
     </div>

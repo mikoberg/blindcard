@@ -241,6 +241,10 @@ class FakeRepository:
         if activate:
             self.active_version = config.version
 
+    def refresh_fighter_tallies(self) -> int:
+        self.tallies_refreshed = getattr(self, "tallies_refreshed", 0) + 1
+        return 0
+
     def refresh_fighter_awards(self) -> int:
         self.awards_refreshed = getattr(self, "awards_refreshed", 0) + 1
         return 0

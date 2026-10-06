@@ -218,6 +218,13 @@ class Repository(Protocol):
         count. Returns how many fighters have awards now."""
         ...
 
+    def refresh_fighter_tallies(self) -> int:
+        """Rebuild `fighters.tally`, the career totals of how a fighter's UFC fights in our data
+        ended (wins by knockout, submission and decision, first-round finishes, title fights and
+        the strikes, takedowns and knockdowns landed). A public current-standing total; returns how
+        many fighters have one."""
+        ...
+
     def fights_with_sides(self, source: str, from_year: int) -> list[FightSides]:
         """Stored fights from `from_year` on, with both fighters' ids and names."""
         ...
@@ -763,6 +770,61 @@ class PostgresRepository:
                     group by side.fighter_id
                 ) a
                 where f.id = a.fighter_id
+                """
+            )
+            return cur.rowcount
+
+    def refresh_fighter_tallies(self) -> int:
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute("update public.fighters set tally = null where tally is not null")
+            cur.execute(
+                """
+                update public.fighters f
+                set tally = jsonb_build_object(
+                    'fights', t.fights, 'wins', t.wins, 'ko', t.ko, 'sub', t.sub, 'dec', t.dec,
+                    'r1', t.r1, 'title', t.title, 'kd', t.kd, 'sig', t.sig, 'td', t.td, 'sa', t.sa
+                )
+                from (
+                    select side.fighter_id,
+                           count(*)::int as fights,
+                           count(*) filter (
+                               where r.winner_fighter_id = side.fighter_id
+                           )::int as wins,
+                           count(*) filter (
+                               where r.winner_fighter_id = side.fighter_id
+                                 and r.method = 'KO/TKO'
+                           )::int as ko,
+                           count(*) filter (
+                               where r.winner_fighter_id = side.fighter_id
+                                 and r.method = 'Submission'
+                           )::int as sub,
+                           count(*) filter (
+                               where r.winner_fighter_id = side.fighter_id
+                                 and r.method like 'Decision%'
+                           )::int as dec,
+                           count(*) filter (
+                               where r.winner_fighter_id = side.fighter_id
+                                 and r.method in ('KO/TKO', 'Submission') and r.end_round = 1
+                           )::int as r1,
+                           count(*) filter (where fi.is_title_fight)::int as title,
+                           coalesce(sum(rd.kd), 0)::int as kd,
+                           coalesce(sum(rd.sig), 0)::int as sig,
+                           coalesce(sum(rd.td), 0)::int as td,
+                           coalesce(sum(rd.sa), 0)::int as sa
+                    from public.fights fi
+                    join public.fight_results r on r.fight_id = fi.id
+                    cross join lateral (
+                        values (fi.fighter_a_id), (fi.fighter_b_id)
+                    ) as side(fighter_id)
+                    left join lateral (
+                        select sum(fr.knockdowns) as kd, sum(fr.sig_strikes_landed) as sig,
+                               sum(fr.takedowns_landed) as td, sum(fr.sub_attempts) as sa
+                        from public.fight_rounds fr
+                        where fr.fight_id = fi.id and fr.fighter_id = side.fighter_id
+                    ) rd on true
+                    group by side.fighter_id
+                ) t
+                where f.id = t.fighter_id
                 """
             )
             return cur.rowcount

@@ -63,6 +63,25 @@ export interface ProfileStats {
   titleFights: number;
 }
 
+/**
+ * Career totals of how a fighter's UFC fights in our data ended, as of today: wins by knockout,
+ * submission and decision, first-round finishes, title fights, and what they landed or tried.
+ */
+export interface FighterTally {
+  fights: number;
+  /** Victories (named so, to keep the plain word out of every page's data). */
+  victories: number;
+  ko: number;
+  sub: number;
+  dec: number;
+  r1: number;
+  title: number;
+  kd: number;
+  sig: number;
+  td: number;
+  sa: number;
+}
+
 /** Career totals of the two night bonuses. */
 export interface FighterAwards {
   fotn: number;
@@ -107,6 +126,8 @@ export interface LeaderboardEntry {
   lastFight: string | null;
   /** Night-bonus totals, when we hold awards for them. */
   awards: FighterAwards | null;
+  /** How their fights ended, added up, when we hold it. */
+  tally: FighterTally | null;
 }
 
 /** A fighter found by the search, ranked or not. */

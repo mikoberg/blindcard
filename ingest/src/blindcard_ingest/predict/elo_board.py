@@ -226,4 +226,6 @@ def run_compute_elo(repo: Repository, *, dry_run: bool = False) -> list[EloRow]:
         repo.set_fight_elo(before)
         repo.set_upcoming_elo(upcoming)
         repo.set_fighters_now(now)
+        repo.refresh_fighter_tallies()
+        repo.refresh_fighter_awards()
     return rows

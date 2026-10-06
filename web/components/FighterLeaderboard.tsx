@@ -22,7 +22,11 @@ export function FighterLeaderboard({
   extra = null,
 }: {
   entries: readonly LeaderboardEntry[];
-  extra?: { label: string; value: (entry: LeaderboardEntry) => number | null } | null;
+  extra?: {
+    label: string;
+    value: (entry: LeaderboardEntry) => number | null;
+    format?: (value: number) => string;
+  } | null;
 }) {
   return (
     <div className="border-2 border-[var(--text)] bg-[var(--surface)]">
@@ -31,7 +35,7 @@ export function FighterLeaderboard({
         <span className="w-6 shrink-0" />
         <span className="flex-1">Fighter</span>
         <span className={FIGHTS_COL}>Rated fights</span>
-        {extra && <span className="w-16 shrink-0 text-right">{extra.label}</span>}
+        {extra && <span className="w-20 shrink-0 text-right">{extra.label}</span>}
         <span className="w-12 shrink-0 text-center">Rating</span>
       </ListHeader>
       <ol className="divide-y divide-[var(--border)]">
@@ -44,7 +48,11 @@ export function FighterLeaderboard({
               country={entry.country}
               fights={entry.fights}
               average={entry.average}
-              extra={extra ? { label: extra.label, value: extra.value(entry) } : undefined}
+              extra={
+                extra
+                  ? { label: extra.label, value: extra.value(entry), format: extra.format }
+                  : undefined
+              }
             />
           </li>
         ))}

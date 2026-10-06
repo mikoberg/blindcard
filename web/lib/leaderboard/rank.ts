@@ -5,6 +5,7 @@ import { profileStats } from "./profile";
 import type {
   FighterAwards,
   FighterFightRow,
+  FighterTally,
   FighterNowRow,
   ProfileStats,
   FighterProfile,
@@ -25,7 +26,7 @@ export const MIN_FIGHTS = 8;
  */
 export function rankFighters(
   rows: readonly FighterRatingRow[],
-  awards: ReadonlyMap<string, FighterAwards> = new Map(),
+  extras: ReadonlyMap<string, FighterExtras> = new Map(),
 ): LeaderboardEntry[] {
   return rows
     .map((row) => ({ row, average: Number(row.avg_stars), fights: row.rated_fights }))
@@ -49,7 +50,8 @@ export function rankFighters(
       fights: r.fights,
       average: r.average,
       lastFight: typeof r.row.last_fight === "string" ? r.row.last_fight : null,
-      awards: awards.get(r.row.slug) ?? null,
+      awards: extras.get(r.row.slug)?.awards ?? null,
+      tally: extras.get(r.row.slug)?.tally ?? null,
     }));
 }
 
@@ -69,6 +71,27 @@ export function toAwards(value: unknown): FighterAwards | null {
   const o = value as { fotn?: unknown; potn?: unknown };
   const whole = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
   return whole(o.fotn) && whole(o.potn) ? { fotn: o.fotn, potn: o.potn } : null;
+}
+
+const TALLY_KEYS = ["fights", "victories", "ko", "sub", "dec", "r1", "title", "kd", "sig", "td", "sa"] as const;
+
+/** The career totals, or null when the stored value does not have the expected shape. */
+export function toTally(value: unknown): FighterTally | null {
+  if (typeof value !== "object" || value === null) return null;
+  const o = value as Record<string, unknown>;
+  const out: Partial<FighterTally> = {};
+  for (const key of TALLY_KEYS) {
+    const n = o[key === "victories" ? "wins" : key];
+    if (typeof n !== "number" || !Number.isInteger(n) || n < 0) return null;
+    out[key] = n;
+  }
+  return out as FighterTally;
+}
+
+/** What the fighters list holds besides the rating of a fighter: night bonuses and the tally. */
+export interface FighterExtras {
+  awards: FighterAwards | null;
+  tally: FighterTally | null;
 }
 
 export function buildProfile(

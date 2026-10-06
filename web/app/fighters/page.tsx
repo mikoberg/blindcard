@@ -4,7 +4,7 @@ import { ActiveFighterBoard } from "@/components/ActiveFighterBoard";
 import { FighterTabs } from "@/components/FighterTabs";
 import { FighterSearch } from "@/components/FighterSearch";
 import { Notice } from "@/components/Notice";
-import { listFighterAwards, listFighterRatings } from "@/lib/data/leaderboard";
+import { listFighterExtras, listFighterRatings } from "@/lib/data/leaderboard";
 import { MIN_FIGHTS, rankFighters } from "@/lib/leaderboard/rank";
 
 export const revalidate = 300;
@@ -17,8 +17,8 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function FightersPage() {
-  const [ratings, awards] = await Promise.all([listFighterRatings(), listFighterAwards()]);
-  const ranked = rankFighters(ratings, awards);
+  const [ratings, extras] = await Promise.all([listFighterRatings(), listFighterExtras()]);
+  const ranked = rankFighters(ratings, extras);
   if (ranked.length === 0) return <Notice>No fighters to rank yet. Check back soon.</Notice>;
   return (
     <div className="space-y-6">
@@ -31,7 +31,7 @@ export default async function FightersPage() {
           Fighters worth watching
         </h1>
         <p className="mt-4 max-w-xl text-lg text-[var(--muted)]">
-          Fighters ranked by the average rating of their fights, or by their night bonuses. A fighter needs at least{" "}
+          Fighters ranked by the average rating of their fights, or by night bonuses, knockouts, submissions and more. A fighter needs at least{" "}
           {MIN_FIGHTS} rated fights to be listed, so one great fight is not enough.
         </p>
       </section>

@@ -1,31 +1,94 @@
 import type { LeaderboardEntry } from "./types";
 
 /** How the fighters list can be ordered. The default is the average rating (the list as it comes). */
-export type BoardOrder = "rating" | "potn" | "fotn" | "awards" | "fights";
+export type BoardOrder =
+  | "rating"
+  | "fights"
+  | "title"
+  | "potn"
+  | "fotn"
+  | "awards"
+  | "victories"
+  | "ko"
+  | "sub"
+  | "dec"
+  | "finishes"
+  | "finishRate"
+  | "r1"
+  | "kd"
+  | "sig"
+  | "td"
+  | "sa";
+
+export type BoardGroup = "Ratings" | "Night bonuses" | "How they win" | "In the cage";
 
 export interface BoardOrderOption {
   id: BoardOrder;
   label: string;
+  group: BoardGroup;
   /** What the order counts, shown as a column when it is not the rating (null: no extra column). */
   column: string | null;
   value: (entry: LeaderboardEntry) => number | null;
+  format: (value: number) => string;
+}
+
+/** A finish rate needs this many wins behind it, so two wins out of two is not a 100% fighter. */
+export const MIN_WINS_FOR_RATE = 5;
+
+const count = (n: number): string => String(Math.round(n));
+const percent = (n: number): string => `${Math.round(n)}%`;
+
+function option(
+  id: BoardOrder,
+  label: string,
+  group: BoardGroup,
+  column: string | null,
+  value: BoardOrderOption["value"],
+  format: BoardOrderOption["format"] = count,
+): BoardOrderOption {
+  return { id, label, group, column, value, format };
 }
 
 export const BOARD_ORDERS: readonly BoardOrderOption[] = [
-  { id: "rating", label: "Average rating", column: null, value: (e) => e.average },
-  { id: "potn", label: "Most Performance of the Night bonuses", column: "POTN", value: (e) => e.awards?.potn ?? null },
-  { id: "fotn", label: "Most Fight of the Night bonuses", column: "FOTN", value: (e) => e.awards?.fotn ?? null },
-  {
-    id: "awards",
-    label: "Most night bonuses in all",
-    column: "Bonuses",
-    value: (e) => (e.awards ? e.awards.fotn + e.awards.potn : null),
-  },
-  { id: "fights", label: "Most rated fights", column: "Fights", value: (e) => e.fights },
+  option("rating", "Average rating", "Ratings", null, (e) => e.average),
+  option("fights", "Most rated fights", "Ratings", "Fights", (e) => e.fights),
+  option("title", "Most title fights", "Ratings", "Title", (e) => e.tally?.title ?? null),
+
+  option("potn", "Most Performance of the Night bonuses", "Night bonuses", "POTN", (e) => e.awards?.potn ?? null),
+  option("fotn", "Most Fight of the Night bonuses", "Night bonuses", "FOTN", (e) => e.awards?.fotn ?? null),
+  option("awards", "Most night bonuses in all", "Night bonuses", "Bonuses", (e) =>
+    e.awards ? e.awards.fotn + e.awards.potn : null,
+  ),
+
+  option("victories", "Most UFC victories", "How they win", "Victories", (e) => e.tally?.victories ?? null),
+  option("ko", "Most knockouts", "How they win", "KOs", (e) => e.tally?.ko ?? null),
+  option("sub", "Most submissions", "How they win", "Subs", (e) => e.tally?.sub ?? null),
+  option("dec", "Most decisions", "How they win", "Dec.", (e) => e.tally?.dec ?? null),
+  option("finishes", "Most finishes (knockouts and submissions)", "How they win", "Finishes", (e) =>
+    e.tally ? e.tally.ko + e.tally.sub : null,
+  ),
+  option(
+    "finishRate",
+    `Highest finish rate (from ${MIN_WINS_FOR_RATE} victories)`,
+    "How they win",
+    "Finish rate",
+    (e) => (e.tally && e.tally.victories >= MIN_WINS_FOR_RATE
+        ? ((e.tally.ko + e.tally.sub) / e.tally.victories) * 100
+        : null),
+    percent,
+  ),
+  option("r1", "Most first-round finishes", "How they win", "Round 1", (e) => e.tally?.r1 ?? null),
+
+  option("kd", "Most knockdowns", "In the cage", "Knockdowns", (e) => e.tally?.kd ?? null),
+  option("sig", "Most significant strikes landed", "In the cage", "Strikes", (e) => e.tally?.sig ?? null),
+  option("td", "Most takedowns", "In the cage", "Takedowns", (e) => e.tally?.td ?? null),
+  option("sa", "Most submission attempts", "In the cage", "Sub. att.", (e) => e.tally?.sa ?? null),
 ];
 
+export const BOARD_GROUPS: readonly BoardGroup[] = ["Ratings", "Night bonuses", "How they win", "In the cage"];
+
 export function orderById(id: string): BoardOrderOption {
-  return BOARD_ORDERS.find((option) => option.id === id) ?? (BOARD_ORDERS[0] as BoardOrderOption);
+  return BOARD_ORDERS.find((o) => o.id === id) ?? (BOARD_ORDERS[0] as BoardOrderOption);
 }
 
 /**
@@ -35,9 +98,9 @@ export function orderById(id: string): BoardOrderOption {
  */
 export function orderEntries(entries: readonly LeaderboardEntry[], order: BoardOrder): LeaderboardEntry[] {
   if (order === "rating") return entries.map((entry, index) => ({ ...entry, rank: index + 1 }));
-  const option = orderById(order);
+  const chosen = orderById(order);
   return entries
-    .map((entry) => ({ entry, key: option.value(entry) }))
+    .map((entry) => ({ entry, key: chosen.value(entry) }))
     .sort((a, b) => {
       if (a.key === null && b.key !== null) return 1;
       if (a.key !== null && b.key === null) return -1;

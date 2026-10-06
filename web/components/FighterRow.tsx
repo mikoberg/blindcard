@@ -19,7 +19,7 @@ interface FighterRowProps {
   /** A short line under the name, e.g. why the fighter is not ranked. */
   note?: string;
   /** The number the list is ordered by, when that is not the rating (null value: not known). */
-  extra?: { label: string; value: number | null };
+  extra?: { label: string; value: number | null; format?: (value: number) => string };
 }
 
 /** One fighter: rank, flag, name, number of rated fights and the average rating. Opens their fights. */
@@ -40,10 +40,16 @@ export function FighterRow({ rank, slug, name, country, fights, average, note, e
       <span className={`${FIGHTS_COL} text-sm tabular-nums text-[var(--muted)]`}>{fights}</span>
       {extra && (
         <span
-          className="w-16 shrink-0 text-right text-lg font-extrabold tabular-nums"
-          aria-label={extra.value === null ? `${extra.label}: not known` : `${extra.label}: ${extra.value}`}
+          className="w-20 shrink-0 text-right text-lg font-extrabold tabular-nums"
+          aria-label={
+            extra.value === null
+              ? `${extra.label}: not known`
+              : `${extra.label}: ${extra.format ? extra.format(extra.value) : extra.value}`
+          }
         >
-          <span aria-hidden="true">{extra.value === null ? "–" : extra.value}</span>
+          <span aria-hidden="true">
+            {extra.value === null ? "–" : extra.format ? extra.format(extra.value) : extra.value}
+          </span>
         </span>
       )}
       <span
