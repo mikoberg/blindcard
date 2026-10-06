@@ -14,6 +14,12 @@ const CLIENT_SIDE = [
   "lib/judges/disputes.ts",
   "components/UpcomingPick.tsx",
   "lib/upcoming/pick.ts",
+  "components/FighterFights.tsx",
+  "lib/fighters/results.ts",
+  "components/EloBoard.tsx",
+  "components/EloHistory.tsx",
+  "lib/elo/board.ts",
+  "lib/elo/history.ts",
   "lib/reveal/client.ts",
   "lib/reveal/format.ts",
   "lib/reveal/response.ts",
@@ -24,6 +30,11 @@ const CLIENT_SIDE = [
 describe("the reveal vocabulary stays on the server", () => {
   it.each(CLIENT_SIDE)("%s does not import the label or breakdown modules", (path) => {
     expect(read(path)).not.toMatch(/from\s+["'](?:@\/lib\/reveal\/|\.\/)(?:featureLabels|breakdown|service)["']/);
+  });
+
+  it("the fighter results module is shipped to the browser, so it must not import its server-side mapping", () => {
+    expect(read("lib/fighters/results.ts")).not.toMatch(/from\s+["']\.\/map["']/);
+    expect(read("components/FighterFights.tsx")).not.toMatch(/fighters\/map["']/);
   });
 
   it("only the server-side breakdown names result-like features", () => {

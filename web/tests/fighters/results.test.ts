@@ -5,15 +5,13 @@ vi.mock("@/lib/reveal/service", () => ({ revealFighterResults }));
 
 import * as route from "@/app/api/fighters/[slug]/results/route";
 import { summarise } from "@/components/FighterFights";
+import { howDecided, rowToResult, rowsToResults } from "@/lib/fighters/map";
 import {
   FighterResultsParseError,
   FighterResultsRequestError,
   MAX_FIGHTER_RESULTS,
   fetchFighterResults,
-  howDecided,
   parseResults,
-  rowToResult,
-  rowsToResults,
 } from "@/lib/fighters/results";
 
 const ID = "0e55d8a3-d7a7-4391-8c3b-6a6e6d1d0b11";
@@ -65,6 +63,10 @@ describe("parseResults and fetchFighterResults", () => {
     expect(parseResults({ results: [result] })).toEqual([result]);
     expect(() => parseResults({ error: "not_found" })).toThrow(FighterResultsParseError);
     expect(() => parseResults({ results: [{ ...result, outcome: "x" }] })).toThrow(FighterResultsParseError);
+    expect(() => parseResults({ results: [{ ...result, how: "" }] })).toThrow(FighterResultsParseError);
+    expect(() => parseResults({ results: Array.from({ length: MAX_FIGHTER_RESULTS + 1 }, () => result) })).toThrow(
+      FighterResultsParseError,
+    );
   });
 
   it("asks with POST for one fighter, never cached, and refuses a bad slug before asking", async () => {

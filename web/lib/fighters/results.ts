@@ -3,21 +3,17 @@ import { isValidSlug } from "@/lib/slug";
 /**
  * How one of a fighter's fights ended. This is result data: it is only loaded after an explicit
  * click on the fighter page, through the reveal path (`fighter_results`), never during a render.
+ *
+ * This file is shipped to the browser, so it holds no method strings: the server turns the source's
+ * method into a few plain words (lib/fighters/map.ts) and the browser only checks and shows them.
  */
 export type FightOutcome = "win" | "loss" | "draw" | "no_contest";
 
 export interface FighterResult {
   fightId: string;
   outcome: FightOutcome;
-  /** How it was decided, in a few words: "Decision", "KO/TKO", "Submission", "DQ" or "Other". */
+  /** How it was decided, in a few words, as the server worded it. */
   how: string;
-}
-
-/** A row of `fighter_results`. */
-export interface FighterResultRow {
-  fight_id: unknown;
-  result: unknown;
-  method: unknown;
 }
 
 /** At most this many fights are ever served for one fighter (also enforced in the database). */
@@ -39,30 +35,15 @@ export class FighterResultsRequestError extends Error {
   }
 }
 
-/** The source's method string in a few plain words. Anything unseen is "Other", never guessed. */
-export function howDecided(method: unknown): string {
-  const text = typeof method === "string" ? method.trim().toUpperCase() : "";
-  if (text.startsWith("DECISION") || text.endsWith("-DEC") || text.includes("DEC")) return "Decision";
-  if (text.startsWith("KO") || text.includes("TKO") || text.includes("STOPPAGE")) return "KO/TKO";
-  if (text.startsWith("SUB")) return "Submission";
-  if (text === "DQ" || text.startsWith("DISQ")) return "DQ";
-  return "Other";
-}
-
-/** Maps one database row; anything unexpected is an error, never a guess. */
-export function rowToResult(row: FighterResultRow): FighterResult {
-  if (typeof row.fight_id !== "string" || !/^[0-9a-f-]{36}$/i.test(row.fight_id)) {
-    throw new FighterResultsParseError("fight_id");
+/** One result as the route sends it; anything unexpected is an error, never a guess. */
+export function checkResult(item: unknown): FighterResult {
+  const r = (item ?? {}) as Record<string, unknown>;
+  if (typeof r.fightId !== "string" || !/^[0-9a-f-]{36}$/i.test(r.fightId)) throw new FighterResultsParseError("fightId");
+  if (typeof r.outcome !== "string" || !(OUTCOMES as readonly string[]).includes(r.outcome)) {
+    throw new FighterResultsParseError("outcome");
   }
-  if (typeof row.result !== "string" || !(OUTCOMES as readonly string[]).includes(row.result)) {
-    throw new FighterResultsParseError("result");
-  }
-  return { fightId: row.fight_id, outcome: row.result as FightOutcome, how: howDecided(row.method) };
-}
-
-export function rowsToResults(rows: readonly FighterResultRow[]): FighterResult[] {
-  if (rows.length > MAX_FIGHTER_RESULTS) throw new FighterResultsParseError("too many rows");
-  return rows.map(rowToResult);
+  if (typeof r.how !== "string" || r.how.length === 0 || r.how.length > 24) throw new FighterResultsParseError("how");
+  return { fightId: r.fightId, outcome: r.outcome as FightOutcome, how: r.how };
 }
 
 /** Validates what the browser received: the results the route sends. Error bodies are rejected. */
@@ -70,13 +51,8 @@ export function parseResults(json: unknown): FighterResult[] {
   if (typeof json !== "object" || json === null) throw new FighterResultsParseError("not an object");
   const results = (json as Record<string, unknown>).results;
   if (!Array.isArray(results)) throw new FighterResultsParseError("results");
-  return rowsToResults(
-    results.map((item) => {
-      const r = (item ?? {}) as Record<string, unknown>;
-      // The route sends the mapped shape; the same checks as for a database row apply.
-      return { fight_id: r.fightId, result: r.outcome, method: r.how } as FighterResultRow;
-    }),
-  );
+  if (results.length > MAX_FIGHTER_RESULTS) throw new FighterResultsParseError("too many rows");
+  return results.map(checkResult);
 }
 
 /** Browser side: ask for one fighter's results. Never cached. */
