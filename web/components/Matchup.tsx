@@ -184,8 +184,8 @@ export function Matchup({
       <span className="my-1 flex items-center gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:my-0 sm:flex-col sm:gap-0.5 sm:self-center">
         <span className="h-px flex-1 bg-[var(--border)] sm:hidden" />
         {titleFight && (
-          <span className="hidden sm:mb-0.5 sm:inline-flex">
-            <TitleBelt className="h-6 w-[84px]" caption />
+          <span className="hidden sm:-mx-4 sm:mb-0.5 sm:inline-flex">
+            <TitleBelt className="h-8 w-[136px]" />
           </span>
         )}
         {(billing === 1 || billing === 2) && (

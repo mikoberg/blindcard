@@ -24,8 +24,8 @@ const LOOK: Record<FightTagKind, string> = {
 export function FightTag({ kind, children }: { kind: FightTagKind; children: ReactNode }) {
   if (kind === "title") {
     return (
-      <span className="inline-flex h-6 items-center">
-        <TitleBelt className="h-6 w-[84px]" />
+      <span className="inline-flex items-center">
+        <TitleBelt className="h-8 w-[136px]" />
       </span>
     );
   }

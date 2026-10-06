@@ -90,7 +90,7 @@ export function EventPoster({
       </div>
       {main?.title && (
         <span className="absolute right-4 top-4 sm:right-5 sm:top-5">
-          <TitleBelt className="h-8 w-28" caption />
+          <TitleBelt className="h-9 w-[153px]" />
         </span>
       )}
       <div

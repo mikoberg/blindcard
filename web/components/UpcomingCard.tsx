@@ -44,7 +44,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
     >
       {title && (
         <span className="absolute right-3 top-3">
-          <TitleBelt className="h-6 w-[84px]" />
+          <TitleBelt className="h-8 w-[136px]" />
         </span>
       )}
       <DateBlock isoDate={event.eventDate} />
