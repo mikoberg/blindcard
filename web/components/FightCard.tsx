@@ -51,7 +51,6 @@ export function FightCard({
   const pairing = pairingLabel(fight);
   const stars = fight.rating?.stars ?? null;
   const classic = isClassic(stars);
-  const hasTags = (showSegment && fight.cardSegment) || classic || fight.isTitleFight || isHiddenGem(fight) || pairing;
   // The left edge carries the tier: gold for a classic, red from 4, ink otherwise.
   const edge = classic ? "border-l-[var(--gold-mid)]" : stars !== null && stars >= 4 ? "border-l-[var(--accent)]" : "border-l-[var(--text)]";
   return (
@@ -73,7 +72,8 @@ export function FightCard({
               {fight.isTitleFight && <FightTag kind="title">Title fight</FightTag>}
               {isHiddenGem(fight) && <FightTag kind="gem">Hidden gem</FightTag>}
               {pairing && <FightTag kind="pairing">{pairing}</FightTag>}
-              <span className={`text-xs text-[var(--muted)] ${hasTags ? "ml-1" : ""}`}>{fightBlurb(fight)}</span>
+              {/* For screen readers only: the weight class, the title and the rounds are on the card already. */}
+              <span className="sr-only">{fightBlurb(fight)}</span>
             </div>
             <ShareFightButton fightId={fight.id} fighterA={fight.fighterA.name} fighterB={fight.fighterB.name} />
           </div>
