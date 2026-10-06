@@ -33,7 +33,9 @@ export function TitleBelt({
   const rim = { fill: "var(--gold-hi)" };
   return (
     <span className={`shrink-0 ${caption ? "inline-flex flex-col items-center gap-0.5" : "inline-flex"}`} title="Title fight">
-      {caption && <span className="text-[0.68rem] font-extrabold leading-none text-[var(--gold-text)]">Title fight</span>}
+      {caption && <span className="text-[0.7rem] font-extrabold leading-none text-[var(--gold-mid)] [-webkit-text-stroke:1.4px_var(--ink)] [paint-order:stroke_fill]">
+          Title fight
+        </span>}
       <svg viewBox="0 0 112 32" aria-hidden="true" className={className}>
         <rect x="0" y="9" width="112" height="14" rx="3" style={ink} />
         {[12.5, 19.5].flatMap((y) =>
