@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { isProvisional } from "@/lib/card/elo";
 import { recordParts } from "@/lib/card/record";
-import { formatMonthYear } from "@/lib/format";
 import { formatRating, isHighRating } from "@/lib/leaderboard/format";
 import { activeYears } from "@/lib/leaderboard/profile";
 import { MIN_FIGHTS } from "@/lib/leaderboard/rank";
 import type { FighterFight, FighterProfile } from "@/lib/leaderboard/types";
 import { barHeight } from "@/lib/overview/poster";
+import { FighterFights } from "./FighterFights";
 import { FlagChip } from "./FlagChip";
 
 /** One figure of the strip under the name: a number and what it is. */
@@ -158,82 +158,7 @@ export function FighterProfileView({ profile }: { profile: FighterProfile }) {
 
       {fights.length > 1 && <RatingStrip fights={fights} />}
 
-      <section aria-labelledby="fights">
-        <h2 id="fights" className="display text-xl sm:text-2xl">
-          Rated fights
-        </h2>
-        <div className="mt-3 border-2 border-[var(--text)] bg-[var(--surface)]">
-          <div
-            aria-hidden="true"
-            className="hidden items-center gap-3 border-b border-[var(--border)] px-4 py-2 text-xs font-semibold text-[var(--muted)] sm:flex"
-          >
-            <span className="w-16 shrink-0">Date</span>
-            <span className="min-w-0 flex-1">Opponent</span>
-            <span className="hidden min-w-0 flex-1 md:block">Event</span>
-            {showClass && <span className="hidden w-36 shrink-0 lg:block">Weight class</span>}
-            <span className="w-12 shrink-0 text-center">Rating</span>
-          </div>
-          <ul className="divide-y divide-[var(--border)]">
-            {fights.map((fight) => {
-              const eventHref = fight.fightId
-                ? `/events/${fight.eventSlug}#fight-${fight.fightId}`
-                : `/events/${fight.eventSlug}`;
-              return (
-                <li
-                  key={`${fight.eventSlug}-${fight.opponent}`}
-                  className="flex min-h-[3.25rem] items-center gap-3 px-3 py-2 sm:px-4"
-                >
-                  <span className="w-16 shrink-0 text-sm tabular-nums text-[var(--muted)]">
-                    {formatMonthYear(fight.eventDate)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block break-words font-extrabold leading-tight sm:text-lg">
-                      <span className="mr-1 text-sm font-bold text-[var(--accent-text)]">vs</span>
-                      {fight.opponentSlug ? (
-                        <Link
-                          href={`/fighters/${fight.opponentSlug}`}
-                          className="underline decoration-[var(--border)] decoration-2 underline-offset-[5px] hover:text-[var(--accent)] hover:decoration-[var(--accent)]"
-                        >
-                          {fight.opponent}
-                        </Link>
-                      ) : (
-                        fight.opponent
-                      )}
-                      {fight.isTitleFight && (
-                        <span className="ml-2 inline-block border-[1.5px] border-[var(--text)] bg-[var(--text)] px-1.5 py-px align-middle text-[0.7rem] font-bold leading-4 text-[var(--bg)]">
-                          Title
-                        </span>
-                      )}
-                    </span>
-                    <Link href={eventHref} className="block text-xs text-[var(--muted)] hover:text-[var(--accent)] md:hidden">
-                      {fight.eventName}
-                    </Link>
-                  </span>
-                  <Link
-                    href={eventHref}
-                    className="hidden min-w-0 flex-1 truncate text-sm text-[var(--muted)] hover:text-[var(--accent)] md:block"
-                    title={fight.eventName}
-                  >
-                    {fight.eventName}
-                  </Link>
-                  {showClass && (
-                    <span className="hidden w-36 shrink-0 truncate text-sm text-[var(--muted)] lg:block">
-                      {fight.weightClass ?? ""}
-                    </span>
-                  )}
-                  <span
-                    role="img"
-                    aria-label={`Rated ${formatRating(fight.stars)} out of 5`}
-                    className={`scorebox h-8 w-12 shrink-0 text-base ${isHighRating(fight.stars) ? "scorebox-hot" : ""}`}
-                  >
-                    <span aria-hidden="true">{formatRating(fight.stars)}</span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </section>
+      <FighterFights slug={profile.slug} name={profile.name} fights={fights} showClass={showClass} />
 
       <p className="max-w-2xl text-xs text-[var(--muted)]">
         The average is the total of these ratings divided by the number of fights

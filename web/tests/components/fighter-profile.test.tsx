@@ -103,12 +103,15 @@ describe("FighterProfileView", () => {
     expect(html).not.toContain("<img src=x");
   });
 
-  it("shows nothing of a result: no fight-by-fight record, no rating change, no outcome words", () => {
+  it("shows nothing of a result before the gate is opened, only the gate and its warning", () => {
     const html = renderToStaticMarkup(
       <FighterProfileView profile={profile({ record: { w: 24, l: 5, d: 0, nc: 0 }, elo: { rating: 1700, fights: 12 } })} />,
     );
     expect(html.match(/24-5/g)).toHaveLength(2); // the aria label and the visible figure, once
-    expect(html).not.toMatch(/\bwon\b|\blost\b|KO\/TKO|Submission|Decision|→/i);
+    expect(html).toContain("Show who they beat and lost to (spoilers)");
+    expect(html).toContain("Spoilers: shows how every fight below ended");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toMatch(/KO\/TKO|Submission|Decision|Won \d|aria-label="(Won|Lost)|→/);
   });
 });
 

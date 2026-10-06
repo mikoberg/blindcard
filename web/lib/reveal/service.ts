@@ -3,6 +3,7 @@ import { getSupabase } from "@/lib/supabase/server";
 import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
 import { ELO_ROWS_SHOWN, rowsToEntries, type EloEntry, type EloRow } from "@/lib/elo/board";
 import { rowsToSteps, type EloStepRow, type EloStepView } from "@/lib/elo/history";
+import { rowsToResults, type FighterResult, type FighterResultRow } from "@/lib/fighters/results";
 import { rowToPick, type PickRow, type UpcomingPick } from "@/lib/upcoming/pick";
 import { RevealUnavailableError } from "./errors";
 import { buildScoreBreakdown } from "./breakdown";
@@ -80,4 +81,16 @@ export async function revealEloHistory(slug: string): Promise<EloStepView[]> {
   if (error) throw new RevealUnavailableError(error.code ?? "unknown");
   if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
   return rowsToSteps(data as EloStepRow[]);
+}
+
+/**
+ * How every fight of one fighter ended, newest first. Result data like `reveal_fight`: only called
+ * from a POST route after a click on the fighter page, one fighter per call, and the database
+ * function (not this code) enforces the row limit.
+ */
+export async function revealFighterResults(slug: string): Promise<FighterResult[]> {
+  const { data, error } = await getSupabase().rpc("fighter_results", { p_slug: slug });
+  if (error) throw new RevealUnavailableError(error.code ?? "unknown");
+  if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
+  return rowsToResults(data as FighterResultRow[]);
 }

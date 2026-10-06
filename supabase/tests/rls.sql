@@ -561,6 +561,28 @@ begin
 end $$;
 reset role;
 
+-- Who a fighter beat and lost to: result data behind one narrow function, one fighter per call.
+set local role anon;
+do $$
+declare
+  r record;
+  n integer;
+begin
+  select * into r from public.fighter_results('fighter-a');
+  if r.result <> 'loss' then raise exception 'FAIL: fighter A lost the seeded fight, got %', r.result; end if;
+  select * into r from public.fighter_results('fighter-b');
+  if r.result <> 'win' or r.method <> 'KO/TKO' then raise exception 'FAIL: fighter B won by KO/TKO, got % / %', r.result, r.method; end if;
+  select count(*) into n from public.fighter_results('nobody');
+  if n <> 0 then raise exception 'FAIL: fighter_results answered for an unknown slug'; end if;
+  begin
+    perform count(*) from public.fight_results;
+    raise exception 'FAIL: anon could read fight_results';
+  exception when insufficient_privilege then
+    raise notice 'PASS fighter_results serves one fighter; the table stays closed';
+  end;
+end $$;
+reset role;
+
 -- The calculation behind a rating: private table, one narrow function, newest fight first.
 insert into public.fighter_elo_steps (fighter_id, seq, fight_id, fight_date, opponent_id, score, how,
   rating_before, opponent_rating, expected, k, change, rating_after) values
