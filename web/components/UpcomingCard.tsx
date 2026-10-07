@@ -7,7 +7,6 @@ import { countdownLabel, daysUntil } from "@/lib/upcoming/when";
 import { startTimes } from "@/lib/upcoming/time";
 import { PlaceChip } from "./PlaceChip";
 import { StartTimes } from "./StartTimes";
-import { TitleBelt } from "./TitleBelt";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 
@@ -35,25 +34,22 @@ export function DateBlock({ isoDate }: { isoDate: string }) {
 export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Date }) {
   const names = headliners(event);
   const days = daysUntil(event.eventDate, today);
-  const title = event.bouts.some((b) => b.position <= 2 && b.isTitleFight);
+  const title = event.bouts[0]?.isTitleFight === true;
   const watch = lookOutFor(event.bouts);
   return (
     <Link
       href={`/upcoming/${event.slug}`}
-      className="slip group relative flex h-full gap-3 border-2 border-[var(--text)] bg-[var(--surface)] p-3"
+      className="slip group flex h-full gap-3 border-2 border-[var(--text)] bg-[var(--surface)] p-3"
     >
-      {title && (
-        <span className="absolute right-3 top-3">
-          <TitleBelt className="h-8 w-[136px]" />
-        </span>
-      )}
       <DateBlock isoDate={event.eventDate} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-extrabold text-[var(--muted)]">{eventLabel(event.name)}</p>
         <h3 className="display-tight break-words text-lg leading-tight group-hover:text-[var(--accent)] sm:text-xl">
           {names ? (
             <>
-              {names[0]} <span className="text-base font-bold text-[var(--accent-text)]">vs</span> {names[1]}
+              <span className={title ? "foil-text" : undefined}>{names[0]}</span>{" "}
+              <span className="text-base font-bold text-[var(--accent-text)]">vs</span>{" "}
+              <span className={title ? "foil-text" : undefined}>{names[1]}</span>
             </>
           ) : (
             event.name
@@ -61,6 +57,7 @@ export function UpcomingCard({ event, today }: { event: UpcomingEvent; today: Da
         </h3>
         <p className="sr-only">
           {event.name}, {formatEventDate(event.eventDate)}
+          {title ? ". Title fight." : ""}
         </p>
         <PlaceChip location={event.location} detail={event.location} />
         <StartTimes times={startTimes(event)} variant="tile" />

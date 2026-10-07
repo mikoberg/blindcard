@@ -150,6 +150,7 @@ function About() {
 /** An event that has not happened yet: when and where, then the announced bouts. */
 export function UpcomingView({ event, today }: { event: UpcomingEvent; today: Date }) {
   const names = headliners(event);
+  const titleMain = event.bouts[0]?.isTitleFight === true;
   const days = daysUntil(event.eventDate, today);
   const parts = groups(event.bouts);
   const hasExpectations = event.bouts.some((b) => b.prediction !== null);
@@ -159,7 +160,15 @@ export function UpcomingView({ event, today }: { event: UpcomingEvent; today: Da
         <p className="display-tight text-lg text-[var(--muted)]">{eventLabel(event.name)}</p>
         <div className="flex items-start justify-between gap-4">
           <h1 className="display mt-1 min-w-0 break-words text-4xl leading-[0.95] sm:text-5xl">
-            {names ? `${names[0]} vs ${names[1]}` : event.name}
+            {names ? (
+              <>
+                <span className={titleMain ? "foil-text" : undefined}>{names[0]}</span>{" "}
+                <span className="text-[var(--accent)]">vs</span>{" "}
+                <span className={titleMain ? "foil-text" : undefined}>{names[1]}</span>
+              </>
+            ) : (
+              event.name
+            )}
           </h1>
         </div>
         <div className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-3">
