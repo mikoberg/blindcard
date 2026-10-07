@@ -33,6 +33,14 @@ export interface EloRow {
   peak_date: unknown;
 }
 
+/** Which fighters the board lists: fought in the last two years, did not, or everyone on the board. */
+export type EloStatus = "active" | "inactive" | "all";
+export const ELO_STATUSES: readonly EloStatus[] = ["active", "inactive", "all"];
+
+export function isEloStatus(value: unknown): value is EloStatus {
+  return typeof value === "string" && (ELO_STATUSES as readonly string[]).includes(value);
+}
+
 /** At most this many rows are ever served (also enforced in the database). */
 export const MAX_ELO_ROWS = 100;
 /** How many the page asks for. */
@@ -110,8 +118,16 @@ export function parseBoard(json: unknown): EloEntry[] {
 }
 
 /** Browser side: ask for the board. Never cached. */
-export async function fetchEloBoard(fetchImpl: typeof fetch = fetch): Promise<EloEntry[]> {
-  const response = await fetchImpl("/api/elo", { method: "POST", cache: "no-store" });
+export async function fetchEloBoard(
+  status: EloStatus = "active",
+  fetchImpl: typeof fetch = fetch,
+): Promise<EloEntry[]> {
+  const response = await fetchImpl("/api/elo", {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
   if (!response.ok) throw new EloRequestError(response.status);
   return parseBoard(await response.json());
 }

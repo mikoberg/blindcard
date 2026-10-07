@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { fetchEloBoard, type EloEntry } from "@/lib/elo/board";
+import { ELO_STATUSES, fetchEloBoard, type EloEntry, type EloStatus } from "@/lib/elo/board";
 import { formatMonthYear } from "@/lib/format";
 import { EloHistory } from "./EloHistory";
 import { FlagChip } from "./FlagChip";
@@ -25,30 +25,61 @@ function lastFought(iso: string): string {
  * The Elo leaderboard. It is built from who beat whom, so it is never part of the page render: the
  * browser asks for it (a POST, never cached) as soon as the page has opened.
  */
+const STATUS_LABEL: Record<EloStatus, string> = { active: "Active", inactive: "Inactive", all: "All" };
+const STATUS_NOTE: Record<EloStatus, string> = {
+  active: "Fighters who fought in the last two years.",
+  inactive: "Fighters on the list who have not fought for two years or more.",
+  all: "Everyone on the list, active or not.",
+};
+
 export function EloBoard() {
   const [state, setState] = useState<State>({ status: "loading" });
+  const [which, setWhich] = useState<EloStatus>("active");
   const panelId = useId();
   const [openSlug, setOpenSlug] = useState<string | null>(null);
 
+  function choose(next: EloStatus) {
+    if (next === which) return;
+    setOpenSlug(null);
+    setState({ status: "loading" });
+    setWhich(next);
+  }
+
   function load() {
     setState({ status: "loading" });
-    fetchEloBoard()
+    fetchEloBoard(which)
       .then((board) => setState({ status: "shown", board }))
       .catch(() => setState({ status: "error" }));
   }
 
   useEffect(() => {
     let live = true;
-    fetchEloBoard()
+    fetchEloBoard(which)
       .then((board) => live && setState({ status: "shown", board }))
       .catch(() => live && setState({ status: "error" }));
     return () => {
       live = false;
     };
-  }, []);
+  }, [which]);
 
   return (
-    <div>
+    <div className="space-y-4">
+      <div role="group" aria-label="Which fighters" className="inline-flex border-2 border-[var(--text)]">
+        {ELO_STATUSES.map((status) => (
+          <button
+            key={status}
+            type="button"
+            aria-pressed={which === status}
+            onClick={() => choose(status)}
+            className={`inline-flex min-h-11 items-center px-4 text-sm font-bold ${
+              which === status ? "bg-[var(--text)] text-[var(--bg)]" : "text-[var(--text)] hover:bg-[var(--surface-2)]"
+            }`}
+          >
+            {STATUS_LABEL[status]}
+          </button>
+        ))}
+      </div>
+      <p className="text-sm text-[var(--muted)]">{STATUS_NOTE[which]}</p>
       <div id={panelId} aria-live="polite">
         {state.status === "loading" && <p className="text-[var(--muted)]">Loading the list…</p>}
         {state.status === "error" && (

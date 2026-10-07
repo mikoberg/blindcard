@@ -83,6 +83,9 @@ class Ledger:
     #: How many rated fights each fighter has (no contests do not count).
     counts: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     steps: list[EloStep] = field(default_factory=list)
+    #: The date of each fighter's latest fight of any kind: a no contest moves no rating, but the
+    #: fighter did fight, so it counts for whether they are still active.
+    last_fought: dict[str, dt.date] = field(default_factory=dict)
     #: fight id -> the two fighters' Elo going into it (None: no earlier fight).
     before: dict[str, tuple[EloBefore | None, EloBefore | None]] = field(default_factory=dict)
 
@@ -104,6 +107,7 @@ def build_ledger(fights: list[EloFight]) -> Ledger:
                 EloBefore(round(ra, 1), count[a]) if count[a] > 0 else None,
                 EloBefore(round(rb, 1), count[b]) if count[b] > 0 else None,
             )
+            ledger.last_fought[a] = ledger.last_fought[b] = fight.event_date
             if fight.outcome == "none":
                 continue
             score_a = score_of(fight)
@@ -201,7 +205,7 @@ def build_board(
             fighter_id=fighter,
             rating=round(rating, 1),
             fights=last[fighter].seq,
-            last_fight=last[fighter].fight_date,
+            last_fight=ledger.last_fought.get(fighter, last[fighter].fight_date),
             peak=best[fighter].rating_after,
             peak_date=best[fighter].fight_date,
         )

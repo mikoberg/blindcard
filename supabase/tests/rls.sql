@@ -558,6 +558,17 @@ begin
   select count(*) into n from public.elo_leaderboard(0);
   if n <> 1 then raise exception 'FAIL: elo_leaderboard(0) should still answer with one row at most, got %', n; end if;
   raise notice 'PASS elo_leaderboard lists active fighters only, ranked, capped';
+  select count(*) into n from public.elo_leaderboard(1000, 'inactive');
+  if n <> 1 then raise exception 'FAIL: elo_leaderboard inactive should list the one inactive fighter, got %', n; end if;
+  select * into r from public.elo_leaderboard(1000, 'inactive');
+  if r.rank <> 1 or r.name <> 'Fighter B' then raise exception 'FAIL: elo_leaderboard inactive returned the wrong row'; end if;
+  select count(*) into n from public.elo_leaderboard(1000, 'all');
+  if n <> 2 then raise exception 'FAIL: elo_leaderboard all should list both fighters, got %', n; end if;
+  select count(*) into n from public.elo_leaderboard(1, 'all');
+  if n <> 1 then raise exception 'FAIL: elo_leaderboard(1, all) should be capped at one row, got %', n; end if;
+  select count(*) into n from public.elo_leaderboard(1000, 'nonsense');
+  if n <> 0 then raise exception 'FAIL: an unknown status should list nobody, got %', n; end if;
+  raise notice 'PASS elo_leaderboard filters active, inactive and all';
 end $$;
 reset role;
 

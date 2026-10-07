@@ -81,10 +81,17 @@ describe("parseBoard and fetchEloBoard", () => {
 
   it("asks with POST, never cached, and fails on a bad status", async () => {
     const ok = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ board: [rowToEntry(row)] }) });
-    expect(await fetchEloBoard(ok as unknown as typeof fetch)).toHaveLength(1);
-    expect(ok).toHaveBeenCalledWith("/api/elo", { method: "POST", cache: "no-store" });
+    expect(await fetchEloBoard("active", ok as unknown as typeof fetch)).toHaveLength(1);
+    expect(ok).toHaveBeenCalledWith("/api/elo", {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "active" }),
+    });
+    await fetchEloBoard("inactive", ok as unknown as typeof fetch);
+    expect(ok).toHaveBeenLastCalledWith("/api/elo", expect.objectContaining({ body: JSON.stringify({ status: "inactive" }) }));
     const bad = vi.fn().mockResolvedValue({ ok: false, status: 503 });
-    await expect(fetchEloBoard(bad as unknown as typeof fetch)).rejects.toBeInstanceOf(EloRequestError);
+    await expect(fetchEloBoard("active", bad as unknown as typeof fetch)).rejects.toBeInstanceOf(EloRequestError);
   });
 });
 
@@ -102,6 +109,26 @@ describe("POST /api/elo", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect((await response.json()).board).toHaveLength(1);
+  });
+
+  it("passes on which fighters were asked for, active by default, and refuses anything else", async () => {
+    revealEloBoard.mockResolvedValue([rowToEntry(row)]);
+    const post = (body: unknown) =>
+      route.POST(new Request("http://localhost/api/elo", { method: "POST", body: JSON.stringify(body) }));
+    await post({});
+    expect(revealEloBoard).toHaveBeenLastCalledWith("active");
+    await post({ status: "inactive" });
+    expect(revealEloBoard).toHaveBeenLastCalledWith("inactive");
+    await post({ status: "all" });
+    expect(revealEloBoard).toHaveBeenLastCalledWith("all");
+    revealEloBoard.mockClear();
+    expect((await post({ status: "retired" })).status).toBe(400);
+    expect((await post({ status: 5 })).status).toBe(400);
+    expect(revealEloBoard).not.toHaveBeenCalled();
+    // no body at all (an old client) still gets the active list
+    const bare = await route.POST(new Request("http://localhost/api/elo", { method: "POST" }));
+    expect(bare.status).toBe(200);
+    expect(revealEloBoard).toHaveBeenLastCalledWith("active");
   });
 
   it("answers a generic 503 without details", async () => {
@@ -127,6 +154,8 @@ describe("the Elo page as first rendered", () => {
   it("holds no fighter and no rating: the list is fetched by the browser, never rendered with the page", () => {
     const html = renderToStaticMarkup(<EloBoard />);
     expect(html).toContain("Loading the list");
+    expect(html).toContain("Active");
+    expect(html).toContain("Inactive");
     expect(html).not.toContain("<li");
     expect(html).not.toMatch(/Spoilers ahead|Unlock/);
   });

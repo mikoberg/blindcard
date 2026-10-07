@@ -1,7 +1,7 @@
 import "server-only"; // a client component that imports this fails the build
 import { getSupabase } from "@/lib/supabase/server";
 import { rowsToCards, type DisputedCard, type DisputeRow, MAX_DISPUTES } from "@/lib/judges/disputes";
-import { ELO_ROWS_SHOWN, rowsToEntries, type EloEntry, type EloRow } from "@/lib/elo/board";
+import { ELO_ROWS_SHOWN, rowsToEntries, type EloEntry, type EloRow, type EloStatus } from "@/lib/elo/board";
 import { rowsToSteps, type EloStepRow, type EloStepView } from "@/lib/elo/history";
 import { rowsToOthers, rowsToResults, type FighterResultRow, type OtherBoutRow } from "@/lib/fighters/map";
 import type { FighterCareer } from "@/lib/fighters/results";
@@ -65,8 +65,8 @@ export async function revealUpcomingPick(boutId: string): Promise<UpcomingPick |
  * `reveal_fight` it is only called from a POST route after an explicit click on the spoiler page,
  * and the database function (not this code) enforces the row limit and the active-fighter rule.
  */
-export async function revealEloBoard(): Promise<EloEntry[]> {
-  const { data, error } = await getSupabase().rpc("elo_leaderboard", { p_limit: ELO_ROWS_SHOWN });
+export async function revealEloBoard(status: EloStatus = "active"): Promise<EloEntry[]> {
+  const { data, error } = await getSupabase().rpc("elo_leaderboard", { p_limit: ELO_ROWS_SHOWN, p_status: status });
   if (error) throw new RevealUnavailableError(error.code ?? "unknown");
   if (!Array.isArray(data)) throw new RevealUnavailableError("bad_shape");
   return rowsToEntries(data as EloRow[]);

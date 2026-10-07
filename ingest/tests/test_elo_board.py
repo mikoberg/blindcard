@@ -127,6 +127,15 @@ def test_last_fight_is_the_date_of_their_latest_fight() -> None:
     assert rows[0].last_fight == dt.date(2020, 1, 1) + dt.timedelta(days=30 * (MIN_FIGHTS - 1))
 
 
+def test_a_no_contest_as_the_latest_fight_still_counts_as_their_last_fight() -> None:
+    games = wins("champ", "x", MIN_FIGHTS) + [fight(MIN_FIGHTS + 5, "champ", "y", outcome="none")]
+    rows, steps = build_board(games)
+    # the no contest moved nothing: eight rated fights, and no step for it ...
+    assert rows[0].fights == MIN_FIGHTS and len(steps) == MIN_FIGHTS
+    # ... but the fighter did fight that night, so that is when they were last active
+    assert rows[0].last_fight == dt.date(2020, 1, 1) + dt.timedelta(days=30 * (MIN_FIGHTS + 5))
+
+
 def test_run_stores_board_and_steps_and_a_dry_run_stores_nothing() -> None:
     repo = FakeRepository()
     repo.elo_fight_rows = wins("champ", "x", MIN_FIGHTS)
