@@ -173,6 +173,15 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* A title fight: the two names are gold foil, light at the top of each name and deeper below it. */
+.poster-gold > span:not(.poster-vs) {
+  color: var(--gold-lo);
+  background-image: linear-gradient(180deg, #f8cf57 0%, #e5a617 42%, var(--gold-lo) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .poster-vs {
   font-size: 0.5em;
   font-stretch: 100%;

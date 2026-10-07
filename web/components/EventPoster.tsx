@@ -2,7 +2,6 @@ import { eventLabel, labelFontSize, matchupFontSize, posterNames } from "@/lib/o
 import { barHeight } from "@/lib/overview/poster";
 import { stripLabel } from "@/lib/overview/summary";
 import type { EventSummary } from "@/lib/overview/types";
-import { TitleBelt } from "./TitleBelt";
 
 type Size = "sm" | "md" | "lg";
 
@@ -76,7 +75,11 @@ export function EventPoster({
         )}
         {header}
         {main ? (
-          <div className="poster-type" style={{ fontSize: `${fontSize}cqw` }} aria-hidden="true">
+          <div
+            className={`poster-type${main.title ? " poster-gold" : ""}`}
+            style={{ fontSize: `${fontSize}cqw` }}
+            aria-hidden="true"
+          >
             <span className="block">{names[0]}</span>
             <span className="poster-vs block">vs</span>
             <span className="block">{names[1]}</span>
@@ -88,11 +91,7 @@ export function EventPoster({
         ) : null}
         {footer}
       </div>
-      {main?.title && (
-        <span className="absolute right-4 top-4 sm:right-5 sm:top-5">
-          <TitleBelt className="h-9 w-[153px]" />
-        </span>
-      )}
+      {main?.title && !decorative && <p className="sr-only">Title fight</p>}
       <div
         role={decorative ? undefined : "img"}
         aria-label={decorative ? undefined : stripLabel(event)}
