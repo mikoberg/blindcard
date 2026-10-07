@@ -334,6 +334,19 @@ def career_bouts(
     ]
 
 
+def record_before_date(
+    rows: list[RecordRow], event_date: dt.date, *, tolerance_days: int = 1
+) -> Record | None:
+    """The record after the latest row dated before `event_date`, for a page that is demonstrably
+    the fighter's (another of their bouts matched) but where this one bout does not match by
+    opponent: the table may not be written up to it yet, or spell the opponent differently. Rows
+    within `tolerance_days` of the date are the bout itself and are not counted."""
+    earlier = [row for row in rows if (event_date - row.date).days > tolerance_days]
+    if not earlier:
+        return None  # never a 0-0 on the strength of a page that may start late
+    return max(earlier, key=lambda row: row.date).after
+
+
 def record_before(
     rows: list[RecordRow], event_date: dt.date, opponent: str, *, tolerance_days: int = 1
 ) -> Record | None:

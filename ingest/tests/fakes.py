@@ -288,6 +288,15 @@ class FakeRepository:
         self.countries.update(countries)
         return changed
 
+    chain_fights: list = field(default_factory=list)
+    outside_dates: dict = field(default_factory=dict)
+
+    def fights_for_chain(self, source: str):  # type: ignore[no-untyped-def]
+        return list(self.chain_fights)
+
+    def outside_bout_dates(self, source: str):  # type: ignore[no-untyped-def]
+        return dict(self.outside_dates)
+
     def set_fight_records(self, source: str, records: Mapping[str, Mapping[str, Any]]) -> int:
         changed = 0
         for key, payload in records.items():

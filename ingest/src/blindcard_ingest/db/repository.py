@@ -39,6 +39,7 @@ from blindcard_ingest.predict.types import (
     UpcomingPrediction,
 )
 from blindcard_ingest.predict.winner import dominance_of
+from blindcard_ingest.records_chain import ChainFight
 from blindcard_ingest.scoring.career import HistoryBout, career_contexts, career_json
 from blindcard_ingest.scoring.config import ScoringConfig
 from blindcard_ingest.scoring.features import (
@@ -101,6 +102,17 @@ def _decision_label(method: str | None) -> str:
     if kind is MethodKind.DISQUALIFICATION:
         return "disqualification"
     return "unanimous decision" if kind is MethodKind.DECISION_UNANIMOUS else "other"
+
+
+def _chain_outcome(outcome: str | None, winner: str | None) -> str | None:
+    """How a fight ended, for working out records: a win only with a known winner."""
+    if outcome in ("win", "dq"):
+        return "win" if winner in ("a", "b") else None
+    if outcome == "draw":
+        return "draw"
+    if outcome == "no_contest":
+        return "no_contest"
+    return None
 
 
 def _elo_outcome(outcome: str | None, has_winner: bool) -> str:
@@ -238,6 +250,15 @@ class Repository(Protocol):
 
     def fights_with_sides(self, source: str, from_year: int) -> list[FightSides]:
         """Stored fights from `from_year` on, with both fighters' ids and names."""
+        ...
+
+    def fights_for_chain(self, source: str) -> list[ChainFight]:
+        """Every stored fight with the records stored now and how it ended (RESULT DATA: only used
+        to work out a missing going-in record, see records_chain)."""
+        ...
+
+    def outside_bout_dates(self, source: str) -> dict[str, list[date]]:
+        """Per fighter source id, the dates of the career bouts that are not in our own data."""
         ...
 
     def set_fighter_countries(self, source: str, countries: Mapping[str, str]) -> int:
@@ -876,6 +897,48 @@ class PostgresRepository:
             )
             for row in rows
         ]
+
+    def fights_for_chain(self, source: str) -> list[ChainFight]:
+        query = """
+            select f.source_id as fight_source_id, e.event_date, f.records,
+                   a.source_id as a_id, b.source_id as b_id, r.outcome,
+                   case when r.winner_fighter_id = f.fighter_a_id then 'a'
+                        when r.winner_fighter_id = f.fighter_b_id then 'b' end as winner
+            from public.fights f
+            join public.events e on e.id = f.event_id
+            join public.fighters a on a.id = f.fighter_a_id
+            join public.fighters b on b.id = f.fighter_b_id
+            left join public.fight_results r on r.fight_id = f.id
+            where f.source = %s
+        """
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (source,))
+            rows = cur.fetchall()
+        return [
+            ChainFight(
+                fight_source_id=row["fight_source_id"],
+                event_date=row["event_date"],
+                a_source_id=row["a_id"],
+                b_source_id=row["b_id"],
+                stored_records=row["records"],
+                outcome=_chain_outcome(row["outcome"], row["winner"]),
+                winner=row["winner"],
+            )
+            for row in rows
+        ]
+
+    def outside_bout_dates(self, source: str) -> dict[str, list[date]]:
+        query = """
+            select f.source_id, b.bout_date
+            from public.fighter_bouts b join public.fighters f on f.id = b.fighter_id
+            where f.source = %s
+        """
+        found: dict[str, list[date]] = {}
+        with sanitized_db_errors(), self._conn.transaction(), self._conn.cursor() as cur:
+            cur.execute(query, (source,))
+            for row in cur.fetchall():
+                found.setdefault(row["source_id"], []).append(row["bout_date"])
+        return found
 
     def set_fighter_countries(self, source: str, countries: Mapping[str, str]) -> int:
         changed = 0

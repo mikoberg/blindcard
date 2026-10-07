@@ -19,7 +19,16 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from blindcard_ingest.db.repository import FightSides, Repository
-from blindcard_ingest.sources.sherdog import SherdogPage, career_rows, record_before_bout
+from blindcard_ingest.records_chain import chain_records
+from blindcard_ingest.sources.sherdog import (
+    SherdogPage,
+    career_rows,
+    fought_on,
+    record_before_bout,
+)
+from blindcard_ingest.sources.sherdog import (
+    record_before_date as sherdog_record_before_date,
+)
 from blindcard_ingest.sources.wikipedia.countries import country_code
 from blindcard_ingest.sources.wikipedia.fighter_birth import parse_birth_date
 from blindcard_ingest.sources.wikipedia.fighter_record import (
@@ -28,6 +37,7 @@ from blindcard_ingest.sources.wikipedia.fighter_record import (
     career_bouts,
     parse_record_rows,
     record_before,
+    record_before_date,
 )
 from blindcard_ingest.sources.wikipedia.fighter_style import parse_styles
 
@@ -135,9 +145,17 @@ def run_ingest_fighters(
 
     def take(fighter: str, text: str) -> bool:
         """Use `text` for `fighter` if it demonstrably is their page."""
-        found = _records_for(parse_record_rows(text), appearances[fighter])
+        rows = parse_record_rows(text)
+        found = _records_for(rows, appearances[fighter])
         if not found:
             return False  # a page, but not (demonstrably) this fighter's
+        # The page is theirs. A bout that did not match by opponent still has a record: that of
+        # everything dated before it (the table may not be written up to it yet).
+        for appearance in appearances[fighter]:
+            if appearance.fight_source_id not in found:
+                earlier = record_before_date(rows, appearance.event_date)
+                if earlier is not None:
+                    found[appearance.fight_source_id] = (appearance.side, earlier)
         pending.discard(fighter)
         report.fighters_resolved += 1
         code = country_code(text)
@@ -190,7 +208,21 @@ def run_ingest_fighters(
             for page in sherdog.pages_for(names[fighter]):
                 found = _sherdog_records(page, appearances[fighter])
                 if not found:
+                    # Same name, same night, other opponent listed (a late replacement).
+                    found = {
+                        a.fight_source_id: (a.side, rec)
+                        for a in appearances[fighter]
+                        if fought_on(page, names[fighter], a.event_date)
+                        and (rec := sherdog_record_before_date(page.bouts, a.event_date))
+                        is not None
+                    }
+                if not found:
                     continue
+                for appearance in appearances[fighter]:
+                    if appearance.fight_source_id not in found:
+                        earlier = sherdog_record_before_date(page.bouts, appearance.event_date)
+                        if earlier is not None:
+                            found[appearance.fight_source_id] = (appearance.side, earlier)
                 pending.discard(fighter)
                 report.fighters_resolved += 1
                 report.fighters_via_sherdog += 1
@@ -226,10 +258,17 @@ def run_ingest_fighters(
         changed_styles = repo.set_fighter_styles(source_name, styles)
         stored_bouts = repo.set_fighter_bouts(source_name, careers)
         repo.set_fighter_birth_dates(source_name, births)
+        # What no page gave: a record that follows from the fighter's neighbouring fights.
+        chained = chain_records(
+            repo.fights_for_chain(source_name), repo.outside_bout_dates(source_name)
+        )
+        changed_chain = repo.set_fight_records(source_name, chained)
         logger.info(
-            "ingest-fighters: %d countries, %d fights' records, %d styles, %d other bouts changed",
+            "ingest-fighters: %d countries, %d fights' records (%d from neighbouring fights),"
+            " %d styles, %d other bouts changed",
             changed_countries,
             changed_records,
+            changed_chain,
             changed_styles,
             stored_bouts,
         )

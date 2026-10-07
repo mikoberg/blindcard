@@ -100,12 +100,22 @@ def _same_person_name(candidate: str, name: str) -> bool:
     return len(ours) >= 2 and len(theirs) >= 2 and (ours <= theirs or theirs <= ours)
 
 
-def parse_search(html: str, name: str) -> list[str]:
-    """Fighter page paths in a search result whose name is `name` (strictly the same name)."""
+def parse_search(html: str, name: str, *, one_word_in_full_name: bool = False) -> list[str]:
+    """Fighter page paths in a search result whose name is `name` (strictly the same name).
+
+    With `one_word_in_full_name`, a fighter listed by a single name ("Maheshate") also matches the
+    pages whose longer name holds that word ("Bolatihan Maheshate"). That is only a candidate: the
+    page is used once one of its bouts matches a stored bout by date and opponent."""
     found: list[str] = []
+    single = one_word_in_full_name and len(_tokens(name)) == 1
     for match in re.finditer(r'href="(/fighter/([^"/]+?)-(\d+))"', html):
         path, slug = match.group(1), match.group(2)
-        if path not in found and _same_person_name(slug.replace("-", " "), name):
+        words = slug.replace("-", " ")
+        if path in found:
+            continue
+        if _same_person_name(words, name) or (
+            single and len(_tokens(words)) >= 2 and _tokens(name)[0] in _tokens(words)
+        ):
             found.append(path)
     # The closest names first: the page limit then cuts the loosest matches.
     found.sort(key=lambda p: _squash(p.rsplit("/", 1)[-1].rsplit("-", 1)[0]) != _squash(name))
@@ -210,6 +220,39 @@ def parse_fighter_page(html: str, url: str = "") -> SherdogPage:
     )
 
 
+def fought_on(
+    page: SherdogPage, name: str, event_date: dt.date, *, tolerance_days: int = 1
+) -> bool:
+    """The page has the exact name `name` and exactly one bout on `event_date`, whoever the page
+    lists as the opponent (a late replacement is often not yet corrected there). A fighter fights
+    at most once a night, so the same full name on the same night is the same person."""
+    slug = page.url.rsplit("/", 1)[-1].rsplit("-", 1)[0].replace("-", " ")
+    if _squash(slug) != _squash(name):
+        return False
+    return sum(1 for b in page.bouts if abs((b.date - event_date).days) <= tolerance_days) == 1
+
+
+def record_before_date(
+    bouts: tuple[SherdogBout, ...] | list[SherdogBout],
+    event_date: dt.date,
+    *,
+    tolerance_days: int = 1,
+) -> Record | None:
+    """The record from every bout dated before `event_date`, for a page that is demonstrably the
+    fighter's (another of their bouts matched) but where this one bout does not match by opponent:
+    the page may not be written up to it yet, or spell the opponent differently. Bouts within
+    `tolerance_days` of the date are the bout itself and are not counted."""
+    earlier = [b for b in bouts if (event_date - b.date).days > tolerance_days]
+    if not earlier:
+        return None  # never a 0-0 on the strength of a page that may start late
+    return Record(
+        wins=sum(1 for b in earlier if b.result == "win"),
+        losses=sum(1 for b in earlier if b.result == "loss"),
+        draws=sum(1 for b in earlier if b.result == "draw"),
+        no_contests=sum(1 for b in earlier if b.result == "no_contest"),
+    )
+
+
 def record_before_bout(
     bouts: tuple[SherdogBout, ...] | list[SherdogBout],
     event_date: dt.date,
@@ -259,6 +302,8 @@ class SherdogClient:
                 SEARCH_URL + quote_plus(query), max_age_seconds=MAX_AGE_SECONDS
             )
             paths = parse_search(search, name)[:MAX_CANDIDATES]
+            if not paths:
+                paths = parse_search(search, name, one_word_in_full_name=True)[:MAX_CANDIDATES]
             for path in paths:
                 html = self._client.get_html(BASE_URL + path, max_age_seconds=MAX_AGE_SECONDS)
                 pages.append(parse_fighter_page(html, path))
